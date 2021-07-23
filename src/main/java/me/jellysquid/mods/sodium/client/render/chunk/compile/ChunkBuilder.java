@@ -44,6 +44,10 @@ public class ChunkBuilder<T extends ChunkGraphicsState> {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final List<Thread> threads = new ArrayList<>();
+    /**
+     * Amount of threads which are currently blocked waiting on {@link #jobNotifier}. Synchronized via the same object.
+     */
+    private int idleThreads;
 
     private ClonedChunkSectionCache sectionCache;
 
@@ -147,6 +151,7 @@ public class ChunkBuilder<T extends ChunkGraphicsState> {
      * Processes all pending build task uploads using the chunk render backend.
      */
     // TODO: Limit the amount of time this can take per frame
+    //       (except when called from performAllUploads)
     public boolean performPendingUploads() {
         if (this.uploadQueue.isEmpty()) {
             return false;
@@ -155,6 +160,50 @@ public class ChunkBuilder<T extends ChunkGraphicsState> {
         this.backend.upload(RenderDevice.INSTANCE.createCommandList(), new DequeDrain<>(this.uploadQueue));
 
         return true;
+    }
+
+    /**
+     * Processes all build task uploads, blocking for tasks to complete if necessary.
+     */
+    public boolean performAllUploads() {
+        boolean anythingUploaded = false;
+
+        while (true) {
+            // First check if all tasks are done building (and therefore the upload queue is final)
+            boolean allTasksBuilt = this.isIdle();
+
+            // Then process the entire upload queue
+            anythingUploaded |= this.performPendingUploads();
+
+            // If the upload queue was the final one
+            if (allTasksBuilt) {
+                // then we are done
+                return anythingUploaded;
+            } else {
+                // otherwise we need to wait for the worker threads to make progress
+                try {
+                    // This code path is not the default one, it doesn't need super high performance, and having the
+                    // workers notify the main thread just for it is probably not worth it.
+                    //noinspection BusyWait
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return true;
+                }
+            }
+        }
+    }
+
+    /**
+     * @return True if all background work has been completed
+     */
+    public boolean isIdle() {
+        if (!this.isBuildQueueEmpty()) {
+            return false;
+        }
+        synchronized (this.jobNotifier) {
+            return this.idleThreads >= this.threads.size();
+        }
     }
 
     public CompletableFuture<ChunkBuildResult<T>> schedule(ChunkRenderBuildTask<T> task) {
@@ -317,9 +366,12 @@ public class ChunkBuilder<T extends ChunkGraphicsState> {
 
             if (job == null) {
                 synchronized (ChunkBuilder.this.jobNotifier) {
+                    ChunkBuilder.this.idleThreads++;
                     try {
                         ChunkBuilder.this.jobNotifier.wait();
                     } catch (InterruptedException ignored) {
+                    } finally {
+                        ChunkBuilder.this.idleThreads--;
                     }
                 }
             }

@@ -454,6 +454,31 @@ public class ChunkRenderManager<T extends ChunkGraphicsState> implements ChunkSt
         }
     }
 
+    public void updateAllChunksNow() {
+        Deque<CompletableFuture<ChunkBuildResult<T>>> futures = new ArrayDeque<>();
+
+        // Schedule all pending rebuilds
+        while (!this.importantRebuildQueue.isEmpty()) {
+            futures.add(this.builder.scheduleRebuildTaskAsync(this.importantRebuildQueue.dequeue()));
+        }
+
+        while (!this.rebuildQueue.isEmpty()) {
+            futures.add(this.builder.scheduleRebuildTaskAsync(this.rebuildQueue.dequeue()));
+        }
+
+        // Try to complete some other work on the main thread while we wait for rebuilds to complete
+        this.dirty |= this.builder.performPendingUploads();
+
+        if (!futures.isEmpty()) {
+            // Now wait for all of our rebuilds to complete
+            this.backend.upload(RenderDevice.INSTANCE.createCommandList(), new FutureDequeDrain<>(futures));
+            this.dirty = true;
+        }
+
+        // Finally wait for any rebuilds which had already been scheduled before this method was called
+        this.dirty |= this.builder.performAllUploads();
+    }
+
     public void markDirty() {
         this.dirty = true;
     }

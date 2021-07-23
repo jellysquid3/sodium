@@ -3,6 +3,7 @@ package me.jellysquid.mods.sodium.mixin.features.chunk_rendering;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import me.jellysquid.mods.sodium.client.gl.device.RenderDevice;
 import me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer;
+import me.jellysquid.mods.sodium.client.util.FlawlessFrames;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.options.GameOptions;
 import net.minecraft.client.render.*;
@@ -30,6 +31,12 @@ public abstract class MixinWorldRenderer {
     @Shadow
     @Final
     private Long2ObjectMap<SortedSet<BlockBreakingInfo>> blockBreakingProgressions;
+
+    @Shadow
+    private int frame;
+
+    @Shadow
+    private boolean needsTerrainUpdate;
 
     private SodiumWorldRenderer renderer;
 
@@ -103,6 +110,20 @@ public abstract class MixinWorldRenderer {
 
         try {
             this.renderer.updateChunks(camera, frustum, hasForcedFrustum, frame, spectator);
+
+            if (FlawlessFrames.isActive()) {
+                // Block until all chunk updates have been processed
+                this.renderer.getChunkRenderManager().updateAllChunksNow();
+
+                // If that caused new chunks to become visible, repeat until we got them all
+                while (this.renderer.getChunkRenderManager().isDirty()) {
+                    this.renderer.updateChunks(camera, frustum, hasForcedFrustum, this.frame++, spectator);
+                    this.renderer.getChunkRenderManager().updateAllChunksNow();
+                }
+
+                // We set this because third-party mods may use it (to loop themselves), even if Vanilla does not.
+                this.needsTerrainUpdate = false;
+            }
         } finally {
             RenderDevice.exitManagedCode();
         }
