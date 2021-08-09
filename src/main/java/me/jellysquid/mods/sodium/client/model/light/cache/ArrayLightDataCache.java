@@ -1,16 +1,15 @@
 package me.jellysquid.mods.sodium.client.model.light.cache;
 
 import me.jellysquid.mods.sodium.client.model.light.data.LightDataAccess;
-import me.jellysquid.mods.sodium.client.world.WorldSlice;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.world.BlockRenderView;
-
+import me.jellysquid.mods.sodium.client.level.LevelSlice;
+import net.minecraft.core.SectionPos;
+import net.minecraft.world.level.BlockAndTintGetter;
 import java.util.Arrays;
 
 /**
  * A light data cache which uses a flat-array to store the light data for the blocks in a given chunk and its direct
  * neighbors. This is considerably faster than using a hash table to lookup values for a given block position and
- * can be re-used by {@link WorldSlice} to avoid allocations.
+ * can be re-used by {@link LevelSlice} to avoid allocations.
  */
 public class ArrayLightDataCache extends LightDataAccess {
     private static final int NEIGHBOR_BLOCK_RADIUS = 2;
@@ -20,15 +19,15 @@ public class ArrayLightDataCache extends LightDataAccess {
 
     private int xOffset, yOffset, zOffset;
 
-    public ArrayLightDataCache(BlockRenderView world) {
+    public ArrayLightDataCache(BlockAndTintGetter world) {
         this.world = world;
         this.light = new long[BLOCK_LENGTH * BLOCK_LENGTH * BLOCK_LENGTH];
     }
 
-    public void reset(ChunkSectionPos origin) {
-        this.xOffset = origin.getMinX() - NEIGHBOR_BLOCK_RADIUS;
-        this.yOffset = origin.getMinY() - NEIGHBOR_BLOCK_RADIUS;
-        this.zOffset = origin.getMinZ() - NEIGHBOR_BLOCK_RADIUS;
+    public void reset(SectionPos origin) {
+        this.xOffset = origin.minBlockX() - NEIGHBOR_BLOCK_RADIUS;
+        this.yOffset = origin.minBlockY() - NEIGHBOR_BLOCK_RADIUS;
+        this.zOffset = origin.minBlockZ() - NEIGHBOR_BLOCK_RADIUS;
 
         Arrays.fill(this.light, 0L);
     }

@@ -14,7 +14,7 @@ import me.jellysquid.mods.sodium.client.render.chunk.format.ChunkModelVertexForm
 import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPass;
 import me.jellysquid.mods.sodium.client.util.MathUtil;
 import me.jellysquid.mods.sodium.client.util.math.FrustumExtended;
-import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.core.SectionPos;
 import org.apache.commons.lang3.Validate;
 
 import java.util.EnumMap;
@@ -75,7 +75,7 @@ public class RenderRegion {
     }
 
     public static long getRegionKeyForChunk(int x, int y, int z) {
-        return ChunkSectionPos.asLong(x >> REGION_WIDTH_SH, y >> REGION_HEIGHT_SH, z >> REGION_LENGTH_SH);
+        return SectionPos.asLong(x >> REGION_WIDTH_SH, y >> REGION_HEIGHT_SH, z >> REGION_LENGTH_SH);
     }
 
     public int getOriginX() {

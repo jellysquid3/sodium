@@ -1,8 +1,8 @@
 package me.jellysquid.mods.sodium.client.model.quad;
 
-import net.minecraft.client.texture.Sprite;
-
 import static me.jellysquid.mods.sodium.client.util.ModelQuadUtil.*;
+
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 /**
  * A simple implementation of the {@link ModelQuadViewMutable} interface which can provide an on-heap scratch area
@@ -12,7 +12,7 @@ public class ModelQuad implements ModelQuadViewMutable {
     private final int[] data = new int[VERTEX_SIZE * 4];
     private int flags;
 
-    private Sprite sprite;
+    private TextureAtlasSprite sprite;
     private int colorIdx;
 
     @Override
@@ -61,7 +61,7 @@ public class ModelQuad implements ModelQuadViewMutable {
     }
 
     @Override
-    public void setSprite(Sprite sprite) {
+    public void setSprite(TextureAtlasSprite sprite) {
         this.sprite = sprite;
     }
 
@@ -81,7 +81,7 @@ public class ModelQuad implements ModelQuadViewMutable {
     }
 
     @Override
-    public int getColorIndex() {
+    public int getTintIndex() {
         return this.colorIdx;
     }
 
@@ -121,7 +121,7 @@ public class ModelQuad implements ModelQuadViewMutable {
     }
 
     @Override
-    public Sprite getSprite() {
+    public TextureAtlasSprite getSprite() {
         return this.sprite;
     }
 

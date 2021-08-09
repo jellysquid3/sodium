@@ -1,10 +1,10 @@
 package me.jellysquid.mods.sodium.mixin.features.options;
 
 import me.jellysquid.mods.sodium.client.gui.SodiumOptionsGUI;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.option.OptionsScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.OptionsScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,14 +13,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(OptionsScreen.class)
 public class MixinOptionsScreen extends Screen {
-    protected MixinOptionsScreen(Text title) {
+    protected MixinOptionsScreen(Component title) {
         super(title);
     }
 
     @Dynamic
-    @Inject(method = "method_19828(Lnet/minecraft/client/gui/widget/ButtonWidget;)V", at = @At("HEAD"), cancellable = true)
-    private void open(ButtonWidget widget, CallbackInfo ci) {
-        this.client.openScreen(new SodiumOptionsGUI(this));
+    @Inject(method = "lambda$init$4(Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), cancellable = true)
+    private void open(Button widget, CallbackInfo ci) {
+        this.minecraft.setScreen(new SodiumOptionsGUI(this));
 
         ci.cancel();
     }

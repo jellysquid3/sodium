@@ -1,13 +1,17 @@
 package me.jellysquid.mods.sodium.mixin.features.buffer_builder.fast_advance;
 
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.render.*;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferVertexConsumer;
+import com.mojang.blaze3d.vertex.DefaultedVertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(BufferBuilder.class)
-public abstract class MixinBufferBuilder extends FixedColorVertexConsumer implements BufferVertexConsumer {
+public abstract class MixinBufferBuilder extends DefaultedVertexConsumer implements BufferVertexConsumer {
     @Shadow
     private VertexFormat format;
 
@@ -15,10 +19,10 @@ public abstract class MixinBufferBuilder extends FixedColorVertexConsumer implem
     private VertexFormatElement currentElement;
 
     @Shadow
-    private int elementOffset;
+    private int nextElementByte;
 
     @Shadow
-    private int currentElementId;
+    private int elementIndex;
 
     /**
      * @author JellySquid
@@ -30,18 +34,18 @@ public abstract class MixinBufferBuilder extends FixedColorVertexConsumer implem
         ImmutableList<VertexFormatElement> elements = this.format.getElements();
 
         do {
-            this.elementOffset += this.currentElement.getByteLength();
+            this.nextElementByte += this.currentElement.getByteSize();
 
             // Wrap around the element pointer without using modulo
-            if (++this.currentElementId >= elements.size()) {
-                this.currentElementId -= elements.size();
+            if (++this.elementIndex >= elements.size()) {
+                this.elementIndex -= elements.size();
             }
 
-            this.currentElement = elements.get(this.currentElementId);
-        } while (this.currentElement.getType() == VertexFormatElement.Type.PADDING);
+            this.currentElement = elements.get(this.elementIndex);
+        } while (this.currentElement.getUsage() == VertexFormatElement.Usage.PADDING);
 
-        if (this.colorFixed && this.currentElement.getType() == VertexFormatElement.Type.COLOR) {
-            BufferVertexConsumer.super.color(this.fixedRed, this.fixedGreen, this.fixedBlue, this.fixedAlpha);
+        if (this.defaultColorSet && this.currentElement.getUsage() == VertexFormatElement.Usage.COLOR) {
+            BufferVertexConsumer.super.color(this.defaultR, this.defaultG, this.defaultB, this.defaultA);
         }
     }
 }

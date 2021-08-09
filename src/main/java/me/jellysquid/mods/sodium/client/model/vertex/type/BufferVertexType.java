@@ -4,7 +4,7 @@ import me.jellysquid.mods.sodium.client.gl.attribute.BufferVertexFormat;
 import me.jellysquid.mods.sodium.client.model.vertex.VertexSink;
 
 /**
- * A blittable {@link VertexType} which supports direct copying into a {@link net.minecraft.client.render.BufferBuilder}
+ * A blittable {@link VertexType} which supports direct copying into a {@link com.mojang.blaze3d.vertex.BufferBuilder}
  * provided the buffer's vertex format matches that required by the {@link VertexSink}.
  *
  * @param <T> The {@link VertexSink} type this factory produces

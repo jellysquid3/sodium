@@ -1,7 +1,7 @@
 package me.jellysquid.mods.sodium.client.model.vertex.fallback;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import me.jellysquid.mods.sodium.client.model.vertex.VertexSink;
-import net.minecraft.client.render.VertexConsumer;
 
 /**
  * The base implementation for a {@link VertexSink} which writes to a black-boxed {@link VertexConsumer}. This is the

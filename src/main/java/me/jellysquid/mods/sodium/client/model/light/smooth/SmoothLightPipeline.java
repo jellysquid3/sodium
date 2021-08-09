@@ -5,9 +5,9 @@ import me.jellysquid.mods.sodium.client.model.light.data.LightDataAccess;
 import me.jellysquid.mods.sodium.client.model.light.data.QuadLightData;
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuadView;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFlags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 
 /**
  * A light pipeline which produces smooth interpolated lighting and ambient occlusion for model quads. This
@@ -85,7 +85,7 @@ public class SmoothLightPipeline implements LightPipeline {
     }
 
     private void applySidedBrightness(QuadLightData out, Direction face, boolean shade) {
-        float brightness = this.lightCache.getWorld().getBrightness(face, shade);
+        float brightness = this.lightCache.getWorld().getShade(face, shade);
         float[] br = out.br;
 
         for (int i = 0; i < br.length; i++) {
@@ -110,9 +110,9 @@ public class SmoothLightPipeline implements LightPipeline {
             float depth = neighborInfo.getDepth(cx, cy, cz);
 
             // If the quad is approximately grid-aligned (not inset), avoid unnecessary computation by treating it is as aligned
-            if (MathHelper.approximatelyEquals(depth, 0.0F)) {
+            if (Mth.equal(depth, 0.0F)) {
                 this.applyAlignedPartialFace(pos, dir, weights, i, out, offset);
-            } else if (MathHelper.approximatelyEquals(depth, 1.0F)) {
+            } else if (Mth.equal(depth, 1.0F)) {
                 this.applyAlignedPartialFace(pos, dir, weights, i, out, offset);
             } else {
                 // Blend the occlusion factor between the blocks directly beside this face and the blocks above it

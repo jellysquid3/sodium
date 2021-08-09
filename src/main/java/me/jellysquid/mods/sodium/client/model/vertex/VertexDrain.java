@@ -1,7 +1,7 @@
 package me.jellysquid.mods.sodium.client.model.vertex;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import me.jellysquid.mods.sodium.client.model.vertex.type.VertexType;
-import net.minecraft.client.render.VertexConsumer;
 
 /**
  * A drain allows the instantiation of {@link VertexSink} and is implemented on outputs which take vertex data.

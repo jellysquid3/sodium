@@ -6,11 +6,11 @@ import me.jellysquid.mods.sodium.client.model.quad.blender.BiomeColorBlender;
 import me.jellysquid.mods.sodium.client.render.pipeline.BlockRenderer;
 import me.jellysquid.mods.sodium.client.render.pipeline.ChunkRenderCache;
 import me.jellysquid.mods.sodium.client.render.pipeline.FluidRenderer;
-import me.jellysquid.mods.sodium.client.world.WorldSlice;
-import me.jellysquid.mods.sodium.client.world.cloned.ChunkRenderContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.block.BlockModels;
-import net.minecraft.world.World;
+import me.jellysquid.mods.sodium.client.level.LevelSlice;
+import me.jellysquid.mods.sodium.client.level.cloned.ChunkRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.block.BlockModelShaper;
+import net.minecraft.world.level.Level;
 
 public class ChunkRenderCacheLocal extends ChunkRenderCache {
     private final ArrayLightDataCache lightDataCache;
@@ -18,23 +18,23 @@ public class ChunkRenderCacheLocal extends ChunkRenderCache {
     private final BlockRenderer blockRenderer;
     private final FluidRenderer fluidRenderer;
 
-    private final BlockModels blockModels;
-    private final WorldSlice worldSlice;
+    private final BlockModelShaper blockModels;
+    private final LevelSlice levelSlice;
 
-    public ChunkRenderCacheLocal(MinecraftClient client, World world) {
-        this.worldSlice = new WorldSlice(world);
-        this.lightDataCache = new ArrayLightDataCache(this.worldSlice);
+    public ChunkRenderCacheLocal(Minecraft minecraft, Level level) {
+        this.levelSlice = new LevelSlice(level);
+        this.lightDataCache = new ArrayLightDataCache(this.levelSlice);
 
         LightPipelineProvider lightPipelineProvider = new LightPipelineProvider(this.lightDataCache);
         BiomeColorBlender biomeColorBlender = this.createBiomeColorBlender();
 
-        this.blockRenderer = new BlockRenderer(client, lightPipelineProvider, biomeColorBlender);
+        this.blockRenderer = new BlockRenderer(minecraft, lightPipelineProvider, biomeColorBlender);
         this.fluidRenderer = new FluidRenderer(lightPipelineProvider, biomeColorBlender);
 
-        this.blockModels = client.getBakedModelManager().getBlockModels();
+        this.blockModels = minecraft.getModelManager().getBlockModelShaper();
     }
 
-    public BlockModels getBlockModels() {
+    public BlockModelShaper getBlockModels() {
         return this.blockModels;
     }
 
@@ -48,10 +48,10 @@ public class ChunkRenderCacheLocal extends ChunkRenderCache {
 
     public void init(ChunkRenderContext context) {
         this.lightDataCache.reset(context.getOrigin());
-        this.worldSlice.copyData(context);
+        this.levelSlice.copyData(context);
     }
 
-    public WorldSlice getWorldSlice() {
-        return this.worldSlice;
+    public LevelSlice getWorldSlice() {
+        return this.levelSlice;
     }
 }

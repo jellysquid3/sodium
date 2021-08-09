@@ -1,7 +1,7 @@
 package me.jellysquid.mods.sodium.client.model.vertex.type;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import me.jellysquid.mods.sodium.client.model.vertex.VertexSink;
-import net.minecraft.client.render.VertexConsumer;
 
 /**
  * Provides factories which create a {@link VertexSink} for the given vertex format.

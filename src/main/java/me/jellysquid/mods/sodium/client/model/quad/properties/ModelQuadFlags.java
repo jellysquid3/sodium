@@ -1,8 +1,8 @@
 package me.jellysquid.mods.sodium.client.model.quad.properties;
 
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuadView;
-import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.core.Direction;
 
 public class ModelQuadFlags {
     /**
@@ -28,7 +28,7 @@ public class ModelQuadFlags {
      */
     public static int getQuadFlags(BakedQuad bakedQuad) {
         ModelQuadView quad = (ModelQuadView) bakedQuad;
-        Direction face = bakedQuad.getFace();
+        Direction face = bakedQuad.getDirection();
 
         float minX = 32.0F;
         float minY = 32.0F;

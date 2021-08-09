@@ -5,7 +5,7 @@ import me.jellysquid.mods.sodium.client.gl.attribute.BufferVertexFormat;
 import java.nio.ByteBuffer;
 
 /**
- * Provides a view into {@link net.minecraft.client.render.BufferBuilder} and similar types.
+ * Provides a view into {@link com.mojang.blaze3d.vertex.BufferBuilder} and similar types.
  */
 public interface VertexBufferView {
     /**

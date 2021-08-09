@@ -1,11 +1,10 @@
 package me.jellysquid.mods.sodium.client.gui.options.control;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.jellysquid.mods.sodium.client.gui.options.Option;
 import me.jellysquid.mods.sodium.client.gui.widgets.AbstractWidget;
 import me.jellysquid.mods.sodium.client.util.Dim2i;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 
 public class ControlElement<T> extends AbstractWidget {
     protected final Option<T> option;
@@ -24,22 +23,22 @@ public class ControlElement<T> extends AbstractWidget {
     }
 
     @Override
-    public void render(MatrixStack matrixStack, int mouseX, int mouseY, float delta) {
+    public void render(PoseStack matrixStack, int mouseX, int mouseY, float delta) {
         String name = this.option.getName().getString();
         String label;
 
-        if (this.hovered && this.font.getWidth(name) > (this.dim.width() - this.option.getControl().getMaxWidth())) {
+        if (this.hovered && this.font.width(name) > (this.dim.width() - this.option.getControl().getMaxWidth())) {
             name = name.substring(0, Math.min(name.length(), 10)) + "...";
         }
 
         if (this.option.isAvailable()) {
             if (this.option.hasChanged()) {
-                label = Formatting.ITALIC + name + " *";
+                label = ChatFormatting.ITALIC + name + " *";
             } else {
-                label = Formatting.WHITE + name;
+                label = ChatFormatting.WHITE + name;
             }
         } else {
-            label = String.valueOf(Formatting.GRAY) + Formatting.STRIKETHROUGH + name;
+            label = String.valueOf(ChatFormatting.GRAY) + ChatFormatting.STRIKETHROUGH + name;
         }
 
         this.hovered = this.dim.containsCursor(mouseX, mouseY);

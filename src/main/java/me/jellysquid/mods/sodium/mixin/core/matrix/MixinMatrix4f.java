@@ -1,89 +1,89 @@
 package me.jellysquid.mods.sodium.mixin.core.matrix;
 
+import com.mojang.math.Matrix4f;
+import com.mojang.math.Quaternion;
 import me.jellysquid.mods.sodium.client.util.math.Matrix4fExtended;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Quaternion;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(Matrix4f.class)
 public class MixinMatrix4f implements Matrix4fExtended {
     @Shadow
-    protected float a00;
+    protected float m00;
 
     @Shadow
-    protected float a01;
+    protected float m01;
 
     @Shadow
-    protected float a02;
+    protected float m02;
 
     @Shadow
-    protected float a03;
+    protected float m03;
 
     @Shadow
-    protected float a10;
+    protected float m10;
 
     @Shadow
-    protected float a11;
+    protected float m11;
 
     @Shadow
-    protected float a12;
+    protected float m12;
 
     @Shadow
-    protected float a13;
+    protected float m13;
 
     @Shadow
-    protected float a20;
+    protected float m20;
 
     @Shadow
-    protected float a21;
+    protected float m21;
 
     @Shadow
-    protected float a22;
+    protected float m22;
 
     @Shadow
-    protected float a23;
+    protected float m23;
 
     @Shadow
-    protected float a30;
+    protected float m30;
 
     @Shadow
-    protected float a31;
+    protected float m31;
 
     @Shadow
-    protected float a32;
+    protected float m32;
 
     @Shadow
-    protected float a33;
+    protected float m33;
 
     @Override
     public void translate(float x, float y, float z) {
-        this.a03 = this.a00 * x + this.a01 * y + this.a02 * z + this.a03;
-        this.a13 = this.a10 * x + this.a11 * y + this.a12 * z + this.a13;
-        this.a23 = this.a20 * x + this.a21 * y + this.a22 * z + this.a23;
-        this.a33 = this.a30 * x + this.a31 * y + this.a32 * z + this.a33;
+        this.m03 = this.m00 * x + this.m01 * y + this.m02 * z + this.m03;
+        this.m13 = this.m10 * x + this.m11 * y + this.m12 * z + this.m13;
+        this.m23 = this.m20 * x + this.m21 * y + this.m22 * z + this.m23;
+        this.m33 = this.m30 * x + this.m31 * y + this.m32 * z + this.m33;
     }
 
     @Override
     public float transformVecX(float x, float y, float z) {
-        return (this.a00 * x) + (this.a01 * y) + (this.a02 * z) + (this.a03 * 1.0f);
+        return (this.m00 * x) + (this.m01 * y) + (this.m02 * z) + (this.m03 * 1.0f);
     }
 
     @Override
     public float transformVecY(float x, float y, float z) {
-        return (this.a10 * x) + (this.a11 * y) + (this.a12 * z) + (this.a13 * 1.0f);
+        return (this.m10 * x) + (this.m11 * y) + (this.m12 * z) + (this.m13 * 1.0f);
     }
 
     @Override
     public float transformVecZ(float x, float y, float z) {
-        return (this.a20 * x) + (this.a21 * y) + (this.a22 * z) + (this.a23 * 1.0f);
+        return (this.m20 * x) + (this.m21 * y) + (this.m22 * z) + (this.m23 * 1.0f);
     }
 
     @Override
     public void rotate(Quaternion quaternion) {
-        boolean x = quaternion.getX() != 0.0F;
-        boolean y = quaternion.getY() != 0.0F;
-        boolean z = quaternion.getZ() != 0.0F;
+        boolean x = quaternion.i() != 0.0F;
+        boolean y = quaternion.j() != 0.0F;
+        boolean z = quaternion.k() != 0.0F;
 
         // Try to determine if this is a simple rotation on one axis component only
         if (x) {
@@ -104,8 +104,8 @@ public class MixinMatrix4f implements Matrix4fExtended {
     }
 
     private void rotateX(Quaternion quaternion) {
-        float x = quaternion.getX();
-        float w = quaternion.getW();
+        float x = quaternion.i();
+        float w = quaternion.r();
 
         float xx = 2.0F * x * x;
         float ta11 = 1.0F - xx;
@@ -116,28 +116,28 @@ public class MixinMatrix4f implements Matrix4fExtended {
         float ta21 = 2.0F * xw;
         float ta12 = 2.0F * -xw;
 
-        float a01 = this.a01 * ta11 + this.a02 * ta21;
-        float a02 = this.a01 * ta12 + this.a02 * ta22;
-        float a11 = this.a11 * ta11 + this.a12 * ta21;
-        float a12 = this.a11 * ta12 + this.a12 * ta22;
-        float a21 = this.a21 * ta11 + this.a22 * ta21;
-        float a22 = this.a21 * ta12 + this.a22 * ta22;
-        float a31 = this.a31 * ta11 + this.a32 * ta21;
-        float a32 = this.a31 * ta12 + this.a32 * ta22;
+        float m01 = this.m01 * ta11 + this.m02 * ta21;
+        float m02 = this.m01 * ta12 + this.m02 * ta22;
+        float m11 = this.m11 * ta11 + this.m12 * ta21;
+        float m12 = this.m11 * ta12 + this.m12 * ta22;
+        float m21 = this.m21 * ta11 + this.m22 * ta21;
+        float m22 = this.m21 * ta12 + this.m22 * ta22;
+        float m31 = this.m31 * ta11 + this.m32 * ta21;
+        float m32 = this.m31 * ta12 + this.m32 * ta22;
 
-        this.a01 = a01;
-        this.a02 = a02;
-        this.a11 = a11;
-        this.a12 = a12;
-        this.a21 = a21;
-        this.a22 = a22;
-        this.a31 = a31;
-        this.a32 = a32;
+        this.m01 = m01;
+        this.m02 = m02;
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m31 = m31;
+        this.m32 = m32;
     }
 
     private void rotateY(Quaternion quaternion) {
-        float y = quaternion.getY();
-        float w = quaternion.getW();
+        float y = quaternion.j();
+        float w = quaternion.r();
 
         float yy = 2.0F * y * y;
         float ta00 = 1.0F - yy;
@@ -146,28 +146,28 @@ public class MixinMatrix4f implements Matrix4fExtended {
         float ta20 = 2.0F * -yw;
         float ta02 = 2.0F * yw;
 
-        float a00 = this.a00 * ta00 + this.a02 * ta20;
-        float a02 = this.a00 * ta02 + this.a02 * ta22;
-        float a10 = this.a10 * ta00 + this.a12 * ta20;
-        float a12 = this.a10 * ta02 + this.a12 * ta22;
-        float a20 = this.a20 * ta00 + this.a22 * ta20;
-        float a22 = this.a20 * ta02 + this.a22 * ta22;
-        float a30 = this.a30 * ta00 + this.a32 * ta20;
-        float a32 = this.a30 * ta02 + this.a32 * ta22;
+        float m00 = this.m00 * ta00 + this.m02 * ta20;
+        float m02 = this.m00 * ta02 + this.m02 * ta22;
+        float m10 = this.m10 * ta00 + this.m12 * ta20;
+        float m12 = this.m10 * ta02 + this.m12 * ta22;
+        float m20 = this.m20 * ta00 + this.m22 * ta20;
+        float m22 = this.m20 * ta02 + this.m22 * ta22;
+        float m30 = this.m30 * ta00 + this.m32 * ta20;
+        float m32 = this.m30 * ta02 + this.m32 * ta22;
 
-        this.a00 = a00;
-        this.a02 = a02;
-        this.a10 = a10;
-        this.a12 = a12;
-        this.a20 = a20;
-        this.a22 = a22;
-        this.a30 = a30;
-        this.a32 = a32;
+        this.m00 = m00;
+        this.m02 = m02;
+        this.m10 = m10;
+        this.m12 = m12;
+        this.m20 = m20;
+        this.m22 = m22;
+        this.m30 = m30;
+        this.m32 = m32;
     }
 
     private void rotateZ(Quaternion quaternion) {
-        float z = quaternion.getZ();
-        float w = quaternion.getW();
+        float z = quaternion.k();
+        float w = quaternion.r();
 
         float zz = 2.0F * z * z;
         float ta00 = 1.0F - zz;
@@ -176,30 +176,30 @@ public class MixinMatrix4f implements Matrix4fExtended {
         float ta10 = 2.0F * zw;
         float ta01 = 2.0F * -zw;
 
-        float a00 = this.a00 * ta00 + this.a01 * ta10;
-        float a01 = this.a00 * ta01 + this.a01 * ta11;
-        float a10 = this.a10 * ta00 + this.a11 * ta10;
-        float a11 = this.a10 * ta01 + this.a11 * ta11;
-        float a20 = this.a20 * ta00 + this.a21 * ta10;
-        float a21 = this.a20 * ta01 + this.a21 * ta11;
-        float a30 = this.a30 * ta00 + this.a31 * ta10;
-        float a31 = this.a30 * ta01 + this.a31 * ta11;
+        float m00 = this.m00 * ta00 + this.m01 * ta10;
+        float m01 = this.m00 * ta01 + this.m01 * ta11;
+        float m10 = this.m10 * ta00 + this.m11 * ta10;
+        float m11 = this.m10 * ta01 + this.m11 * ta11;
+        float m20 = this.m20 * ta00 + this.m21 * ta10;
+        float m21 = this.m20 * ta01 + this.m21 * ta11;
+        float m30 = this.m30 * ta00 + this.m31 * ta10;
+        float m31 = this.m30 * ta01 + this.m31 * ta11;
 
-        this.a00 = a00;
-        this.a01 = a01;
-        this.a10 = a10;
-        this.a11 = a11;
-        this.a20 = a20;
-        this.a21 = a21;
-        this.a30 = a30;
-        this.a31 = a31;
+        this.m00 = m00;
+        this.m01 = m01;
+        this.m10 = m10;
+        this.m11 = m11;
+        this.m20 = m20;
+        this.m21 = m21;
+        this.m30 = m30;
+        this.m31 = m31;
     }
 
     private void rotateXYZ(Quaternion quaternion) {
-        float x = quaternion.getX();
-        float y = quaternion.getY();
-        float z = quaternion.getZ();
-        float w = quaternion.getW();
+        float x = quaternion.i();
+        float y = quaternion.j();
+        float z = quaternion.k();
+        float w = quaternion.r();
 
         float xx = 2.0F * x * x;
         float yy = 2.0F * y * y;
@@ -220,30 +220,30 @@ public class MixinMatrix4f implements Matrix4fExtended {
         float ta21 = 2.0F * (yz + xw);
         float ta12 = 2.0F * (yz - xw);
 
-        float a00 = this.a00 * ta00 + this.a01 * ta10 + this.a02 * ta20;
-        float a01 = this.a00 * ta01 + this.a01 * ta11 + this.a02 * ta21;
-        float a02 = this.a00 * ta02 + this.a01 * ta12 + this.a02 * ta22;
-        float a10 = this.a10 * ta00 + this.a11 * ta10 + this.a12 * ta20;
-        float a11 = this.a10 * ta01 + this.a11 * ta11 + this.a12 * ta21;
-        float a12 = this.a10 * ta02 + this.a11 * ta12 + this.a12 * ta22;
-        float a20 = this.a20 * ta00 + this.a21 * ta10 + this.a22 * ta20;
-        float a21 = this.a20 * ta01 + this.a21 * ta11 + this.a22 * ta21;
-        float a22 = this.a20 * ta02 + this.a21 * ta12 + this.a22 * ta22;
-        float a30 = this.a30 * ta00 + this.a31 * ta10 + this.a32 * ta20;
-        float a31 = this.a30 * ta01 + this.a31 * ta11 + this.a32 * ta21;
-        float a32 = this.a30 * ta02 + this.a31 * ta12 + this.a32 * ta22;
+        float m00 = this.m00 * ta00 + this.m01 * ta10 + this.m02 * ta20;
+        float m01 = this.m00 * ta01 + this.m01 * ta11 + this.m02 * ta21;
+        float m02 = this.m00 * ta02 + this.m01 * ta12 + this.m02 * ta22;
+        float m10 = this.m10 * ta00 + this.m11 * ta10 + this.m12 * ta20;
+        float m11 = this.m10 * ta01 + this.m11 * ta11 + this.m12 * ta21;
+        float m12 = this.m10 * ta02 + this.m11 * ta12 + this.m12 * ta22;
+        float m20 = this.m20 * ta00 + this.m21 * ta10 + this.m22 * ta20;
+        float m21 = this.m20 * ta01 + this.m21 * ta11 + this.m22 * ta21;
+        float m22 = this.m20 * ta02 + this.m21 * ta12 + this.m22 * ta22;
+        float m30 = this.m30 * ta00 + this.m31 * ta10 + this.m32 * ta20;
+        float m31 = this.m30 * ta01 + this.m31 * ta11 + this.m32 * ta21;
+        float m32 = this.m30 * ta02 + this.m31 * ta12 + this.m32 * ta22;
 
-        this.a00 = a00;
-        this.a01 = a01;
-        this.a02 = a02;
-        this.a10 = a10;
-        this.a11 = a11;
-        this.a12 = a12;
-        this.a20 = a20;
-        this.a21 = a21;
-        this.a22 = a22;
-        this.a30 = a30;
-        this.a31 = a31;
-        this.a32 = a32;
+        this.m00 = m00;
+        this.m01 = m01;
+        this.m02 = m02;
+        this.m10 = m10;
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m20 = m20;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m30 = m30;
+        this.m31 = m31;
+        this.m32 = m32;
     }
 }

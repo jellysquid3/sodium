@@ -1,8 +1,7 @@
 package me.jellysquid.mods.sodium.common.util;
 
-import net.minecraft.util.math.Direction;
-
 import java.util.Arrays;
+import net.minecraft.core.Direction;
 
 /**
  * Contains a number of cached arrays to avoid allocations since calling Enum#values() requires the backing array to

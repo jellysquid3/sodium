@@ -1,26 +1,28 @@
 accessWidener v1 named
 
-accessible class net/minecraft/client/model/ModelPart$Vertex
-accessible class net/minecraft/client/model/ModelPart$Quad
-accessible class net/minecraft/client/texture/Sprite$Interpolation
+accessible class net/minecraft/client/model/geom/ModelPart$Vertex
+accessible class net/minecraft/client/model/geom/ModelPart$Polygon
+accessible class net/minecraft/client/model/geom/ModelPart$Quad
+accessible class net/minecraft/client/renderer/texture/TextureAtlasSprite$InterpolationData
+accessible class net/minecraft/client/renderer/texture/TextureAtlasSprite
 accessible class net/minecraft/client/world/ClientWorld$BlockParticle
-accessible class net/minecraft/client/texture/Sprite$Animation
+accessible class net/minecraft/client/renderer/texture/TextureAtlasSprite$AnimatedTexture
 
-accessible method net/minecraft/client/texture/Sprite$Interpolation apply ()V
+accessible method net/minecraft/client/renderer/texture/TextureAtlasSprite$Interpolation apply ()V
 accessible method net/minecraft/client/render/Frustum isVisible (DDDDDD)Z
+accessible method net/minecraft/client/renderer/texture/TextureAtlasSprite upload (II[Lcom/mojang/blaze3d/platform/NativeImage;)V
 
-accessible field net/minecraft/client/option/CyclingOption setter Lnet/minecraft/client/option/CyclingOption$Setter;
-accessible field net/minecraft/client/option/CyclingOption getter Ljava/util/function/Function;
+accessible field net/minecraft/client/CycleOption setter Lnet/minecraft/client/CycleOption$OptionSetter;
+accessible field net/minecraft/client/CycleOption getter Ljava/util/function/Function;
 
-accessible class net/minecraft/client/texture/Sprite$AnimationFrame
-accessible field net/minecraft/client/texture/Sprite$AnimationFrame index I
-accessible field net/minecraft/client/texture/Sprite$AnimationFrame time I
-accessible field net/minecraft/client/texture/Sprite$Animation frameIndex I
-accessible field net/minecraft/client/texture/Sprite$Animation frameTicks I
-accessible field net/minecraft/client/texture/Sprite$Animation frames Ljava/util/List;
-accessible field net/minecraft/client/texture/Sprite$Animation frameCount I
-accessible field net/minecraft/client/texture/Sprite width I
-accessible field net/minecraft/client/texture/Sprite height I
-accessible field net/minecraft/client/texture/Sprite images [Lnet/minecraft/client/texture/NativeImage;
-accessible method net/minecraft/client/texture/Sprite upload (II[Lnet/minecraft/client/texture/NativeImage;)V
-accessible field net/minecraft/client/texture/NativeImage pointer J
+accessible class net/minecraft/client/renderer/texture/TextureAtlasSprite$FrameInfo
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite$FrameInfo index I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite$FrameInfo time I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite$AnimatedTexture frame I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite$AnimatedTexture subFrame I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite$AnimatedTexture frames Ljava/util/List;
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite$AnimatedTexture frameRowSize I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite width I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite height I
+accessible field net/minecraft/client/renderer/texture/TextureAtlasSprite mainImage [Lcom/mojang/blaze3d/platform/NativeImage;
+accessible field com/mojang/blaze3d/platform/NativeImage pixels J

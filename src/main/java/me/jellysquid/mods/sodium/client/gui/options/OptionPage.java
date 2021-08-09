@@ -1,14 +1,14 @@
 package me.jellysquid.mods.sodium.client.gui.options;
 
 import com.google.common.collect.ImmutableList;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public class OptionPage {
-    private final Text name;
+    private final Component name;
     private final ImmutableList<OptionGroup> groups;
     private final ImmutableList<Option<?>> options;
 
-    public OptionPage(Text name, ImmutableList<OptionGroup> groups) {
+    public OptionPage(Component name, ImmutableList<OptionGroup> groups) {
         this.name = name;
         this.groups = groups;
 
@@ -29,7 +29,7 @@ public class OptionPage {
         return this.options;
     }
 
-    public Text getName() {
+    public Component getName() {
         return this.name;
     }
 

@@ -1,6 +1,7 @@
 package me.jellysquid.mods.sodium.client.render.chunk;
 
 import com.google.common.collect.Lists;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.jellysquid.mods.sodium.client.gl.attribute.GlVertexAttributeBinding;
 import me.jellysquid.mods.sodium.client.gl.buffer.GlBufferUsage;
 import me.jellysquid.mods.sodium.client.gl.buffer.GlMutableBuffer;
@@ -20,7 +21,6 @@ import me.jellysquid.mods.sodium.client.render.chunk.format.ChunkMeshAttribute;
 import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPass;
 import me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion;
 import me.jellysquid.mods.sodium.client.render.chunk.shader.ChunkShaderBindingPoints;
-import net.minecraft.client.util.math.MatrixStack;
 import org.lwjgl.opengl.GL20C;
 import org.lwjgl.opengl.GL32C;
 import org.lwjgl.system.MemoryStack;
@@ -85,7 +85,7 @@ public class RegionChunkRenderer extends ShaderChunkRenderer {
     }
 
     @Override
-    public void render(MatrixStack matrixStack, CommandList commandList,
+    public void render(PoseStack matrixStack, CommandList commandList,
                        ChunkRenderList list, BlockRenderPass pass,
                        ChunkCameraContext camera) {
         super.begin(pass, matrixStack);

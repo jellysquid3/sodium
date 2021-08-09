@@ -10,21 +10,20 @@ import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPass;
 import me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion;
 import me.jellysquid.mods.sodium.client.render.pipeline.context.ChunkRenderCacheLocal;
 import me.jellysquid.mods.sodium.client.util.task.CancellationSource;
-import me.jellysquid.mods.sodium.client.world.WorldSlice;
-import me.jellysquid.mods.sodium.client.world.cloned.ChunkRenderContext;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.render.chunk.ChunkOcclusionDataBuilder;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-
+import me.jellysquid.mods.sodium.client.level.LevelSlice;
+import me.jellysquid.mods.sodium.client.level.cloned.ChunkRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.chunk.VisGraph;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -49,14 +48,14 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
     @Override
     public ChunkBuildResult performBuild(ChunkRenderCacheLocal cache, ChunkBuildBuffers buffers, CancellationSource cancellationSource) {
         ChunkRenderData.Builder renderData = new ChunkRenderData.Builder();
-        ChunkOcclusionDataBuilder occluder = new ChunkOcclusionDataBuilder();
+        VisGraph occluder = new VisGraph();
         ChunkRenderBounds.Builder bounds = new ChunkRenderBounds.Builder();
 
         buffers.init(renderData, this.render.getChunkId());
 
         cache.init(this.context);
 
-        WorldSlice slice = cache.getWorldSlice();
+        LevelSlice slice = cache.getWorldSlice();
 
         int minX = this.render.getOriginX();
         int minY = this.render.getOriginY();
@@ -66,8 +65,8 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
         int maxY = minY + 16;
         int maxZ = minZ + 16;
 
-        BlockPos.Mutable blockPos = new BlockPos.Mutable();
-        BlockPos.Mutable offset = new BlockPos.Mutable();
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos offset = new BlockPos.MutableBlockPos();
 
         for (int y = minY; y < maxY; y++) {
             if (cancellationSource.isCancelled()) {
@@ -87,13 +86,13 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
 
                     boolean rendered = false;
 
-                    if (blockState.getRenderType() == BlockRenderType.MODEL) {
-                        RenderLayer layer = RenderLayers.getBlockLayer(blockState);
+                    if (blockState.getRenderShape() == RenderShape.MODEL) {
+                        RenderType layer = ItemBlockRenderTypes.getChunkRenderType(blockState);
 
                         BakedModel model = cache.getBlockModels()
-                                .getModel(blockState);
+                                .getBlockModel(blockState);
 
-                        long seed = blockState.getRenderingSeed(blockPos);
+                        long seed = blockState.getSeed(blockPos);
 
                         if (cache.getBlockRenderer().renderModel(slice, blockState, blockPos, offset, model, buffers.get(layer), true, seed)) {
                             rendered = true;
@@ -103,7 +102,7 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
                     FluidState fluidState = blockState.getFluidState();
 
                     if (!fluidState.isEmpty()) {
-                        RenderLayer layer = RenderLayers.getFluidLayer(fluidState);
+                        RenderType layer = ItemBlockRenderTypes.getRenderLayer(fluidState);
 
                         if (cache.getFluidRenderer().render(slice, fluidState, blockPos, offset, buffers.get(layer))) {
                             rendered = true;
@@ -114,17 +113,17 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
                         BlockEntity entity = slice.getBlockEntity(blockPos);
 
                         if (entity != null) {
-                            BlockEntityRenderer<BlockEntity> renderer = MinecraftClient.getInstance().getBlockEntityRenderDispatcher().get(entity);
+                            BlockEntityRenderer<BlockEntity> renderer = Minecraft.getInstance().getBlockEntityRenderDispatcher().getRenderer(entity);
 
                             if (renderer != null) {
-                                renderData.addBlockEntity(entity, !renderer.rendersOutsideBoundingBox(entity));
+                                renderData.addBlockEntity(entity, !renderer.shouldRenderOffScreen(entity));
                                 rendered = true;
                             }
                         }
                     }
 
-                    if (blockState.isOpaqueFullCube(slice, blockPos)) {
-                        occluder.markClosed(blockPos);
+                    if (blockState.isSolidRender(slice, blockPos)) {
+                        occluder.setOpaque(blockPos);
                     }
 
                     if (rendered) {
@@ -144,7 +143,7 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
             }
         }
 
-        renderData.setOcclusionData(occluder.build());
+        renderData.setOcclusionData(occluder.resolve());
         renderData.setBounds(bounds.build(this.render.getChunkPos()));
 
         return new ChunkBuildResult(this.render, renderData.build(), meshes, this.frame);

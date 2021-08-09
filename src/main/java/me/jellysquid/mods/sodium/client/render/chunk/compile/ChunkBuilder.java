@@ -6,9 +6,9 @@ import me.jellysquid.mods.sodium.client.render.chunk.tasks.ChunkRenderBuildTask;
 import me.jellysquid.mods.sodium.client.render.pipeline.context.ChunkRenderCacheLocal;
 import me.jellysquid.mods.sodium.client.util.task.CancellationSource;
 import me.jellysquid.mods.sodium.common.util.collections.QueueDrainingIterator;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.level.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,7 +32,7 @@ public class ChunkBuilder {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final List<Thread> threads = new ArrayList<>();
 
-    private World world;
+    private Level level;
     private BlockRenderPassManager renderPassManager;
 
     private final int limitThreads;
@@ -66,11 +66,11 @@ public class ChunkBuilder {
             throw new IllegalStateException("Threads are still alive while in the STOPPED state");
         }
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft minecraft = Minecraft.getInstance();
 
         for (int i = 0; i < this.limitThreads; i++) {
             ChunkBuildBuffers buffers = new ChunkBuildBuffers(this.vertexType, this.renderPassManager);
-            ChunkRenderCacheLocal pipeline = new ChunkRenderCacheLocal(client, this.world);
+            ChunkRenderCacheLocal pipeline = new ChunkRenderCacheLocal(minecraft, this.level);
 
             WorkerRunnable worker = new WorkerRunnable(buffers, pipeline);
 
@@ -129,7 +129,7 @@ public class ChunkBuilder {
 
         this.buildQueue.clear();
 
-        this.world = null;
+        this.level = null;
     }
 
     public CompletableFuture<ChunkBuildResult> schedule(ChunkRenderBuildTask task) {
@@ -156,20 +156,20 @@ public class ChunkBuilder {
     }
 
     /**
-     * Initializes this chunk builder for the given world. If the builder is already running (which can happen during
-     * a world teleportation event), the worker threads will first be stopped and all pending tasks will be discarded
+     * Initializes this chunk builder for the given level. If the builder is already running (which can happen during
+     * a level teleportation event), the worker threads will first be stopped and all pending tasks will be discarded
      * before being started again.
-     * @param world The world instance
-     * @param renderPassManager The render pass manager used for the world
+     * @param level The level instance
+     * @param renderPassManager The render pass manager used for the level
      */
-    public void init(ClientWorld world, BlockRenderPassManager renderPassManager) {
-        if (world == null) {
-            throw new NullPointerException("World is null");
+    public void init(ClientLevel level, BlockRenderPassManager renderPassManager) {
+        if (level == null) {
+            throw new NullPointerException("Level is null");
         }
 
         this.stopWorkers();
 
-        this.world = world;
+        this.level = level;
         this.renderPassManager = renderPassManager;
 
         this.startWorkers();

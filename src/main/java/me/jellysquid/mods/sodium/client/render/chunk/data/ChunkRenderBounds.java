@@ -1,6 +1,6 @@
 package me.jellysquid.mods.sodium.client.render.chunk.data;
 
-import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.core.SectionPos;
 
 public class ChunkRenderBounds {
     public static final ChunkRenderBounds ALWAYS_FALSE = new ChunkRenderBounds(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
@@ -19,14 +19,14 @@ public class ChunkRenderBounds {
         this.z2 = z2;
     }
 
-    public ChunkRenderBounds(ChunkSectionPos origin) {
-        this.x1 = origin.getMinX();
-        this.y1 = origin.getMinY();
-        this.z1 = origin.getMinZ();
+    public ChunkRenderBounds(SectionPos origin) {
+        this.x1 = origin.minBlockX();
+        this.y1 = origin.minBlockY();
+        this.z1 = origin.minBlockZ();
 
-        this.x2 = origin.getMaxX() + 1;
-        this.y2 = origin.getMaxY() + 1;
-        this.z2 = origin.getMaxZ() + 1;
+        this.x2 = origin.maxBlockX() + 1;
+        this.y2 = origin.maxBlockY() + 1;
+        this.z2 = origin.maxBlockZ() + 1;
     }
 
     public static class Builder {
@@ -42,29 +42,29 @@ public class ChunkRenderBounds {
             this.z |= 1 << z;
         }
 
-        public ChunkRenderBounds build(ChunkSectionPos origin) {
+        public ChunkRenderBounds build(SectionPos origin) {
             // If no bits were set on any axis, return the default bounds
             if ((this.x | this.y | this.z) == 0) {
                 return new ChunkRenderBounds(origin);
             }
 
-            int x1 = origin.getMinX() + leftBound(this.x);
-            int x2 = origin.getMinX() + rightBound(this.x);
+            int x1 = origin.minBlockX() + leftBound(this.x);
+            int x2 = origin.minBlockX() + rightBound(this.x);
 
-            int y1 = origin.getMinY() + leftBound(this.y);
-            int y2 = origin.getMinY() + rightBound(this.y);
+            int y1 = origin.minBlockY() + leftBound(this.y);
+            int y2 = origin.minBlockY() + rightBound(this.y);
 
-            int z1 = origin.getMinZ() + leftBound(this.z);
-            int z2 = origin.getMinZ() + rightBound(this.z);
+            int z1 = origin.minBlockZ() + leftBound(this.z);
+            int z2 = origin.minBlockZ() + rightBound(this.z);
 
             return new ChunkRenderBounds(
-                    Math.max(x1, origin.getMinX()) - 0.5f,
-                    Math.max(y1, origin.getMinY()) - 0.5f,
-                    Math.max(z1, origin.getMinZ()) - 0.5f,
+                    Math.max(x1, origin.minBlockX()) - 0.5f,
+                    Math.max(y1, origin.minBlockY()) - 0.5f,
+                    Math.max(z1, origin.minBlockZ()) - 0.5f,
 
-                    Math.min(x2, origin.getMaxX()) + 0.5f,
-                    Math.min(y2, origin.getMaxY()) + 0.5f,
-                    Math.min(z2, origin.getMaxZ()) + 0.5f
+                    Math.min(x2, origin.maxBlockX()) + 0.5f,
+                    Math.min(y2, origin.maxBlockY()) + 0.5f,
+                    Math.min(z2, origin.maxBlockZ()) + 0.5f
             );
         }
 

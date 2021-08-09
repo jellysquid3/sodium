@@ -1,22 +1,22 @@
 package me.jellysquid.mods.sodium.client.render.chunk.passes;
 
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.renderer.RenderType;
 
 // TODO: Move away from using an enum, make this extensible
 public enum BlockRenderPass {
-    SOLID(RenderLayer.getSolid(), false),
-    CUTOUT(RenderLayer.getCutout(), false),
-    CUTOUT_MIPPED(RenderLayer.getCutoutMipped(), false),
-    TRANSLUCENT(RenderLayer.getTranslucent(), true),
-    TRIPWIRE(RenderLayer.getTripwire(), true);
+    SOLID(RenderType.solid(), false),
+    CUTOUT(RenderType.cutout(), false),
+    CUTOUT_MIPPED(RenderType.cutoutMipped(), false),
+    TRANSLUCENT(RenderType.translucent(), true),
+    TRIPWIRE(RenderType.tripwire(), true);
 
     public static final BlockRenderPass[] VALUES = BlockRenderPass.values();
     public static final int COUNT = VALUES.length;
 
-    private final RenderLayer layer;
+    private final RenderType layer;
     private final boolean translucent;
 
-    BlockRenderPass(RenderLayer layer, boolean translucent) {
+    BlockRenderPass(RenderType layer, boolean translucent) {
         this.layer = layer;
         this.translucent = translucent;
     }
@@ -25,17 +25,17 @@ public enum BlockRenderPass {
         return this.translucent;
     }
 
-    public RenderLayer getLayer() {
+    public RenderType getLayer() {
         return this.layer;
     }
 
     @Deprecated
     public void endDrawing() {
-        this.layer.endDrawing();
+        this.layer.clearRenderState();
     }
 
     @Deprecated
     public void startDrawing() {
-        this.layer.startDrawing();
+        this.layer.setupRenderState();
     }
 }

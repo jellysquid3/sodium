@@ -1,7 +1,7 @@
 package me.jellysquid.mods.sodium.client.render.chunk.format;
 
 import me.jellysquid.mods.sodium.client.model.vertex.VertexSink;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.core.Vec3i;
 
 public interface ModelVertexSink extends VertexSink {
     /**

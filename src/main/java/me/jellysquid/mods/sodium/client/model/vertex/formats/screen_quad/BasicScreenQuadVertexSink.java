@@ -1,14 +1,14 @@
 package me.jellysquid.mods.sodium.client.model.vertex.formats.screen_quad;
 
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.math.Matrix4f;
 import me.jellysquid.mods.sodium.client.model.vertex.VertexSink;
 import me.jellysquid.mods.sodium.client.util.math.Matrix4fExtended;
 import me.jellysquid.mods.sodium.client.util.math.MatrixUtil;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.util.math.Matrix4f;
 
 public interface BasicScreenQuadVertexSink extends VertexSink {
-    VertexFormat VERTEX_FORMAT = VertexFormats.POSITION_COLOR;
+    VertexFormat VERTEX_FORMAT = DefaultVertexFormat.POSITION_COLOR;
 
     /**
      * Writes a quad vertex to this sink.

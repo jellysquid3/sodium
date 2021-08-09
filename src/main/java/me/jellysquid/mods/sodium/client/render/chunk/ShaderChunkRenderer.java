@@ -1,5 +1,6 @@
 package me.jellysquid.mods.sodium.client.render.chunk;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import me.jellysquid.mods.sodium.client.gl.attribute.GlVertexFormat;
 import me.jellysquid.mods.sodium.client.gl.shader.*;
@@ -11,9 +12,7 @@ import me.jellysquid.mods.sodium.client.render.chunk.shader.ChunkFogMode;
 import me.jellysquid.mods.sodium.client.render.chunk.shader.ChunkProgram;
 import me.jellysquid.mods.sodium.client.render.chunk.shader.ChunkShaderBindingPoints;
 import me.jellysquid.mods.sodium.client.render.chunk.shader.ChunkShaderOptions;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.resources.ResourceLocation;
 import java.util.Map;
 
 public abstract class ShaderChunkRenderer implements ChunkRenderer {
@@ -63,13 +62,13 @@ public abstract class ShaderChunkRenderer implements ChunkRenderer {
         ShaderConstants constants = options.constants();
 
         GlShader vertShader = ShaderLoader.loadShader(ShaderType.VERTEX,
-                new Identifier("sodium", path + ".vsh"), constants);
+                new ResourceLocation("sodium", path + ".vsh"), constants);
         
         GlShader fragShader = ShaderLoader.loadShader(ShaderType.FRAGMENT,
-                new Identifier("sodium", path + ".fsh"), constants);
+                new ResourceLocation("sodium", path + ".fsh"), constants);
 
         try {
-            return GlProgram.builder(new Identifier("sodium", "chunk_shader"))
+            return GlProgram.builder(new ResourceLocation("sodium", "chunk_shader"))
                     .attachShader(vertShader)
                     .attachShader(fragShader)
                     .bindAttribute("a_Pos", ChunkShaderBindingPoints.ATTRIBUTE_POSITION_ID)
@@ -84,7 +83,7 @@ public abstract class ShaderChunkRenderer implements ChunkRenderer {
         }
     }
 
-    protected void begin(BlockRenderPass pass, MatrixStack matrixStack) {
+    protected void begin(BlockRenderPass pass, PoseStack matrixStack) {
         ChunkShaderOptions options = new ChunkShaderOptions(ChunkFogMode.SMOOTH);
 
         this.activeProgram = this.compileProgram(pass, options);

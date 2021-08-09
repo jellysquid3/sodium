@@ -1,10 +1,10 @@
 package me.jellysquid.mods.sodium.mixin.core.frustum;
 
+import com.mojang.math.Matrix4f;
+import com.mojang.math.Vector4f;
 import me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegionVisibility;
 import me.jellysquid.mods.sodium.client.util.math.FrustumExtended;
-import net.minecraft.client.render.Frustum;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vector4f;
+import net.minecraft.client.renderer.culling.Frustum;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,14 +22,14 @@ public class MixinFrustum implements FrustumExtended {
     private float nzX, nzY, nzZ, nzW;
     private float pzX, pzY, pzZ, pzW;
 
-    @Inject(method = "setPosition", at = @At("HEAD"))
+    @Inject(method = "prepare", at = @At("HEAD"))
     private void prePositionUpdate(double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
         this.xF = (float) cameraX;
         this.yF = (float) cameraY;
         this.zF = (float) cameraZ;
     }
 
-    @Inject(method = "transform", at = @At("HEAD"))
+    @Inject(method = "getPlane", at = @At("HEAD"))
     private void transform(Matrix4f mat, int x, int y, int z, int index, CallbackInfo ci) {
         Vector4f vec = new Vector4f((float) x, (float) y, (float) z, 1.0F);
         vec.transform(mat);
@@ -37,40 +37,40 @@ public class MixinFrustum implements FrustumExtended {
 
         switch (index) {
             case 0 -> {
-                this.nxX = vec.getX();
-                this.nxY = vec.getY();
-                this.nxZ = vec.getZ();
-                this.nxW = vec.getW();
+                this.nxX = vec.x();
+                this.nxY = vec.y();
+                this.nxZ = vec.z();
+                this.nxW = vec.w();
             }
             case 1 -> {
-                this.pxX = vec.getX();
-                this.pxY = vec.getY();
-                this.pxZ = vec.getZ();
-                this.pxW = vec.getW();
+                this.pxX = vec.x();
+                this.pxY = vec.y();
+                this.pxZ = vec.z();
+                this.pxW = vec.w();
             }
             case 2 -> {
-                this.nyX = vec.getX();
-                this.nyY = vec.getY();
-                this.nyZ = vec.getZ();
-                this.nyW = vec.getW();
+                this.nyX = vec.x();
+                this.nyY = vec.y();
+                this.nyZ = vec.z();
+                this.nyW = vec.w();
             }
             case 3 -> {
-                this.pyX = vec.getX();
-                this.pyY = vec.getY();
-                this.pyZ = vec.getZ();
-                this.pyW = vec.getW();
+                this.pyX = vec.x();
+                this.pyY = vec.y();
+                this.pyZ = vec.z();
+                this.pyW = vec.w();
             }
             case 4 -> {
-                this.nzX = vec.getX();
-                this.nzY = vec.getY();
-                this.nzZ = vec.getZ();
-                this.nzW = vec.getW();
+                this.nzX = vec.x();
+                this.nzY = vec.y();
+                this.nzZ = vec.z();
+                this.nzW = vec.w();
             }
             case 5 -> {
-                this.pzX = vec.getX();
-                this.pzY = vec.getY();
-                this.pzZ = vec.getZ();
-                this.pzW = vec.getW();
+                this.pzX = vec.x();
+                this.pzY = vec.y();
+                this.pzZ = vec.z();
+                this.pzW = vec.w();
             }
             default -> throw new IllegalArgumentException("Invalid index");
         }
@@ -78,7 +78,7 @@ public class MixinFrustum implements FrustumExtended {
 
     @Override
     public boolean fastAabbTest(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
-        return this.isAnyCornerVisible(minX - this.xF, minY - this.yF, minZ - this.zF,
+        return this.cubeInFrustum(minX - this.xF, minY - this.yF, minZ - this.zF,
                 maxX - this.xF, maxY - this.yF, maxZ - this.zF);
     }
 
@@ -87,7 +87,7 @@ public class MixinFrustum implements FrustumExtended {
      * @reason Optimize away object allocations and for-loop
      */
     @Overwrite
-    private boolean isAnyCornerVisible(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+    private boolean cubeInFrustum(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
         return this.nxX * (this.nxX < 0 ? minX : maxX) + this.nxY * (this.nxY < 0 ? minY : maxY) + this.nxZ * (this.nxZ < 0 ? minZ : maxZ) >= -this.nxW &&
                 this.pxX * (this.pxX < 0 ? minX : maxX) + this.pxY * (this.pxY < 0 ? minY : maxY) + this.pxZ * (this.pxZ < 0 ? minZ : maxZ) >= -this.pxW &&
                 this.nyX * (this.nyX < 0 ? minX : maxX) + this.nyY * (this.nyY < 0 ? minY : maxY) + this.nyZ * (this.nyZ < 0 ? minZ : maxZ) >= -this.nyW &&

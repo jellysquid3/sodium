@@ -1,11 +1,11 @@
 package me.jellysquid.mods.sodium.client.gl.shader;
 
-import net.minecraft.util.Identifier;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import net.minecraft.resources.ResourceLocation;
 
 public class ShaderLoader {
     /**
@@ -18,11 +18,11 @@ public class ShaderLoader {
      * @param constants A list of constants for shader specialization
      * @return An OpenGL shader object compiled with the given user defines
      */
-    public static GlShader loadShader(ShaderType type, Identifier name, ShaderConstants constants) {
+    public static GlShader loadShader(ShaderType type, ResourceLocation name, ShaderConstants constants) {
         return new GlShader(type, name, ShaderParser.parseShader(getShaderSource(name), constants));
     }
 
-    public static String getShaderSource(Identifier name) {
+    public static String getShaderSource(ResourceLocation name) {
         String path = String.format("/assets/%s/shaders/%s", name.getNamespace(), name.getPath());
 
         try (InputStream in = ShaderLoader.class.getResourceAsStream(path)) {

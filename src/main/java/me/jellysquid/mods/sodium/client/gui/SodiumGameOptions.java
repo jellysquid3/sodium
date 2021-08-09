@@ -4,11 +4,10 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import me.jellysquid.mods.sodium.client.gui.options.TextProvider;
-import net.minecraft.client.option.GraphicsMode;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
-
+import net.minecraft.client.GraphicsStatus;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
@@ -60,8 +59,8 @@ public class SodiumGameOptions {
         }
 
         @Override
-        public Text getLocalizedName() {
-            return new LiteralText(this.name);
+        public Component getLocalizedName() {
+            return new TextComponent(this.name);
         }
 
         public String getName() {
@@ -74,19 +73,19 @@ public class SodiumGameOptions {
         FANCY("options.clouds.fancy"),
         FAST("options.clouds.fast");
 
-        private final Text name;
+        private final Component name;
 
         GraphicsQuality(String name) {
-            this.name = new TranslatableText(name);
+            this.name = new TranslatableComponent(name);
         }
 
         @Override
-        public Text getLocalizedName() {
+        public Component getLocalizedName() {
             return this.name;
         }
 
-        public boolean isFancy(GraphicsMode graphicsMode) {
-            return (this == FANCY) || (this == DEFAULT && (graphicsMode == GraphicsMode.FANCY || graphicsMode == GraphicsMode.FABULOUS));
+        public boolean isFancy(GraphicsStatus graphicsMode) {
+            return (this == FANCY) || (this == DEFAULT && (graphicsMode == GraphicsStatus.FANCY || graphicsMode == GraphicsStatus.FABULOUS));
         }
     }
 

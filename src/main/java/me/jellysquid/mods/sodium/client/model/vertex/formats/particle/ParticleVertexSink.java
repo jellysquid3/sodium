@@ -1,11 +1,11 @@
 package me.jellysquid.mods.sodium.client.model.vertex.formats.particle;
 
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import me.jellysquid.mods.sodium.client.model.vertex.VertexSink;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
 
 public interface ParticleVertexSink extends VertexSink {
-    VertexFormat VERTEX_FORMAT = VertexFormats.POSITION_TEXTURE_COLOR_LIGHT;
+    VertexFormat VERTEX_FORMAT = DefaultVertexFormat.PARTICLE;
 
     /**
      * @param x The x-position of the vertex

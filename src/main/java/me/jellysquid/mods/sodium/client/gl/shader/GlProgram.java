@@ -2,7 +2,7 @@ package me.jellysquid.mods.sodium.client.gl.shader;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import me.jellysquid.mods.sodium.client.gl.GlObject;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.lwjgl.opengl.GL20C;
@@ -19,8 +19,8 @@ public abstract class GlProgram extends GlObject {
         this.setHandle(program);
     }
 
-    public static Builder builder(Identifier identifier) {
-        return new Builder(identifier);
+    public static Builder builder(ResourceLocation location) {
+        return new Builder(location);
     }
 
     public void bind() {
@@ -70,10 +70,10 @@ public abstract class GlProgram extends GlObject {
     }
 
     public static class Builder {
-        private final Identifier name;
+        private final ResourceLocation name;
         private final int program;
 
-        public Builder(Identifier name) {
+        public Builder(ResourceLocation name) {
             this.name = name;
             this.program = GL20C.glCreateProgram();
         }

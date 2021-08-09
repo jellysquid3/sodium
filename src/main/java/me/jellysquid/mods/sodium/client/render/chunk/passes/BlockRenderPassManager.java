@@ -1,20 +1,20 @@
 package me.jellysquid.mods.sodium.client.render.chunk.passes;
 
 import it.unimi.dsi.fastutil.objects.Reference2IntArrayMap;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.renderer.RenderType;
 
 /**
  * Maps vanilla render layers to render passes used by Sodium. This provides compatibility with the render layers already
  * used by the base game.
  */
 public class BlockRenderPassManager {
-    private final Reference2IntArrayMap<RenderLayer> mappingsId = new Reference2IntArrayMap<>();
+    private final Reference2IntArrayMap<RenderType> mappingsId = new Reference2IntArrayMap<>();
 
     public BlockRenderPassManager() {
         this.mappingsId.defaultReturnValue(-1);
     }
 
-    public int getRenderPassId(RenderLayer layer) {
+    public int getRenderPassId(RenderType layer) {
         int pass = this.mappingsId.getInt(layer);
 
         if (pass < 0) {
@@ -24,7 +24,7 @@ public class BlockRenderPassManager {
         return pass;
     }
 
-    private void addMapping(RenderLayer layer, BlockRenderPass type) {
+    private void addMapping(RenderType layer, BlockRenderPass type) {
         if (this.mappingsId.put(layer, type.ordinal()) >= 0) {
             throw new IllegalArgumentException("Layer target already defined for " + layer);
         }
@@ -36,16 +36,16 @@ public class BlockRenderPassManager {
      */
     public static BlockRenderPassManager createDefaultMappings() {
         BlockRenderPassManager mapper = new BlockRenderPassManager();
-        mapper.addMapping(RenderLayer.getSolid(), BlockRenderPass.SOLID);
-        mapper.addMapping(RenderLayer.getCutoutMipped(), BlockRenderPass.CUTOUT_MIPPED);
-        mapper.addMapping(RenderLayer.getCutout(), BlockRenderPass.CUTOUT);
-        mapper.addMapping(RenderLayer.getTranslucent(), BlockRenderPass.TRANSLUCENT);
-        mapper.addMapping(RenderLayer.getTripwire(), BlockRenderPass.TRIPWIRE);
+        mapper.addMapping(RenderType.solid(), BlockRenderPass.SOLID);
+        mapper.addMapping(RenderType.cutoutMipped(), BlockRenderPass.CUTOUT_MIPPED);
+        mapper.addMapping(RenderType.cutout(), BlockRenderPass.CUTOUT);
+        mapper.addMapping(RenderType.translucent(), BlockRenderPass.TRANSLUCENT);
+        mapper.addMapping(RenderType.tripwire(), BlockRenderPass.TRIPWIRE);
 
         return mapper;
     }
 
-    public BlockRenderPass getRenderPassForLayer(RenderLayer layer) {
+    public BlockRenderPass getRenderPassForLayer(RenderType layer) {
         return this.getRenderPass(this.getRenderPassId(layer));
     }
 

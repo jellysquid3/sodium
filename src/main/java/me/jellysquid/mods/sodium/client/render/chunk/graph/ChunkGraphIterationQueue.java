@@ -1,8 +1,7 @@
 package me.jellysquid.mods.sodium.client.render.chunk.graph;
 
 import me.jellysquid.mods.sodium.client.render.chunk.RenderSection;
-import net.minecraft.util.math.Direction;
-
+import net.minecraft.core.Direction;
 import java.util.Arrays;
 
 public class ChunkGraphIterationQueue {

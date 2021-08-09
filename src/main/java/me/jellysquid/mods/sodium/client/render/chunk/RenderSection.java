@@ -1,6 +1,6 @@
 package me.jellysquid.mods.sodium.client.render.chunk;
 
-import me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer;
+import me.jellysquid.mods.sodium.client.render.SodiumLevelRenderer;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildResult;
 import me.jellysquid.mods.sodium.client.render.chunk.graph.ChunkGraphInfo;
 import me.jellysquid.mods.sodium.client.render.chunk.data.ChunkRenderBounds;
@@ -9,12 +9,11 @@ import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPass;
 import me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion;
 import me.jellysquid.mods.sodium.client.render.texture.SpriteUtil;
 import me.jellysquid.mods.sodium.common.util.DirectionUtil;
-import net.minecraft.client.render.chunk.ChunkOcclusionData;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.Direction;
-
+import net.minecraft.client.renderer.chunk.VisibilitySet;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -24,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
  * data about the render in the chunk visibility graph.
  */
 public class RenderSection {
-    private final SodiumWorldRenderer worldRenderer;
+    private final SodiumLevelRenderer levelRenderer;
     private final int chunkX, chunkY, chunkZ;
 
     private final Map<BlockRenderPass, ChunkGraphicsState> graphicsStates;
@@ -48,8 +47,8 @@ public class RenderSection {
 
     private int lastAcceptedBuildTime = -1;
 
-    public RenderSection(SodiumWorldRenderer worldRenderer, int chunkX, int chunkY, int chunkZ, RenderRegion region) {
-        this.worldRenderer = worldRenderer;
+    public RenderSection(SodiumLevelRenderer levelRenderer, int chunkX, int chunkY, int chunkZ, RenderRegion region) {
+        this.levelRenderer = levelRenderer;
         this.region = region;
 
         this.chunkX = chunkX;
@@ -121,7 +120,7 @@ public class RenderSection {
             throw new NullPointerException("Mesh information must not be null");
         }
 
-        this.worldRenderer.onChunkRenderUpdated(this.chunkX, this.chunkY, this.chunkZ, this.data, info);
+        this.levelRenderer.onChunkRenderUpdated(this.chunkX, this.chunkY, this.chunkZ, this.data, info);
         this.data = info;
 
         this.tickable = !info.getAnimatedSprites().isEmpty();
@@ -137,8 +136,8 @@ public class RenderSection {
     /**
      * Returns the chunk section position which this render refers to in the world.
      */
-    public ChunkSectionPos getChunkPos() {
-        return ChunkSectionPos.from(this.chunkX, this.chunkY, this.chunkZ);
+    public SectionPos getChunkPos() {
+        return SectionPos.of(this.chunkX, this.chunkY, this.chunkZ);
     }
 
     /**
@@ -146,7 +145,7 @@ public class RenderSection {
      * time before this render is drawn if {@link RenderSection#isTickable()} is true.
      */
     public void tick() {
-        for (Sprite sprite : this.data.getAnimatedSprites()) {
+        for (TextureAtlasSprite sprite : this.data.getAnimatedSprites()) {
             SpriteUtil.markSpriteActive(sprite);
         }
     }
@@ -272,7 +271,7 @@ public class RenderSection {
         return this.graphInfo;
     }
 
-    public void setOcclusionData(ChunkOcclusionData occlusionData) {
+    public void setOcclusionData(VisibilitySet occlusionData) {
         this.graphInfo.setOcclusionData(occlusionData);
     }
 

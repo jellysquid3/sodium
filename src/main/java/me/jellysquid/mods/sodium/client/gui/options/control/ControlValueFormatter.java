@@ -1,22 +1,22 @@
 package me.jellysquid.mods.sodium.client.gui.options.control;
 
-import net.minecraft.text.TranslatableText;
+import net.minecraft.network.chat.TranslatableComponent;
 
 public interface ControlValueFormatter {
     static ControlValueFormatter guiScale() {
-        return (v) -> (v == 0) ? new TranslatableText("options.guiScale.auto").getString() : v + "x";
+        return (v) -> (v == 0) ? new TranslatableComponent("options.guiScale.auto").getString() : v + "x";
     }
 
     static ControlValueFormatter fpsLimit() {
-        return (v) -> (v == 260) ? new TranslatableText("options.framerateLimit.max").getString() : v + " FPS";
+        return (v) -> (v == 260) ? new TranslatableComponent("options.framerateLimit.max").getString() : v + " FPS";
     }
 
     static ControlValueFormatter brightness() {
         return (v) -> {
             if (v == 0) {
-                return new TranslatableText("options.gamma.min").getString();
+                return new TranslatableComponent("options.gamma.min").getString();
             } else if (v == 100) {
-                return new TranslatableText("options.gamma.max").getString();
+                return new TranslatableComponent("options.gamma.max").getString();
             } else {
                 return v + "%";
             }

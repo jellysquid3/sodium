@@ -1,13 +1,13 @@
 package me.jellysquid.mods.sodium.client.render.chunk;
 
 import it.unimi.dsi.fastutil.longs.*;
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.level.ChunkPos;
 
 public class ChunkAdjacencyMap {
     private final Long2ReferenceMap<LongSet> map = new Long2ReferenceOpenHashMap<>();
 
     public boolean hasNeighbors(int x, int z) {
-        LongSet set = this.map.get(ChunkPos.toLong(x, z));
+        LongSet set = this.map.get(ChunkPos.asLong(x, z));
 
         if (set == null) {
             return false;
@@ -16,7 +16,7 @@ public class ChunkAdjacencyMap {
         return set.size() >= 9;
     }
     public void onChunkLoaded(int x, int z) {
-        long pos = ChunkPos.toLong(x, z);
+        long pos = ChunkPos.asLong(x, z);
 
         for (int xd = -1; xd <= 1; xd++) {
             for (int zd = -1; zd <= 1; zd++) {
@@ -26,7 +26,7 @@ public class ChunkAdjacencyMap {
     }
 
     public void onChunkUnloaded(int x, int z) {
-        long pos = ChunkPos.toLong(x, z);
+        long pos = ChunkPos.asLong(x, z);
 
         for (int xd = -1; xd <= 1; xd++) {
             for (int zd = -1; zd <= 1; zd++) {
@@ -36,7 +36,7 @@ public class ChunkAdjacencyMap {
     }
 
     private void add(int x, int z, long pos) {
-        long key = ChunkPos.toLong(x, z);
+        long key = ChunkPos.asLong(x, z);
         LongSet set = this.map.get(key);
 
         if (set == null) {
@@ -49,7 +49,7 @@ public class ChunkAdjacencyMap {
     }
 
     private void remove(int x, int z, long pos) {
-        long key = ChunkPos.toLong(x, z);
+        long key = ChunkPos.asLong(x, z);
         LongSet set = this.map.get(key);
 
         if (set == null) {

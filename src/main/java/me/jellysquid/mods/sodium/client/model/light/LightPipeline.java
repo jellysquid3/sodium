@@ -2,8 +2,8 @@ package me.jellysquid.mods.sodium.client.model.light;
 
 import me.jellysquid.mods.sodium.client.model.light.data.QuadLightData;
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuadView;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
 /**
  * Light pipelines allow model quads for any location in the world to be lit using various backends, including fluids

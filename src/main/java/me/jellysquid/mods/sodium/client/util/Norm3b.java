@@ -1,8 +1,8 @@
 package me.jellysquid.mods.sodium.client.util;
 
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3f;
-import net.minecraft.util.math.Vec3i;
+import com.mojang.math.Vector3f;
+import net.minecraft.core.Vec3i;
+import net.minecraft.util.Mth;
 
 /**
  * Provides some utilities for working with packed normal vectors. Each normal component provides 8 bits of
@@ -28,8 +28,8 @@ public class Norm3b {
         return pack(norm.getX(), norm.getY(), norm.getZ());
     }
 
-    public static int pack(Vec3f dir) {
-        return pack(dir.getX(), dir.getY(), dir.getZ());
+    public static int pack(Vector3f dir) {
+        return pack(dir.x(), dir.y(), dir.z());
     }
 
     /**
@@ -53,7 +53,7 @@ public class Norm3b {
      */
     private static int encode(float comp) {
         // TODO: is the clamp necessary here? our inputs should always be normalized vector components
-        return ((int) (MathHelper.clamp(comp, -1.0F, 1.0F) * COMPONENT_RANGE) & 255);
+        return ((int) (Mth.clamp(comp, -1.0F, 1.0F) * COMPONENT_RANGE) & 255);
     }
 
     /**

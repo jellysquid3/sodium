@@ -1,8 +1,8 @@
 package me.jellysquid.mods.sodium.client.util.math;
 
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Quaternion;
-import net.minecraft.util.math.Vec3f;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
+import net.minecraft.core.Direction;
 
 public interface Matrix3fExtended {
     /**
@@ -20,16 +20,16 @@ public interface Matrix3fExtended {
 
     float transformVecZ(float x, float y, float z);
 
-    default float transformVecX(Vec3f dir) {
-        return this.transformVecX(dir.getX(), dir.getY(), dir.getZ());
+    default float transformVecX(Vector3f dir) {
+        return this.transformVecX(dir.x(), dir.y(), dir.z());
     }
 
-    default float transformVecY(Vec3f dir) {
-        return this.transformVecY(dir.getX(), dir.getY(), dir.getZ());
+    default float transformVecY(Vector3f dir) {
+        return this.transformVecY(dir.x(), dir.y(), dir.z());
     }
 
-    default float transformVecZ(Vec3f dir) {
-        return this.transformVecZ(dir.getX(), dir.getY(), dir.getZ());
+    default float transformVecZ(Vector3f dir) {
+        return this.transformVecZ(dir.x(), dir.y(), dir.z());
     }
 
     float getA00();

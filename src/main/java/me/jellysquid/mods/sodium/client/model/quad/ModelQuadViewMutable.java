@@ -1,7 +1,7 @@
 package me.jellysquid.mods.sodium.client.model.quad;
 
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFlags;
-import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 /**
  * Provides a mutable view to a model quad.
@@ -55,7 +55,7 @@ public interface ModelQuadViewMutable extends ModelQuadView {
     /**
      * Sets the sprite used by this quad
      */
-    void setSprite(Sprite sprite);
+    void setSprite(TextureAtlasSprite sprite);
 
     /**
      * Sets the color index used by this quad

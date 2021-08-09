@@ -4,7 +4,7 @@ import me.jellysquid.mods.sodium.client.gui.options.binding.GenericBinding;
 import me.jellysquid.mods.sodium.client.gui.options.binding.OptionBinding;
 import me.jellysquid.mods.sodium.client.gui.options.control.Control;
 import me.jellysquid.mods.sodium.client.gui.options.storage.OptionStorage;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.Validate;
 
 import java.util.Collection;
@@ -21,8 +21,8 @@ public class OptionImpl<S, T> implements Option<T> {
 
     private final EnumSet<OptionFlag> flags;
 
-    private final Text name;
-    private final Text tooltip;
+    private final Component name;
+    private final Component tooltip;
 
     private final OptionImpact impact;
 
@@ -32,8 +32,8 @@ public class OptionImpl<S, T> implements Option<T> {
     private final boolean enabled;
 
     private OptionImpl(OptionStorage<S> storage,
-                       Text name,
-                       Text tooltip,
+                       Component name,
+                       Component tooltip,
                        OptionBinding<S, T> binding,
                        Function<OptionImpl<S, T>, Control<T>> control,
                        EnumSet<OptionFlag> flags,
@@ -52,12 +52,12 @@ public class OptionImpl<S, T> implements Option<T> {
     }
 
     @Override
-    public Text getName() {
+    public Component getName() {
         return this.name;
     }
 
     @Override
-    public Text getTooltip() {
+    public Component getTooltip() {
         return this.tooltip;
     }
 
@@ -119,8 +119,8 @@ public class OptionImpl<S, T> implements Option<T> {
 
     public static class Builder<S, T> {
         private final OptionStorage<S> storage;
-        private Text name;
-        private Text tooltip;
+        private Component name;
+        private Component tooltip;
         private OptionBinding<S, T> binding;
         private Function<OptionImpl<S, T>, Control<T>> control;
         private OptionImpact impact;
@@ -131,7 +131,7 @@ public class OptionImpl<S, T> implements Option<T> {
             this.storage = storage;
         }
 
-        public Builder<S, T> setName(Text name) {
+        public Builder<S, T> setName(Component name) {
             Validate.notNull(name, "Argument must not be null");
 
             this.name = name;
@@ -139,7 +139,7 @@ public class OptionImpl<S, T> implements Option<T> {
             return this;
         }
 
-        public Builder<S, T> setTooltip(Text tooltip) {
+        public Builder<S, T> setTooltip(Component tooltip) {
             Validate.notNull(tooltip, "Argument must not be null");
 
             this.tooltip = tooltip;

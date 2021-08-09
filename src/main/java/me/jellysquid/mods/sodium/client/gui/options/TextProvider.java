@@ -1,7 +1,7 @@
 package me.jellysquid.mods.sodium.client.gui.options;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public interface TextProvider {
-    Text getLocalizedName();
+    Component getLocalizedName();
 }

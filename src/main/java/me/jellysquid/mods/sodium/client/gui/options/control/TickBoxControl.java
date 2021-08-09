@@ -1,9 +1,9 @@
 package me.jellysquid.mods.sodium.client.gui.options.control;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.jellysquid.mods.sodium.client.gui.options.Option;
 import me.jellysquid.mods.sodium.client.util.Dim2i;
-import net.minecraft.client.util.math.Rect2i;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.renderer.Rect2i;
 
 public class TickBoxControl implements Control<Boolean> {
     private final Option<Boolean> option;
@@ -37,7 +37,7 @@ public class TickBoxControl implements Control<Boolean> {
         }
 
         @Override
-        public void render(MatrixStack matrixStack, int mouseX, int mouseY, float delta) {
+        public void render(PoseStack matrixStack, int mouseX, int mouseY, float delta) {
             super.render(matrixStack, mouseX, mouseY, delta);
 
             final int x = this.button.getX();
