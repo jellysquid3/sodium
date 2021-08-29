@@ -399,4 +399,8 @@ public class SodiumWorldRenderer implements ChunkStatusListener {
     public Collection<String> getMemoryDebugStrings() {
         return this.renderSectionManager.getDebugStrings();
     }
+
+    public RenderSectionManager getRenderSectionManager() {
+        return this.renderSectionManager;
+    }
 }

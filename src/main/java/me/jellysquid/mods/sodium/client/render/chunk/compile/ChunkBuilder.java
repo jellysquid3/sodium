@@ -31,6 +31,10 @@ public class ChunkBuilder {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final List<Thread> threads = new ArrayList<>();
+    /**
+     * Amount of threads which are currently blocked waiting on {@link #jobNotifier}. Synchronized via the same object.
+     */
+    private int idleThreads;
 
     private World world;
     private BlockRenderPassManager renderPassManager;
@@ -149,6 +153,18 @@ public class ChunkBuilder {
     }
 
     /**
+     * @return True if all background work has been completed
+     */
+    public boolean isIdle() {
+        if (!this.isBuildQueueEmpty()) {
+            return false;
+        }
+        synchronized (this.jobNotifier) {
+            return this.idleThreads >= this.threads.size();
+        }
+    }
+
+    /**
      * @return True if the build queue is empty
      */
     public boolean isBuildQueueEmpty() {
@@ -260,9 +276,12 @@ public class ChunkBuilder {
 
             if (job == null) {
                 synchronized (ChunkBuilder.this.jobNotifier) {
+                    ChunkBuilder.this.idleThreads++;
                     try {
                         ChunkBuilder.this.jobNotifier.wait();
                     } catch (InterruptedException ignored) {
+                    } finally {
+                        ChunkBuilder.this.idleThreads--;
                     }
                 }
             }

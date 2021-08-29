@@ -320,10 +320,22 @@ public class RenderSectionManager implements ChunkStatusListener {
     }
 
     public void updateChunks() {
-        PriorityQueue<CompletableFuture<ChunkBuildResult>> blockingFutures = this.submitRebuildTasks(ChunkUpdateType.IMPORTANT_REBUILD);
+        updateChunks(false);
+    }
 
-        this.submitRebuildTasks(ChunkUpdateType.INITIAL_BUILD);
-        this.submitRebuildTasks(ChunkUpdateType.REBUILD);
+    public void updateAllChunksNow() {
+        updateChunks(true);
+
+        // Also wait for any rebuilds which had already been scheduled before this method was called
+        this.needsUpdate |= this.performAllUploads();
+    }
+
+    private void updateChunks(boolean allImmediately) {
+        PriorityQueue<CompletableFuture<ChunkBuildResult>> blockingFutures = new ObjectArrayFIFOQueue<>();
+
+        this.submitRebuildTasks(ChunkUpdateType.IMPORTANT_REBUILD, blockingFutures);
+        this.submitRebuildTasks(ChunkUpdateType.INITIAL_BUILD, allImmediately ? blockingFutures : null);
+        this.submitRebuildTasks(ChunkUpdateType.REBUILD, allImmediately ? blockingFutures : null);
 
         // Try to complete some other work on the main thread while we wait for rebuilds to complete
         this.needsUpdate |= this.performPendingUploads();
@@ -336,10 +348,9 @@ public class RenderSectionManager implements ChunkStatusListener {
         this.regions.cleanup();
     }
 
-    private PriorityQueue<CompletableFuture<ChunkBuildResult>> submitRebuildTasks(ChunkUpdateType filterType) {
-        int budget = filterType.isImportant() ? Integer.MAX_VALUE : this.builder.getSchedulingBudget();
+    private void submitRebuildTasks(ChunkUpdateType filterType, PriorityQueue<CompletableFuture<ChunkBuildResult>> immediateFutures) {
+        int budget = immediateFutures != null ? Integer.MAX_VALUE : this.builder.getSchedulingBudget();
 
-        PriorityQueue<CompletableFuture<ChunkBuildResult>> immediateFutures = new ObjectArrayFIFOQueue<>();
         PriorityQueue<RenderSection> queue = this.rebuildQueues.get(filterType);
 
         while (budget > 0 && !queue.isEmpty()) {
@@ -359,7 +370,7 @@ public class RenderSectionManager implements ChunkStatusListener {
             ChunkRenderBuildTask task = this.createRebuildTask(section);
             CompletableFuture<?> future;
 
-            if (filterType.isImportant()) {
+            if (immediateFutures != null) {
                 CompletableFuture<ChunkBuildResult> immediateFuture = this.builder.schedule(task);
                 immediateFutures.enqueue(immediateFuture);
 
@@ -372,8 +383,6 @@ public class RenderSectionManager implements ChunkStatusListener {
 
             budget--;
         }
-
-        return immediateFutures;
     }
 
     private boolean performPendingUploads() {
@@ -386,6 +395,38 @@ public class RenderSectionManager implements ChunkStatusListener {
         this.regions.upload(RenderDevice.INSTANCE.createCommandList(), it);
 
         return true;
+    }
+
+    /**
+     * Processes all build task uploads, blocking for tasks to complete if necessary.
+     */
+    private boolean performAllUploads() {
+        boolean anythingUploaded = false;
+
+        while (true) {
+            // First check if all tasks are done building (and therefore the upload queue is final)
+            boolean allTasksBuilt = this.builder.isIdle();
+
+            // Then process the entire upload queue
+            anythingUploaded |= this.performPendingUploads();
+
+            // If the upload queue was the final one
+            if (allTasksBuilt) {
+                // then we are done
+                return anythingUploaded;
+            } else {
+                // otherwise we need to wait for the worker threads to make progress
+                try {
+                    // This code path is not the default one, it doesn't need super high performance, and having the
+                    // workers notify the main thread just for it is probably not worth it.
+                    //noinspection BusyWait
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return true;
+                }
+            }
+        }
     }
 
     public ChunkRenderBuildTask createRebuildTask(RenderSection render) {
