@@ -41,6 +41,8 @@
     "features.fast_biome_colors.MixinClientWorld",
     "features.gui.MixinDebugHud",
     "features.gui.fast_loading_screen.MixinLevelLoadingScreen",
+    "features.gui.fast_status_bars.MixinInGameHud",
+    "features.gui.fast_fps_pie.MixinMinecraftClient",
     "features.gui.font.MixinGlyphRenderer",
     "features.item.MixinItemRenderer",
     "features.matrix_stack.MixinMatrixStack",
