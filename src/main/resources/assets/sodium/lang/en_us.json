@@ -21,6 +21,8 @@
   "sodium.options.clouds_quality.tooltip": "Controls the quality of rendered clouds in the sky.",
   "sodium.options.weather_quality.name": "Weather Quality",
   "sodium.options.weather_quality.tooltip": "Controls the quality of rain and snow effects.",
+  "sodium.options.leaves_quality.name": "Leaves Quality",
+  "sodium.options.leaves_quality.tooltip": "Controls the quality of leaves.",
   "sodium.options.particle_quality.name": "Particle Quality",
   "sodium.options.particle_quality.tooltip": "Controls the maximum number of particles which can be present on screen at any one time.",
   "sodium.options.smooth_lighting.tooltip": "Controls whether blocks will be smoothly lit and shaded. This slightly increases the amount of time needed to re-build a chunk, but doesn't affect frame rates.",
