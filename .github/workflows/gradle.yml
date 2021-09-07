@@ -12,10 +12,26 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 16
+    - name: Cache/Uncache Sodium
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/loom-cache
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
     - name: Build artifacts
       run: ./gradlew build
+    - name: Extract current branch name
+      shell: bash
+      # bash pattern expansion to grab branch name without slashes
+      run: ref="${GITHUB_REF#refs/heads/}" && echo "::set-output name=branch::${ref////-}"
+      id: ref
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
-        name: build-artifacts
-        path: build/libs
+        name: sodium-artifacts-${{ steps.ref.outputs.branch }}
+        # Filter built files to disregard -sources and -dev, and leave only the minecraft-compatible jars.
+        path: build/libs/*[0-9].jar
