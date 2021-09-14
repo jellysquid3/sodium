@@ -5,13 +5,13 @@ import me.jellysquid.mods.sodium.client.model.light.LightPipeline;
 import me.jellysquid.mods.sodium.client.model.light.LightPipelineProvider;
 import me.jellysquid.mods.sodium.client.model.light.data.QuadLightData;
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuad;
+import me.jellysquid.mods.sodium.client.model.quad.ModelQuadColorProvider;
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuadView;
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuadViewMutable;
 import me.jellysquid.mods.sodium.client.model.quad.blender.BiomeColorBlender;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFlags;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadWinding;
-import me.jellysquid.mods.sodium.client.model.quad.ModelQuadColorProvider;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.ChunkModelBuilder;
 import me.jellysquid.mods.sodium.client.render.chunk.format.ModelVertexSink;
 import me.jellysquid.mods.sodium.client.util.Norm3b;
@@ -19,10 +19,8 @@ import me.jellysquid.mods.sodium.client.util.color.ColorABGR;
 import me.jellysquid.mods.sodium.common.util.DirectionUtil;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.impl.client.rendering.fluid.FluidRenderHandlerRegistryImpl;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.StainedGlassBlock;
+import net.minecraft.block.SideShapeType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.model.ModelLoader;
 import net.minecraft.client.texture.Sprite;
@@ -71,19 +69,16 @@ public class FluidRenderer {
         this.biomeColorBlender = biomeColorBlender;
     }
 
-    private boolean isFluidExposed(BlockRenderView world, int x, int y, int z, Direction dir, Fluid fluid) {
-        // Up direction is hard to test since it doesnt fill the block
-        if(dir != Direction.UP) {
-            BlockPos pos = this.scratchPos.set(x, y, z);
-            BlockState blockState = world.getBlockState(pos);
-            VoxelShape shape = blockState.getCullingShape(world, pos);
-            if (blockState.isOpaque() && VoxelShapes.isSideCovered(VoxelShapes.fullCube(), shape, dir.getOpposite())) {
-                return false; // Fluid is in waterlogged block that self occludes
-            }
-        }
+    private boolean isFluidOccluded(BlockRenderView world, int x, int y, int z, Direction dir, Fluid fluid) {
+        BlockPos pos = this.scratchPos.set(x, y, z);
+        BlockState blockState = world.getBlockState(pos);
+        BlockPos adjPos = this.scratchPos.set(x + dir.getOffsetX(), y + dir.getOffsetY(), z + dir.getOffsetZ());
 
-        BlockPos pos = this.scratchPos.set(x + dir.getOffsetX(), y + dir.getOffsetY(), z + dir.getOffsetZ());
-        return !world.getFluidState(pos).getFluid().matchesType(fluid);
+        if (blockState.isOpaque()) {
+            return world.getFluidState(adjPos).getFluid().matchesType(fluid) || blockState.isSideSolid(world,pos,dir, SideShapeType.FULL);
+            // fluidlogged or next to water, occlude sides that are solid or the same liquid
+            }
+        return world.getFluidState(adjPos).getFluid().matchesType(fluid);
     }
 
     private boolean isSideExposed(BlockRenderView world, int x, int y, int z, Direction dir, float height) {
@@ -116,15 +111,15 @@ public class FluidRenderer {
 
         Fluid fluid = fluidState.getFluid();
 
-        boolean sfUp = this.isFluidExposed(world, posX, posY, posZ, Direction.UP, fluid);
-        boolean sfDown = this.isFluidExposed(world, posX, posY, posZ, Direction.DOWN, fluid) &&
-                this.isSideExposed(world, posX, posY, posZ, Direction.DOWN, 0.8888889F);
-        boolean sfNorth = this.isFluidExposed(world, posX, posY, posZ, Direction.NORTH, fluid);
-        boolean sfSouth = this.isFluidExposed(world, posX, posY, posZ, Direction.SOUTH, fluid);
-        boolean sfWest = this.isFluidExposed(world, posX, posY, posZ, Direction.WEST, fluid);
-        boolean sfEast = this.isFluidExposed(world, posX, posY, posZ, Direction.EAST, fluid);
+        boolean sfUp = this.isFluidOccluded(world, posX, posY, posZ, Direction.UP, fluid);
+        boolean sfDown = this.isFluidOccluded(world, posX, posY, posZ, Direction.DOWN, fluid) ||
+                !this.isSideExposed(world, posX, posY, posZ, Direction.DOWN, 0.8888889F);
+        boolean sfNorth = this.isFluidOccluded(world, posX, posY, posZ, Direction.NORTH, fluid);
+        boolean sfSouth = this.isFluidOccluded(world, posX, posY, posZ, Direction.SOUTH, fluid);
+        boolean sfWest = this.isFluidOccluded(world, posX, posY, posZ, Direction.WEST, fluid);
+        boolean sfEast = this.isFluidOccluded(world, posX, posY, posZ, Direction.EAST, fluid);
 
-        if (!sfUp && !sfDown && !sfEast && !sfWest && !sfNorth && !sfSouth) {
+        if (sfUp && sfDown && sfEast && sfWest && sfNorth && sfSouth) {
             return false;
         }
 
@@ -142,7 +137,7 @@ public class FluidRenderer {
         float h3 = this.getCornerHeight(world, posX + 1, posY, posZ + 1, fluidState.getFluid());
         float h4 = this.getCornerHeight(world, posX + 1, posY, posZ, fluidState.getFluid());
 
-        float yOffset = sfDown ? EPSILON : 0.0F;
+        float yOffset = sfDown ? 0.0F : EPSILON;
 
         final ModelQuadViewMutable quad = this.quad;
 
@@ -151,7 +146,7 @@ public class FluidRenderer {
 
         quad.setFlags(0);
 
-        if (sfUp && this.isSideExposed(world, posX, posY, posZ, Direction.UP, Math.min(Math.min(h1, h2), Math.min(h3, h4)))) {
+        if (!sfUp && this.isSideExposed(world, posX, posY, posZ, Direction.UP, Math.min(Math.min(h1, h2), Math.min(h3, h4)))) {
             h1 -= EPSILON;
             h2 -= EPSILON;
             h3 -= EPSILON;
@@ -228,7 +223,7 @@ public class FluidRenderer {
             rendered = true;
         }
 
-        if (sfDown) {
+        if (!sfDown) {
             Sprite sprite = sprites[0];
 
             float minU = sprite.getMinU();
@@ -264,7 +259,7 @@ public class FluidRenderer {
 
             switch (dir) {
                 case NORTH:
-                    if (!sfNorth) {
+                    if (sfNorth) {
                         continue;
                     }
 
@@ -276,7 +271,7 @@ public class FluidRenderer {
                     z2 = z1;
                     break;
                 case SOUTH:
-                    if (!sfSouth) {
+                    if (sfSouth) {
                         continue;
                     }
 
@@ -288,7 +283,7 @@ public class FluidRenderer {
                     z2 = z1;
                     break;
                 case WEST:
-                    if (!sfWest) {
+                    if (sfWest) {
                         continue;
                     }
 
@@ -300,7 +295,7 @@ public class FluidRenderer {
                     z2 = 0.0f;
                     break;
                 case EAST:
-                    if (!sfEast) {
+                    if (sfEast) {
                         continue;
                     }
 
@@ -323,11 +318,13 @@ public class FluidRenderer {
                 Sprite sprite = sprites[1];
 
                 if (isWater) {
-                    BlockPos posAdj = this.scratchPos.set(adjX, adjY, adjZ);
-                    Block block = world.getBlockState(posAdj).getBlock();
+                    BlockPos adjPos = this.scratchPos.set(adjX, adjY, adjZ);
+                    BlockState adjBlock = world.getBlockState(adjPos);
 
-                    if (block == Blocks.GLASS || block instanceof StainedGlassBlock) {
+                    if (!adjBlock.isOpaque() && !adjBlock.isAir()) {
+                        // ice, glass, stained glass, tinted glass
                         sprite = this.waterOverlaySprite;
+
                     }
                 }
 
