@@ -61,21 +61,17 @@ public class SodiumGameOptions {
     }
 
     public enum ArenaMemoryAllocator implements TextProvider {
-        ASYNC("Async"),
-        SWAP("Swap");
+        ASYNC("sodium.options.chunk_memory_allocator.async"),
+        SWAP("sodium.options.chunk_memory_allocator.swap");
 
-        private final String name;
+        private final Text name;
 
         ArenaMemoryAllocator(String name) {
-            this.name = name;
+            this.name = new TranslatableText(name);
         }
 
         @Override
         public Text getLocalizedName() {
-            return new LiteralText(this.name);
-        }
-
-        public String getName() {
             return this.name;
         }
     }
