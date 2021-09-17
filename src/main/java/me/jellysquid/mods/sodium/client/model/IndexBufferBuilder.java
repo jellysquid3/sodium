@@ -1,12 +1,9 @@
 package me.jellysquid.mods.sodium.client.model;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import me.jellysquid.mods.sodium.client.gl.tessellation.GlIndexType;
-import me.jellysquid.mods.sodium.client.gl.util.ElementRange;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadWinding;
-import me.jellysquid.mods.sodium.client.model.vertex.buffer.VertexBufferBuilder;
 
 import java.nio.ByteBuffer;
 

@@ -2,7 +2,6 @@ package me.jellysquid.mods.sodium.client.gl.buffer;
 
 import org.lwjgl.system.MemoryUtil;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 public class GlBufferMapping {

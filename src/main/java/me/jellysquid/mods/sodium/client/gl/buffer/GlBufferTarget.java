@@ -2,7 +2,6 @@ package me.jellysquid.mods.sodium.client.gl.buffer;
 
 import org.lwjgl.opengl.GL20C;
 import org.lwjgl.opengl.GL31C;
-import org.lwjgl.opengl.GL40C;
 
 public enum GlBufferTarget {
     ARRAY_BUFFER(GL20C.GL_ARRAY_BUFFER, GL20C.GL_ARRAY_BUFFER_BINDING),

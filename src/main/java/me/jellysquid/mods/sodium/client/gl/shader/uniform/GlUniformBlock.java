@@ -1,7 +1,6 @@
 package me.jellysquid.mods.sodium.client.gl.shader.uniform;
 
 import me.jellysquid.mods.sodium.client.gl.buffer.GlBuffer;
-import me.jellysquid.mods.sodium.client.gl.shader.GlProgram;
 import org.lwjgl.opengl.GL32C;
 
 public class GlUniformBlock {

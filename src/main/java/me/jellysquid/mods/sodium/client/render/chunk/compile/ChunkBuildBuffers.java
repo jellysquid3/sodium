@@ -15,7 +15,6 @@ import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPass;
 import me.jellysquid.mods.sodium.client.render.chunk.passes.BlockRenderPassManager;
 import me.jellysquid.mods.sodium.client.util.NativeBuffer;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.util.math.Vec3i;
 
 import java.util.Arrays;
 import java.util.EnumMap;

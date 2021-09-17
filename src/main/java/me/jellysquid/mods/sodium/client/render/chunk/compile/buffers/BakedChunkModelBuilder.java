@@ -2,13 +2,9 @@ package me.jellysquid.mods.sodium.client.render.chunk.compile.buffers;
 
 import me.jellysquid.mods.sodium.client.model.IndexBufferBuilder;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFacing;
-import me.jellysquid.mods.sodium.client.render.chunk.RegionChunkRenderer;
-import me.jellysquid.mods.sodium.client.render.chunk.RenderSection;
 import me.jellysquid.mods.sodium.client.render.chunk.data.ChunkRenderData;
 import me.jellysquid.mods.sodium.client.render.chunk.format.ModelVertexSink;
-import me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.util.math.Vec3i;
 
 public class BakedChunkModelBuilder implements ChunkModelBuilder {
     private final ModelVertexSink vertexSink;

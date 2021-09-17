@@ -1,7 +1,5 @@
 package me.jellysquid.mods.sodium.client.gl.sync;
 
-import me.jellysquid.mods.sodium.client.gl.GlObject;
-import org.lwjgl.opengl.GL30C;
 import org.lwjgl.opengl.GL32C;
 import org.lwjgl.system.MemoryStack;
 
