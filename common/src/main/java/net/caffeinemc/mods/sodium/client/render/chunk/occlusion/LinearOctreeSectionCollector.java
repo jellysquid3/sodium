@@ -12,14 +12,20 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
     Tree secondaryTree;
     final int baseOffsetX, baseOffsetY, baseOffsetZ;
 
+    OcclusionCuller.Visitor visitor;
+    Viewport viewport;
+
     LinearOctreeSectionCollector(Long2ReferenceMap<RenderSection> sections, Viewport viewport, float searchDistance) {
         this.sections = sections;
 
+        // offset is shifted by 1 to encompass all sections towards the negative
+        // + 1 to block position approximate fractional part of camera position (correct?)
+        // TODO: is this the correct way of calculating the minimum possible section index?
         var transform = viewport.getTransform();
-        int offsetDistance = Mth.floor(searchDistance / 16.0f);
-        this.baseOffsetX = (transform.intX >> 4) - offsetDistance - 1;
-        this.baseOffsetY = (transform.intY >> 4) - offsetDistance - 1;
-        this.baseOffsetZ = (transform.intZ >> 4) - offsetDistance - 1;
+        int offsetDistance = Mth.floor(searchDistance / 16.0f) + 1;
+        this.baseOffsetX = ((transform.intX + 1) >> 4) - offsetDistance;
+        this.baseOffsetY = ((transform.intY + 1) >> 4) - offsetDistance;
+        this.baseOffsetZ = ((transform.intZ + 1) >> 4) - offsetDistance;
 
         this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }
@@ -33,20 +39,26 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         if (this.mainTree.add(x, y, z)) {
             if (this.secondaryTree == null) {
                 // offset diagonally to fully encompass the required area
-                this.secondaryTree = new Tree(this.baseOffsetX + 4, this.baseOffsetY, this.baseOffsetZ  + 4);
+                this.secondaryTree = new Tree(this.baseOffsetX + 4, this.baseOffsetY, this.baseOffsetZ + 4);
             }
             if (this.secondaryTree.add(x, y, z)) {
-                throw new IllegalStateException("Failed to add section to secondary tree");
+                throw new IllegalStateException("Failed to add section to trees");
             }
         }
     }
 
     @Override
     void traverseVisible(OcclusionCuller.Visitor visitor, Viewport viewport) {
-        this.mainTree.traverse(visitor, viewport);
+        this.visitor = visitor;
+        this.viewport = viewport;
+
+        this.mainTree.traverse(viewport);
         if (this.secondaryTree != null) {
-            this.secondaryTree.traverse(visitor, viewport);
+            this.secondaryTree.traverse(viewport);
         }
+
+        this.visitor = null;
+        this.viewport = null;
     }
 
     private class Tree {
@@ -54,6 +66,7 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         private final long[] treeReduced = new long[64];
         private long treeDoubleReduced = 0L;
         final int offsetX, offsetY, offsetZ;
+        int cameraOffsetX, cameraOffsetY, cameraOffsetZ;
 
         Tree(int offsetX, int offsetY, int offsetZ) {
             this.offsetX = offsetX;
@@ -99,12 +112,24 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
             return n;
         }
 
-        void traverse(OcclusionCuller.Visitor visitor, Viewport viewport) {
-            this.traverse(visitor, viewport, 0, 5);
+        void traverse(Viewport viewport) {
+            var transform = viewport.getTransform();
+
+            // + 1 to block position approximate fractional part of camera position
+            // + 1 to section position to compensate for shifted global offset
+            this.cameraOffsetX = ((transform.intX + 1) >> 4) - this.offsetX + 1;
+            this.cameraOffsetY = ((transform.intY + 1) >> 4) - this.offsetY + 1;
+            this.cameraOffsetZ = ((transform.intZ + 1) >> 4) - this.offsetZ + 1;
+
+            this.traverse(0, 0, 0, 0, 5);
         }
 
-        void traverse(OcclusionCuller.Visitor visitor, Viewport viewport, int nodeOrigin, int level) {
-            int childDim = 1 << (level + 3); // * 16 / 2
+        void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level) {
+            int childHalfDim = 1 << (level + 3); // * 16 / 2
+            int orderModulator = getNodeTraversalModulator(nodeX, nodeY, nodeZ, childHalfDim >> 3);
+            if ((level & 1) == 1) {
+                orderModulator <<= 3;
+            }
 
             if (level <= 1) {
                 // check using the full bitmap
@@ -117,12 +142,13 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
 
                 if (level == 0) {
                     for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
-                        if ((map & (mask << bitIndex)) != 0) {
-                            int sectionOrigin = childOriginBase | bitIndex;
+                        int childIndex = bitIndex ^ orderModulator;
+                        if ((map & (mask << childIndex)) != 0) {
+                            int sectionOrigin = childOriginBase | childIndex;
                             int x = deinterleave6(sectionOrigin) + this.offsetX;
                             int y = deinterleave6(sectionOrigin >> 1) + this.offsetY;
                             int z = deinterleave6(sectionOrigin >> 2) + this.offsetZ;
-                            if (testNode(viewport, x, y, z, childDim)) {
+                            if (testNode(x, y, z, childHalfDim)) {
                                 // TODO: profile if it's faster to do a hashmap lookup to get the region
                                 // and then use the region's array to get the render section
                                 // TODO: also profile if it's worth it to store an array of all render sections
@@ -131,14 +157,15 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                                 // NOTE: such an array would need to be traversed in the correct front-to-back order
                                 // for this the sections should be in it in x, y, z order and then front-to-back iteration is easy
                                 var section = LinearOctreeSectionCollector.this.sections.get(SectionPos.asLong(x, y, z));
-                                visitor.visit(section, true);
+                                LinearOctreeSectionCollector.this.visitor.visit(section, true);
                             }
                         }
                     }
                 } else {
                     for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
-                        if ((map & (mask << bitIndex)) != 0) {
-                            this.testChild(visitor, viewport, childOriginBase | bitIndex, childDim, level);
+                        int childIndex = bitIndex ^ orderModulator;
+                        if ((map & (mask << childIndex)) != 0) {
+                            this.testChild(childOriginBase | childIndex, childHalfDim, level);
                         }
                     }
                 }
@@ -152,8 +179,9 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                 long map = this.treeReduced[nodeOrigin >> 12];
 
                 for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
-                    if ((map & (mask << bitIndex)) != 0) {
-                        this.testChild(visitor, viewport, childOriginBase | (bitIndex << 6), childDim, level);
+                    int childIndex = bitIndex ^ orderModulator;
+                    if ((map & (mask << childIndex)) != 0) {
+                        this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level);
                     }
                 }
             } else {
@@ -164,30 +192,37 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                 int endBit = startBit + (bitStep << 3);
 
                 for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
-                    if ((this.treeDoubleReduced & (mask << bitIndex)) != 0) {
-                        this.testChild(visitor, viewport, bitIndex << 12, childDim, level);
+                    int childIndex = bitIndex ^ orderModulator;
+                    if ((this.treeDoubleReduced & (mask << childIndex)) != 0) {
+                        this.testChild(childIndex << 12, childHalfDim, level);
                     }
                 }
             }
         }
 
-        void testChild(OcclusionCuller.Visitor visitor, Viewport viewport, int childOrigin, int childDim, int level) {
-            int x = deinterleave6(childOrigin) + this.offsetX;
-            int y = deinterleave6(childOrigin >> 1) + this.offsetY;
-            int z = deinterleave6(childOrigin >> 2) + this.offsetZ;
-            if (testNode(viewport, x, y, z, childDim)) {
-                this.traverse(visitor, viewport, childOrigin, level - 1);
+        void testChild(int childOrigin, int childDim, int level) {
+            int x = deinterleave6(childOrigin);
+            int y = deinterleave6(childOrigin >> 1);
+            int z = deinterleave6(childOrigin >> 2);
+            if (testNode(x + this.offsetX, y + this.offsetY, z + this.offsetZ, childDim)) {
+                this.traverse(x, y, z, childOrigin, level - 1);
             }
         }
 
-        static boolean testNode(Viewport viewport, int x, int y, int z, int childDim) {
-            return viewport.isBoxVisible(
+        boolean testNode(int x, int y, int z, int childDim) {
+            return LinearOctreeSectionCollector.this.viewport.isBoxVisible(
                     (x << 4) + childDim,
                     (y << 4) + childDim,
                     (z << 4) + childDim,
                     childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
                     childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
                     childDim + OcclusionCuller.CHUNK_SECTION_SIZE);
+        }
+
+        int getNodeTraversalModulator(int x, int y, int z, int childSections) {
+            return (x + childSections - this.cameraOffsetX) >>> 31
+                    | ((y + childSections - this.cameraOffsetY) >>> 31) << 1
+                    | ((z + childSections - this.cameraOffsetZ) >>> 31) << 2;
         }
     }
 }
