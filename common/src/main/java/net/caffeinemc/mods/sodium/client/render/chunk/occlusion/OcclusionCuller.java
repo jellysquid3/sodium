@@ -18,6 +18,12 @@ public class OcclusionCuller {
 
     private final DoubleBufferedQueue<RenderSection> queue = new DoubleBufferedQueue<>();
 
+    // The bounding box of a chunk section must be large enough to contain all possible geometry within it. Block models
+    // can extend outside a block volume by +/- 1.0 blocks on all axis. Additionally, we make use of a small epsilon
+    // to deal with floating point imprecision during a frustum check (see GH#2132).
+    static final float CHUNK_SECTION_RADIUS = 8.0f /* chunk bounds */;
+    static final float CHUNK_SECTION_SIZE = CHUNK_SECTION_RADIUS + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
+
     public OcclusionCuller(Long2ReferenceMap<RenderSection> sections, Level level) {
         this.sections = sections;
         this.level = level;
@@ -32,13 +38,16 @@ public class OcclusionCuller {
         final var queues = this.queue;
         queues.reset();
 
-        this.init(visitor, queues.write(), viewport, searchDistance, useOcclusionCulling, frame);
+        var collector = new LinearOctreeSectionCollector(this.sections, viewport, searchDistance);
+        this.init(collector, queues.write(), viewport, searchDistance, useOcclusionCulling, frame);
 
         while (queues.flip()) {
-            processQueue(visitor, viewport, searchDistance, useOcclusionCulling, frame, queues.read(), queues.write());
+            processQueue(collector, viewport, searchDistance, useOcclusionCulling, frame, queues.read(), queues.write());
         }
 
         this.addNearbySections(visitor, viewport, searchDistance, frame);
+
+        collector.traverseVisible(visitor, viewport);
     }
 
     private static void processQueue(Visitor visitor,
@@ -111,7 +120,8 @@ public class OcclusionCuller {
     }
 
     private static boolean isSectionVisible(RenderSection section, Viewport viewport, float maxDistance) {
-        return isWithinRenderDistance(viewport.getTransform(), section, maxDistance) && isWithinFrustum(viewport, section);
+        // TODO: fix
+        return isWithinRenderDistance(viewport.getTransform(), section, maxDistance); // && isWithinFrustum(viewport, section);
     }
 
     private static void visitNeighbors(final WriteQueue<RenderSection> queue, RenderSection section, int outgoing, int frame) {
@@ -207,12 +217,6 @@ public class OcclusionCuller {
         return clamped;
     }
 
-    // The bounding box of a chunk section must be large enough to contain all possible geometry within it. Block models
-    // can extend outside a block volume by +/- 1.0 blocks on all axis. Additionally, we make use of a small epsilon
-    // to deal with floating point imprecision during a frustum check (see GH#2132).
-    private static final float CHUNK_SECTION_RADIUS = 8.0f /* chunk bounds */;
-    private static final float CHUNK_SECTION_SIZE = CHUNK_SECTION_RADIUS + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
-
     public static boolean isWithinFrustum(Viewport viewport, RenderSection section) {
         return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
                 CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE);
@@ -220,7 +224,7 @@ public class OcclusionCuller {
 
     // this bigger chunk section size is only used for frustum-testing nearby sections with large models
     private static final float CHUNK_SECTION_SIZE_NEARBY = CHUNK_SECTION_RADIUS + 2.0f /* bigger model extent */ + 0.125f /* epsilon */;
-    
+
     public static boolean isWithinNearbySectionFrustum(Viewport viewport, RenderSection section) {
         return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
                 CHUNK_SECTION_SIZE_NEARBY, CHUNK_SECTION_SIZE_NEARBY, CHUNK_SECTION_SIZE_NEARBY);
@@ -365,7 +369,9 @@ public class OcclusionCuller {
     private void tryVisitNode(WriteQueue<RenderSection> queue, int x, int y, int z, int direction, int frame, Viewport viewport) {
         RenderSection section = this.getRenderSection(x, y, z);
 
-        if (section == null || !isWithinFrustum(viewport, section)) {
+        // TODO: fix
+        // if (section == null || !isWithinFrustum(viewport, section)) {
+        if (section == null) {
             return;
         }
 
