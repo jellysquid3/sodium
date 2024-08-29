@@ -85,7 +85,7 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         }
 
         private static int interleave6(int n) {
-            n &= 0b000000000000111111;
+            n &=               0b000000000000111111;
             n = (n | n << 8) & 0b000011000000001111;
             n = (n | n << 4) & 0b000011000011000011;
             n = (n | n << 2) & 0b001001001001001001;
@@ -93,10 +93,9 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         }
 
         private static int deinterleave6(int n) {
-            n &= 0b001001001001001001;
-            n = (n | n >> 2) & 0b000011000011000011;
-            n = (n | n >> 4) & 0b000011000000001111;
-            n = (n | n >> 8) & 0b000000000000111111;
+            n &=                        0b001001001001001001;
+            n = (n | n >> 2) &          0b000011000011000011;
+            n = (n | n >> 4 | n >> 8) & 0b000000000000111111;
             return n;
         }
 
