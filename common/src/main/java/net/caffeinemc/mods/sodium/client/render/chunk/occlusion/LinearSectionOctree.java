@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.occlusion;
 
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
+import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.PendingTaskCollector;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.minecraft.util.Mth;
@@ -59,6 +60,11 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
     @Override
     public void visit(RenderSection section) {
         super.visit(section);
+
+        // discard invisible or sections that don't need to be rendered
+        if (!visible || (section.getRegion().getSectionFlags(section.getSectionIndex()) & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
+            return;
+        }
 
         int x = section.getChunkX();
         int y = section.getChunkY();
@@ -159,17 +165,16 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
 
             if (level <= 1) {
                 // check using the full bitmap
-                int bitStep = 1 << (level * 3);
-                long mask = (1L << bitStep) - 1;
-                int startBit = nodeOrigin & 0b111111;
-                int endBit = startBit + (bitStep << 3);
                 int childOriginBase = nodeOrigin & 0b111111_111111_000000;
                 long map = this.tree[nodeOrigin >> 6];
 
                 if (level == 0) {
-                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
+                    int startBit = nodeOrigin & 0b111111;
+                    int endBit = startBit + 8;
+
+                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex++) {
                         int childIndex = bitIndex ^ orderModulator;
-                        if ((map & (mask << childIndex)) != 0) {
+                        if ((map & (1L << childIndex)) != 0) {
                             int sectionOrigin = childOriginBase | childIndex;
                             int x = deinterleave6(sectionOrigin) + this.offsetX;
                             int y = deinterleave6(sectionOrigin >> 1) + this.offsetY;
@@ -181,9 +186,9 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                         }
                     }
                 } else {
-                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
+                    for (int bitIndex = 0; bitIndex < 64; bitIndex += 8) {
                         int childIndex = bitIndex ^ orderModulator;
-                        if ((map & (mask << childIndex)) != 0) {
+                        if ((map & (0xFFL << childIndex)) != 0) {
                             this.testChild(childOriginBase | childIndex, childHalfDim, level, inside);
                         }
                     }
@@ -224,14 +229,15 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
             int y = deinterleave6(childOrigin >> 1);
             int z = deinterleave6(childOrigin >> 2);
 
-            int result = 0;
-            int cacheWriteTarget = -1;
+            boolean intersection = false;
             if (!inside) {
-                result = intersectNode(x + this.offsetX, y + this.offsetY, z + this.offsetZ, childDim);
+                // TODO: actually measure time to generate a render list on dev and compare
+                var result = intersectNode(x + this.offsetX, y + this.offsetY, z + this.offsetZ, childDim);
                 inside = result == FrustumIntersection.INSIDE;
+                intersection = result == FrustumIntersection.INTERSECT;
             }
 
-            if (inside || result == FrustumIntersection.INTERSECT) {
+            if (inside || intersection) {
                 this.traverse(x, y, z, childOrigin, level - 1, inside);
             }
         }

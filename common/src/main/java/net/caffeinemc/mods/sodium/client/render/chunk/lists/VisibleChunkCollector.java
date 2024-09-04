@@ -1,7 +1,6 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.LinearSectionOctree;
@@ -42,15 +41,14 @@ public class VisibleChunkCollector implements LinearSectionOctree.VisibleSection
 
         ChunkRenderList renderList = region.getRenderList();
 
-            if (renderList.getLastVisibleFrame() != this.frame) {
+        if (renderList.getLastVisibleFrame() != this.frame) {
             renderList.reset(this.frame);
 
-                this.sortedRenderLists.add(renderList);
-            }
-
-        if (region.getSectionFlags(sectionIndex) != 0) {
-            renderList.add(sectionIndex);
+            this.sortedRenderLists.add(renderList);
         }
+
+        // flags don't need to be checked here since only sections with contents (RenderSectionFlags.MASK_NEEDS_RENDER) are added to the octree
+        renderList.add(sectionIndex);
     }
 
     private static int[] sortItems = new int[RenderRegion.REGION_SIZE];
