@@ -245,31 +245,44 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                     }
                 }
             } else if (level <= 3) {
-                // check using the single reduced bitmap
-                int bitStep = 1 << (level * 3 - 6);
-                long mask = (1L << bitStep) - 1;
-                int startBit = (nodeOrigin >> 6) & 0b111111;
-                int endBit = startBit + (bitStep << 3);
                 int childOriginBase = nodeOrigin & 0b111111_000000_000000;
                 long map = this.treeReduced[nodeOrigin >> 12];
 
-                for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
-                    int childIndex = bitIndex ^ orderModulator;
-                    if ((map & (mask << childIndex)) != 0) {
-                        this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level, inside);
+                if (level == 2) {
+                    int startBit = (nodeOrigin >> 6) & 0b111111;
+                    int endBit = startBit + 8;
+
+                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex ++) {
+                        int childIndex = bitIndex ^ orderModulator;
+                        if ((map & (1L << childIndex)) != 0) {
+                            this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level, inside);
+                        }
+                    }
+                } else {
+                    for (int bitIndex = 0; bitIndex < 64; bitIndex += 8) {
+                        int childIndex = bitIndex ^ orderModulator;
+                        if ((map & (0xFFL << childIndex)) != 0) {
+                            this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level, inside);
+                        }
                     }
                 }
             } else {
-                // check using the double reduced bitmap
-                int bitStep = 1 << (level * 3 - 12);
-                long mask = (1L << bitStep) - 1;
-                int startBit = nodeOrigin >> 12;
-                int endBit = startBit + (bitStep << 3);
+                if (level == 4) {
+                    int startBit = nodeOrigin >> 12;
+                    int endBit = startBit + 8;
 
-                for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
-                    int childIndex = bitIndex ^ orderModulator;
-                    if ((this.treeDoubleReduced & (mask << childIndex)) != 0) {
-                        this.testChild(childIndex << 12, childHalfDim, level, inside);
+                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex ++) {
+                        int childIndex = bitIndex ^ orderModulator;
+                        if ((this.treeDoubleReduced & (1L << childIndex)) != 0) {
+                            this.testChild(childIndex << 12, childHalfDim, level, inside);
+                        }
+                    }
+                } else {
+                    for (int bitIndex = 0; bitIndex < 64; bitIndex += 8) {
+                        int childIndex = bitIndex ^ orderModulator;
+                        if ((this.treeDoubleReduced & (0xFFL << childIndex)) != 0) {
+                            this.testChild(childIndex << 12, childHalfDim, level, inside);
+                        }
                     }
                 }
             }
