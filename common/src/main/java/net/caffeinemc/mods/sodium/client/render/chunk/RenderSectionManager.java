@@ -172,7 +172,7 @@ public class RenderSectionManager {
         var start = System.nanoTime();
         this.currentTree.traverseVisible(visibleCollector, viewport);
         var end = System.nanoTime();
-        if (this.traversalSamples.size() == 100) {
+        if (this.traversalSamples.size() == 2000) {
             long sum = 0;
             for (int i = 0; i < this.traversalSamples.size(); i++) {
                 sum += this.traversalSamples.getInt(i);
