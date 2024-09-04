@@ -108,6 +108,7 @@ public class RenderSectionManager {
 
     private final ExecutorService cullExecutor = Executors.newSingleThreadExecutor();
     private LinearSectionOctree currentTree = null;
+    private Viewport currentViewport = null;
 
     public RenderSectionManager(ClientLevel level, int renderDistance, CommandList commandList) {
         this.chunkRenderer = new DefaultChunkRenderer(RenderDevice.INSTANCE, ChunkMeshFormats.COMPACT);
@@ -169,9 +170,12 @@ public class RenderSectionManager {
 
         // there must a result there now, use it to generate render lists for the frame
         var visibleCollector = new VisibleChunkCollector(this.regions, this.lastUpdatedFrame);
+        this.currentViewport = viewport;
+
         var start = System.nanoTime();
         this.currentTree.traverseVisible(visibleCollector, viewport);
         var end = System.nanoTime();
+
         if (this.traversalSamples.size() == 2000) {
             long sum = 0;
             for (int i = 0; i < this.traversalSamples.size(); i++) {
@@ -313,14 +317,8 @@ public class RenderSectionManager {
         }
     }
 
-    public boolean isSectionVisible(int x, int y, int z) {
-        RenderSection render = this.getRenderSection(x, y, z);
-
-        if (render == null) {
-            return false;
-        }
-
-        return render.getLastVisibleFrame() == this.lastUpdatedFrame;
+    public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
+        return this.currentTree == null || this.currentTree.isBoxVisible(this.currentViewport, x1, y1, z1, x2, y2, z2);
     }
 
     public void uploadChunks() {

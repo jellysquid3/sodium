@@ -4,6 +4,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.PendingTaskCollector;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import org.joml.FrustumIntersection;
 
@@ -81,6 +82,38 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
         }
     }
 
+    public boolean isBoxVisible(Viewport viewport, double x1, double y1, double z1, double x2, double y2, double z2) {
+        if (!viewport.isBoxVisible(x1, y1, z1, x2, y2, z2)) {
+            return false;
+        }
+
+        // check if there's a section at any part of the box
+        int minX = SectionPos.posToSectionCoord(x1 - 0.5D);
+        int minY = SectionPos.posToSectionCoord(y1 - 0.5D);
+        int minZ = SectionPos.posToSectionCoord(z1 - 0.5D);
+
+        int maxX = SectionPos.posToSectionCoord(x2 + 0.5D);
+        int maxY = SectionPos.posToSectionCoord(y2 + 0.5D);
+        int maxZ = SectionPos.posToSectionCoord(z2 + 0.5D);
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                for (int y = minY; y <= maxY; y++) {
+                    if (this.isSectionPresent(x, y, z)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isSectionPresent(int x, int y, int z) {
+        return this.mainTree.isSectionPresent(x, y, z) ||
+                (this.secondaryTree != null && this.secondaryTree.isSectionPresent(x, y, z));
+    }
+
     public void traverseVisible(VisibleSectionVisitor visitor, Viewport viewport) {
         this.visitor = visitor;
         this.viewport = viewport;
@@ -143,6 +176,24 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
             n = (n | n >> 2) & 0b000011000011000011;
             n = (n | n >> 4 | n >> 8) & 0b000000000000111111;
             return n;
+        }
+
+        boolean isSectionPresent(int x, int y, int z) {
+            x -= this.offsetX;
+            y -= this.offsetY;
+            z -= this.offsetZ;
+            if (x > 63 || y > 63 || z > 63 || x < 0 || y < 0 || z < 0) {
+                return false;
+            }
+
+            var bitIndex = interleave6x3(x, y, z);
+            int doubleReducedBitIndex = bitIndex >> 12;
+            if ((this.treeDoubleReduced & (1L << doubleReducedBitIndex)) == 0) {
+                return false;
+            }
+
+            int reducedBitIndex = bitIndex >> 6;
+            return (this.tree[reducedBitIndex] & (1L << (bitIndex & 0b111111))) != 0;
         }
 
         void traverse(Viewport viewport) {

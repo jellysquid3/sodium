@@ -506,25 +506,7 @@ public class SodiumWorldRenderer {
             return true;
         }
 
-        int minX = SectionPos.posToSectionCoord(x1 - 0.5D);
-        int minY = SectionPos.posToSectionCoord(y1 - 0.5D);
-        int minZ = SectionPos.posToSectionCoord(z1 - 0.5D);
-
-        int maxX = SectionPos.posToSectionCoord(x2 + 0.5D);
-        int maxY = SectionPos.posToSectionCoord(y2 + 0.5D);
-        int maxZ = SectionPos.posToSectionCoord(z2 + 0.5D);
-
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                for (int y = minY; y <= maxY; y++) {
-                    if (this.renderSectionManager.isSectionVisible(x, y, z)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        return this.renderSectionManager.isBoxVisible(x1, y1, z1, x2, y2, z2);
     }
 
     public String getChunksDebugString() {
