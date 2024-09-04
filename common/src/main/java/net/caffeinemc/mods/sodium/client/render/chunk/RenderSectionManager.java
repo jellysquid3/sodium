@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMaps;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap;
@@ -136,6 +137,8 @@ public class RenderSectionManager {
         this.cameraPosition = cameraPosition;
     }
 
+    private final IntArrayList traversalSamples = new IntArrayList();
+
     public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator) {
         this.lastUpdatedFrame += 1;
 
@@ -169,7 +172,16 @@ public class RenderSectionManager {
         var start = System.nanoTime();
         this.currentTree.traverseVisible(visibleCollector, viewport);
         var end = System.nanoTime();
-        System.out.println("Tree read took " + (end - start) / 1000 + "µs");
+        if (this.traversalSamples.size() == 100) {
+            long sum = 0;
+            for (int i = 0; i < this.traversalSamples.size(); i++) {
+                sum += this.traversalSamples.getInt(i);
+            }
+            System.out.println("Tree traversal took " + sum / this.traversalSamples.size() + "µs on average over " + this.traversalSamples.size() + " samples");
+            this.traversalSamples.clear();
+        } else {
+            this.traversalSamples.add((int) (end - start) / 1000);
+        }
 
         this.renderLists = visibleCollector.createRenderLists();
 
