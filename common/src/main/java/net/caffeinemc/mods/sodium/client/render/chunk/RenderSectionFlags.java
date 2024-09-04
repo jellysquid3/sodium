@@ -10,7 +10,7 @@ public class RenderSectionFlags {
     public static final int MASK_HAS_BLOCK_ENTITIES      = 1 << HAS_BLOCK_ENTITIES;
     public static final int MASK_HAS_ANIMATED_SPRITES    = 1 << HAS_ANIMATED_SPRITES;
     public static final int MASK_IS_BUILT                = 1 << IS_BUILT;
-    public static final int MASK_NEEDS_RENDER           = MASK_HAS_BLOCK_GEOMETRY | MASK_HAS_ANIMATED_SPRITES | MASK_HAS_BLOCK_ENTITIES;
+    public static final int MASK_NEEDS_RENDER           = MASK_HAS_BLOCK_GEOMETRY | MASK_HAS_BLOCK_ENTITIES | MASK_HAS_ANIMATED_SPRITES;
 
     public static final int NONE = 0;
 }
