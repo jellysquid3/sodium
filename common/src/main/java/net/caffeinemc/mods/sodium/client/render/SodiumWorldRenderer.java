@@ -36,7 +36,6 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.BlockDestructionProgress;
 import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.Profiler;
@@ -208,7 +207,7 @@ public class SodiumWorldRenderer {
         this.lastCameraYaw = yaw;
 
         if (cameraLocationChanged || cameraAngleChanged || cameraProjectionChanged) {
-            this.renderSectionManager.markFrustumDirty();
+            this.renderSectionManager.markRenderListDirty();
         }
 
         this.lastFogDistance = fogDistance;
@@ -471,10 +470,13 @@ public class SodiumWorldRenderer {
     }
 
     // the volume of a section multiplied by the number of sections to be checked at most
-    private static final double MAX_ENTITY_CHECK_VOLUME = 16 * 16 * 16 * 15;
+    private static final double MAX_ENTITY_CHECK_VOLUME = 16 * 16 * 16 * 50;
 
     /**
-     * Returns whether or not the entity intersects with any visible chunks in the graph.
+     * Returns whether the entity intersects with any visible chunks in the graph.
+     *
+     * Note that this method assumes the entity is within the frustum. It does not perform a frustum check.
+     *
      * @return True if the entity is visible, otherwise false
      */
     public <T extends Entity, S extends EntityRenderState> boolean isEntityVisible(EntityRenderer<T, S> renderer, T entity) {
@@ -492,7 +494,7 @@ public class SodiumWorldRenderer {
         // bail on very large entities to avoid checking many sections
         double entityVolume = (bb.maxX - bb.minX) * (bb.maxY - bb.minY) * (bb.maxZ - bb.minZ);
         if (entityVolume > MAX_ENTITY_CHECK_VOLUME) {
-            // TODO: do a frustum check instead, even large entities aren't visible if they're outside the frustum
+            // large entities are only frustum tested, their sections are not checked for visibility
             return true;
         }
 

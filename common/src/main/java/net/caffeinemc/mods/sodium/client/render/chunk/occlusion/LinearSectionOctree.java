@@ -82,11 +82,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
         }
     }
 
-    public boolean isBoxVisible(Viewport viewport, double x1, double y1, double z1, double x2, double y2, double z2) {
-        if (!viewport.isBoxVisible(x1, y1, z1, x2, y2, z2)) {
-            return false;
-        }
-
+    public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
         // check if there's a section at any part of the box
         int minX = SectionPos.posToSectionCoord(x1 - 0.5D);
         int minY = SectionPos.posToSectionCoord(y1 - 0.5D);

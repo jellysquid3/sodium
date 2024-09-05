@@ -318,7 +318,7 @@ public class RenderSectionManager {
     }
 
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
-        return this.currentTree == null || this.currentTree.isBoxVisible(this.currentViewport, x1, y1, z1, x2, y2, z2);
+        return this.currentTree == null || this.currentTree.isBoxVisible(x1, y1, z1, x2, y2, z2);
     }
 
     public void uploadChunks() {
