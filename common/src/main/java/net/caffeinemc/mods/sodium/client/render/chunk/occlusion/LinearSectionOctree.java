@@ -18,7 +18,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
     final Tree mainTree;
     Tree secondaryTree;
     final int baseOffsetX, baseOffsetY, baseOffsetZ;
-    final int buildSectionCenterX, buildSectionCenterY, buildSectionCenterZ;
+    final int buildSectionX, buildSectionY, buildSectionZ;
 
     VisibleSectionVisitor visitor;
     Viewport viewport;
@@ -26,7 +26,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
     // offset is shifted by 1 to encompass all sections towards the negative
     // TODO: is this the correct way of calculating the minimum possible section index?
     private static final int TREE_OFFSET = 1;
-    private static final int REUSE_MAX_DISTANCE = 8;
+    private static final int REUSE_MAX_SECTION_DISTANCE = 0;
 
     public interface VisibleSectionVisitor {
         void visit(int x, int y, int z);
@@ -36,21 +36,21 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
 
         var transform = viewport.getTransform();
         int offsetDistance = Mth.floor(searchDistance / 16.0f) + TREE_OFFSET;
-        this.buildSectionCenterX = (transform.intX & ~0b1111) + 8;
-        this.buildSectionCenterY = (transform.intY & ~0b1111) + 8;
-        this.buildSectionCenterZ = (transform.intZ & ~0b1111) + 8;
-        this.baseOffsetX = (transform.intX >> 4) - offsetDistance;
-        this.baseOffsetY = (transform.intY >> 4) - offsetDistance;
-        this.baseOffsetZ = (transform.intZ >> 4) - offsetDistance;
+        this.buildSectionX = transform.intX >> 4;
+        this.buildSectionY = transform.intY >> 4;
+        this.buildSectionZ = transform.intZ >> 4;
+        this.baseOffsetX = this.buildSectionX - offsetDistance;
+        this.baseOffsetY = this.buildSectionY - offsetDistance;
+        this.baseOffsetZ = this.buildSectionZ - offsetDistance;
 
         this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }
 
     public boolean isAcceptableFor(Viewport viewport) {
         var transform = viewport.getTransform();
-        return Math.abs(transform.intX - this.buildSectionCenterX) <= REUSE_MAX_DISTANCE
-                && Math.abs(transform.intY - this.buildSectionCenterY) <= REUSE_MAX_DISTANCE
-                && Math.abs(transform.intZ - this.buildSectionCenterZ) <= REUSE_MAX_DISTANCE;
+        return Math.abs((transform.intX >> 4) - this.buildSectionX) <= REUSE_MAX_SECTION_DISTANCE
+            && Math.abs((transform.intY >> 4) - this.buildSectionY) <= REUSE_MAX_SECTION_DISTANCE
+            && Math.abs((transform.intZ >> 4) - this.buildSectionZ) <= REUSE_MAX_SECTION_DISTANCE;
     }
 
     @Override
