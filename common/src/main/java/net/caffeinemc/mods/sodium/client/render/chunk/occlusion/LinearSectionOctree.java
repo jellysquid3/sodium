@@ -46,7 +46,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
         this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }
 
-    public boolean isAcceptableFor(Viewport viewport) {
+    public boolean isCompatibleWith(Viewport viewport) {
         var transform = viewport.getTransform();
         return Math.abs((transform.intX >> 4) - this.buildSectionX) <= REUSE_MAX_SECTION_DISTANCE
             && Math.abs((transform.intY >> 4) - this.buildSectionY) <= REUSE_MAX_SECTION_DISTANCE

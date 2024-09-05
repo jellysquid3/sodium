@@ -21,7 +21,9 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilder
 import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionInfo;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.SortedRenderLists;
-import net.caffeinemc.mods.sodium.client.render.chunk.lists.VisibleChunkCollector;
+import net.caffeinemc.mods.sodium.client.render.chunk.lists.VisibleChunkCollectorAsync;
+import net.caffeinemc.mods.sodium.client.render.chunk.lists.VisibleChunkCollectorSync;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.AsyncCameraTimingControl;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.GraphDirection;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.LinearSectionOctree;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
@@ -59,10 +61,7 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3dc;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class RenderSectionManager {
     private final ChunkBuilder builder;
@@ -96,19 +95,18 @@ public class RenderSectionManager {
 
     private int lastUpdatedFrame;
 
-    private enum UpdateType {
-        NONE,
-        GRAPH,
-        FRUSTUM
-    }
-    private UpdateType needsUpdate = UpdateType.NONE;
+    private boolean needsGraphUpdate = true;
+    private boolean needsRenderListUpdate = true;
 
     private @Nullable BlockPos cameraBlockPos;
     private @Nullable Vector3dc cameraPosition;
 
     private final ExecutorService cullExecutor = Executors.newSingleThreadExecutor();
+    private Future<LinearSectionOctree> pendingTree = null;
     private LinearSectionOctree currentTree = null;
-    private Viewport currentViewport = null;
+    private boolean treeIsFrustumTested = false;
+
+    private final AsyncCameraTimingControl cameraTimingControl = new AsyncCameraTimingControl();
 
     public RenderSectionManager(ClientLevel level, int renderDistance, CommandList commandList) {
         this.chunkRenderer = new DefaultChunkRenderer(RenderDevice.INSTANCE, ChunkMeshFormats.COMPACT);
@@ -140,56 +138,97 @@ public class RenderSectionManager {
 
     private final IntArrayList traversalSamples = new IntArrayList();
 
+    private void unpackPendingTree() {
+        try {
+            this.currentTree = this.pendingTree.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Failed to do graph search occlusion culling", e);
+        }
+
+        this.taskLists = this.currentTree.getRebuildLists();
+        this.pendingTree = null;
+
+        this.needsGraphUpdate = false;
+        this.treeIsFrustumTested = false;
+        this.needsRenderListUpdate = true;
+    }
+
     public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator) {
         this.lastUpdatedFrame += 1;
 
-        this.resetRenderLists();
-
-        final var searchDistance = this.getSearchDistance();
-        final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
-
-        // preliminary implementation: re-do cull job on camera movement, always use the previous result
         // TODO: preempt camera movement or make BFS work with movement (widen outgoing direction impl)
 
+        if (this.pendingTree != null && this.pendingTree.isDone()) {
+            this.unpackPendingTree();
+        }
+
+        var treeCompatible = this.currentTree == null || !this.currentTree.isCompatibleWith(viewport);
+        if (this.cameraTimingControl.getShouldRenderSync(camera) && treeCompatible) {
+            // switch to sync rendering if the camera moved too much
+            final var searchDistance = this.getSearchDistance();
+            final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
+
+            var start = System.nanoTime();
+            this.currentTree = new LinearSectionOctree(viewport, searchDistance);
+            var visibleCollector = new VisibleChunkCollectorSync(this.currentTree, this.lastUpdatedFrame);
+            this.occlusionCuller.findVisible(visibleCollector, viewport, searchDistance, useOcclusionCulling, this.lastUpdatedFrame);
+            var end = System.nanoTime();
+
+            System.out.println("Sync graph search took " + (end - start) / 1000 + "µs");
+
+            this.renderLists = visibleCollector.createRenderLists();
+            this.needsRenderListUpdate = false;
+            this.needsGraphUpdate = false;
+
+            // make sure the bfs is re-done before just using this tree with an incompatible frustum
+            this.treeIsFrustumTested = true;
+
+            return;
+        }
+
         // generate a section tree result with the occlusion culler if there currently is none
-        if (this.needsGraphUpdate() || this.currentTree == null || !this.currentTree.isAcceptableFor(viewport)) {
-            try {
-                this.currentTree = this.cullExecutor.submit(() -> {
-                    var start = System.nanoTime();
-                    var tree = new LinearSectionOctree(viewport, searchDistance);
-                    this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, this.lastUpdatedFrame);
-                    var end = System.nanoTime();
-                    System.out.println("Graph search with tree build took " + (end - start) / 1000 + "µs");
-                    return tree;
-                }).get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException("Failed to cull chunks", e);
-            }
-            this.taskLists = this.currentTree.getRebuildLists();
+        if ((this.needsGraphUpdate() || treeCompatible || this.treeIsFrustumTested) && this.pendingTree == null) {
+            final var searchDistance = this.getSearchDistance();
+            final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
+
+            this.pendingTree = this.cullExecutor.submit(() -> {
+//                Thread.sleep(100);
+                var start = System.nanoTime();
+                var tree = new LinearSectionOctree(viewport, searchDistance);
+                this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, this.lastUpdatedFrame);
+                var end = System.nanoTime();
+                System.out.println("Graph search with tree build took " + (end - start) / 1000 + "µs");
+                return tree;
+            });
         }
 
-        // there must a result there now, use it to generate render lists for the frame
-        var visibleCollector = new VisibleChunkCollector(this.regions, this.lastUpdatedFrame);
-        this.currentViewport = viewport;
-
-        var start = System.nanoTime();
-        this.currentTree.traverseVisible(visibleCollector, viewport);
-        var end = System.nanoTime();
-
-        if (this.traversalSamples.size() == 2000) {
-            long sum = 0;
-            for (int i = 0; i < this.traversalSamples.size(); i++) {
-                sum += this.traversalSamples.getInt(i);
+        if (this.needsRenderListUpdate()) {
+            // wait if there's no current tree (first frames)
+            if (this.currentTree == null) {
+                this.unpackPendingTree();
             }
-            System.out.println("Tree traversal took " + sum / this.traversalSamples.size() + "µs on average over " + this.traversalSamples.size() + " samples");
-            this.traversalSamples.clear();
-        } else {
-            this.traversalSamples.add((int) (end - start) / 1000);
+
+            var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.lastUpdatedFrame);
+
+            var start = System.nanoTime();
+            this.currentTree.traverseVisible(visibleCollector, viewport);
+            var end = System.nanoTime();
+
+            if (this.traversalSamples.size() == 2000) {
+                long sum = 0;
+                for (int i = 0; i < this.traversalSamples.size(); i++) {
+                    sum += this.traversalSamples.getInt(i);
+                }
+                System.out.println("Tree traversal took " + sum / this.traversalSamples.size() + "µs on average over " + this.traversalSamples.size() + " samples");
+                this.traversalSamples.clear();
+            } else {
+                this.traversalSamples.add((int) (end - start) / 1000);
+            }
+
+            this.renderLists = visibleCollector.createRenderLists();
+
+            this.needsRenderListUpdate = false;
         }
-
-        this.renderLists = visibleCollector.createRenderLists();
-
-        this.needsUpdate = UpdateType.NONE;
     }
 
     private float getSearchDistance() {
@@ -215,14 +254,6 @@ public class RenderSectionManager {
             useOcclusionCulling = Minecraft.getInstance().smartCull;
         }
         return useOcclusionCulling;
-    }
-
-    private void resetRenderLists() {
-        this.renderLists = SortedRenderLists.empty();
-
-        for (var list : this.taskLists.values()) {
-            list.clear();
-        }
     }
 
     public void onSectionAdded(int x, int y, int z) {
@@ -556,21 +587,23 @@ public class RenderSectionManager {
     }
 
     public void markGraphDirty() {
-        this.needsUpdate = UpdateType.GRAPH;
+        this.needsGraphUpdate = true;
     }
 
-    public void markFrustumDirty() {
-        if (this.needsUpdate == UpdateType.NONE) {
-            this.needsUpdate = UpdateType.FRUSTUM;
-        }
+    public void markRenderListDirty() {
+        this.needsRenderListUpdate = true;
     }
 
     public boolean needsAnyUpdate() {
-        return this.needsUpdate != UpdateType.NONE;
+        return this.needsGraphUpdate || this.needsRenderListUpdate || (this.pendingTree != null && this.pendingTree.isDone());
     }
 
     public boolean needsGraphUpdate() {
-        return this.needsUpdate == UpdateType.GRAPH;
+        return this.needsGraphUpdate;
+    }
+
+    public boolean needsRenderListUpdate() {
+        return this.needsRenderListUpdate;
     }
 
     public ChunkBuilder getBuilder() {
@@ -591,7 +624,12 @@ public class RenderSectionManager {
         }
 
         this.sectionsWithGlobalEntities.clear();
-        this.resetRenderLists();
+
+        this.renderLists = SortedRenderLists.empty();
+
+        for (var list : this.taskLists.values()) {
+            list.clear();
+        }
 
         try (CommandList commandList = RenderDevice.INSTANCE.createCommandList()) {
             this.regions.delete(commandList);
