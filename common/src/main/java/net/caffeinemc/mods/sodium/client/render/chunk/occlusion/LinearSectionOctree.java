@@ -13,26 +13,35 @@ import org.joml.FrustumIntersection;
  * ideas to prevent one frame of wrong display when BFS is recalculated but not ready yet:
  * - preemptively do the bfs from the next section the camera is going to be in, and maybe pad the render distance by how far the player can move before we need to recalculate. (if there's padding, then I guess the distance check would need to also be put in the traversal's test)
  * - a more experimental idea would be to allow the BFS to go both left and right (as it currently does in sections that are aligned with the origin section) in the sections aligned with the origin section's neighbors. This would mean we can safely use the bfs result in all neighbors, but could slightly increase the number of false positives (which is a problem already...)
+ * - make another tree similar to this one that is used to track invalidation cubes in the bfs to make it possible to reuse some of its results (?)
  */
 public class LinearSectionOctree extends PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
+    // offset is shifted by 1 to encompass all sections towards the negative
+    // TODO: is this the correct way of calculating the minimum possible section index?
+    private static final int TREE_OFFSET = 1;
+
     final Tree mainTree;
     Tree secondaryTree;
     final int baseOffsetX, baseOffsetY, baseOffsetZ;
     final int buildSectionX, buildSectionY, buildSectionZ;
 
-    VisibleSectionVisitor visitor;
-    Viewport viewport;
+    private final int updateFrame;
+    private final CullType cullType;
+    private final int bfsWidth;
+    private final boolean isFrustumTested;
 
-    // offset is shifted by 1 to encompass all sections towards the negative
-    // TODO: is this the correct way of calculating the minimum possible section index?
-    private static final int TREE_OFFSET = 1;
-    private static final int REUSE_MAX_SECTION_DISTANCE = 0;
+    private VisibleSectionVisitor visitor;
+    private Viewport viewport;
 
     public interface VisibleSectionVisitor {
         void visit(int x, int y, int z);
     }
 
-    public LinearSectionOctree(Viewport viewport, float searchDistance) {
+    public LinearSectionOctree(Viewport viewport, float searchDistance, int updateFrame, CullType cullType) {
+        this.updateFrame = updateFrame;
+        this.cullType = cullType;
+        this.bfsWidth = cullType.bfsWidth;
+        this.isFrustumTested = cullType.isFrustumTested;
 
         var transform = viewport.getTransform();
         int offsetDistance = Mth.floor(searchDistance / 16.0f) + TREE_OFFSET;
@@ -46,16 +55,31 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
         this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }
 
-    public boolean isCompatibleWith(Viewport viewport) {
-        var transform = viewport.getTransform();
-        return Math.abs((transform.intX >> 4) - this.buildSectionX) <= REUSE_MAX_SECTION_DISTANCE
-            && Math.abs((transform.intY >> 4) - this.buildSectionY) <= REUSE_MAX_SECTION_DISTANCE
-            && Math.abs((transform.intZ >> 4) - this.buildSectionZ) <= REUSE_MAX_SECTION_DISTANCE;
+    public int getUpdateFrame() {
+        return this.updateFrame;
+    }
+
+    public CullType getCullType() {
+        return this.cullType;
     }
 
     @Override
     public boolean isWithinFrustum(Viewport viewport, RenderSection section) {
-        return true;
+        return !this.isFrustumTested || super.isWithinFrustum(viewport, section);
+    }
+
+    @Override
+    public int getOutwardDirections(SectionPos origin, RenderSection section) {
+        int planes = 0;
+
+        planes |= section.getChunkX() <= origin.getX() + this.bfsWidth ? 1 << GraphDirection.WEST  : 0;
+        planes |= section.getChunkX() >= origin.getX() - this.bfsWidth ? 1 << GraphDirection.EAST  : 0;
+        planes |= section.getChunkY() <= origin.getY() + this.bfsWidth ? 1 << GraphDirection.DOWN  : 0;
+        planes |= section.getChunkY() >= origin.getY() - this.bfsWidth ? 1 << GraphDirection.UP    : 0;
+        planes |= section.getChunkZ() <= origin.getZ() + this.bfsWidth ? 1 << GraphDirection.NORTH : 0;
+        planes |= section.getChunkZ() >= origin.getZ() - this.bfsWidth ? 1 << GraphDirection.SOUTH : 0;
+
+        return planes;
     }
 
     @Override

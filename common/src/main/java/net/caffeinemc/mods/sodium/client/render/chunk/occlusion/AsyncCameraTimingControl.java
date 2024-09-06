@@ -4,8 +4,8 @@ import net.minecraft.client.Camera;
 import net.minecraft.world.phys.Vec3;
 
 public class AsyncCameraTimingControl {
-    private static final double ENTER_SYNC_STEP_THRESHOLD = 16;
-    private static final double EXIT_SYNC_STEP_THRESHOLD = 10;
+    private static final double ENTER_SYNC_STEP_THRESHOLD = 32;
+    private static final double EXIT_SYNC_STEP_THRESHOLD = 20;
 
     private Vec3 previousPosition;
     private boolean isSyncRendering = false;

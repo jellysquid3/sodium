@@ -1,7 +1,6 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMaps;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap;
@@ -23,10 +22,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.SortedRenderLists;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.VisibleChunkCollectorAsync;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.VisibleChunkCollectorSync;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.AsyncCameraTimingControl;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.GraphDirection;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.LinearSectionOctree;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.*;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegionManager;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
@@ -93,7 +89,8 @@ public class RenderSectionManager {
     @NotNull
     private Map<ChunkUpdateType, ObjectArrayFIFOQueue<RenderSection>> taskLists;
 
-    private int lastUpdatedFrame;
+    private int frame;
+    private int lastGraphDirtyFrame;
 
     private boolean needsGraphUpdate = true;
     private boolean needsRenderListUpdate = true;
@@ -102,9 +99,11 @@ public class RenderSectionManager {
     private @Nullable Vector3dc cameraPosition;
 
     private final ExecutorService cullExecutor = Executors.newSingleThreadExecutor();
+    private CullType pendingCullType = null;
     private Future<LinearSectionOctree> pendingTree = null;
-    private LinearSectionOctree currentTree = null;
-    private boolean treeIsFrustumTested = false;
+    private LinearSectionOctree latestUpdatedTree = null;
+    private LinearSectionOctree renderTree = null;
+    private final EnumMap<CullType, LinearSectionOctree> trees = new EnumMap<>(CullType.class);
 
     private final AsyncCameraTimingControl cameraTimingControl = new AsyncCameraTimingControl();
 
@@ -136,99 +135,155 @@ public class RenderSectionManager {
         this.cameraPosition = cameraPosition;
     }
 
-    private final IntArrayList traversalSamples = new IntArrayList();
-
     private void unpackPendingTree() {
+        if (this.pendingTree == null) {
+            throw new IllegalStateException("No pending tree to unpack");
+        }
+
+        LinearSectionOctree tree;
         try {
-            this.currentTree = this.pendingTree.get();
+            tree = this.pendingTree.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Failed to do graph search occlusion culling", e);
         }
 
-        this.taskLists = this.currentTree.getRebuildLists();
+        // TODO: improve task system by reading back the render lists and applying a more reasonable priority to sections than just whether they're visible or not. We also want currently out-of-frustum sections to eventually get built, since otherwise the world is missing when the player turns around.
+        // TODO: another problem with async bfs is that since the bfs is slower, it leads a slower iterate/load cycle since new sections only get discovered if the bfs traverses into them, which is only possible after building the section and generating its visibility data.
+        this.taskLists = tree.getRebuildLists();
         this.pendingTree = null;
+        this.pendingCullType = null;
 
-        this.needsGraphUpdate = false;
-        this.treeIsFrustumTested = false;
-        this.needsRenderListUpdate = true;
+        // use tree if it can be used (frustum tested bfs results can't be used if the frustum has changed)
+        if (!(this.needsRenderListUpdate() && tree.getCullType() == CullType.FRUSTUM)) {
+            this.trees.put(tree.getCullType(), tree);
+            this.latestUpdatedTree = tree;
+
+            this.needsGraphUpdate = false;
+            this.needsRenderListUpdate = true;
+        }
     }
 
-    public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator) {
-        this.lastUpdatedFrame += 1;
+    public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator, boolean updateImmediately) {
+        this.frame += 1;
 
-        // TODO: preempt camera movement or make BFS work with movement (widen outgoing direction impl)
+        // TODO: with more work it might be good to submit multiple async bfs tasks at once (so that more than one cull type's tree can be built each frame). However, this introduces the need for a lot more complicated decisions. What to do when a task is pending but will be invalid by the time it's completed? Which of multiple results should be used for rebuild task scheduling? Should pending tasks be replaced with more up to date tasks if they're running (or not running)?
 
-        if (this.pendingTree != null && this.pendingTree.isDone()) {
-            this.unpackPendingTree();
-        }
-
-        var treeCompatible = this.currentTree == null || !this.currentTree.isCompatibleWith(viewport);
-        if (this.cameraTimingControl.getShouldRenderSync(camera) && treeCompatible) {
+        // when updating immediately (flawless frame), just do sync bfs continuously.
+        // if we're not updating immediately, the camera timing control should receive the new camera position each time.
+        if ((updateImmediately || this.cameraTimingControl.getShouldRenderSync(camera)) &&
+                (this.needsGraphUpdate() || this.needsRenderListUpdate())) {
             // switch to sync rendering if the camera moved too much
             final var searchDistance = this.getSearchDistance();
             final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
-            var start = System.nanoTime();
-            this.currentTree = new LinearSectionOctree(viewport, searchDistance);
-            var visibleCollector = new VisibleChunkCollectorSync(this.currentTree, this.lastUpdatedFrame);
-            this.occlusionCuller.findVisible(visibleCollector, viewport, searchDistance, useOcclusionCulling, this.lastUpdatedFrame);
-            var end = System.nanoTime();
+            var tree = new LinearSectionOctree(viewport, searchDistance, this.frame, CullType.FRUSTUM);
+            var visibleCollector = new VisibleChunkCollectorSync(tree, this.frame);
+            this.occlusionCuller.findVisible(visibleCollector, viewport, searchDistance, useOcclusionCulling, this.frame);
 
-            System.out.println("Sync graph search took " + (end - start) / 1000 + "µs");
+            this.trees.put(CullType.FRUSTUM, tree);
+            this.renderTree = tree;
 
             this.renderLists = visibleCollector.createRenderLists();
             this.needsRenderListUpdate = false;
             this.needsGraphUpdate = false;
 
-            // make sure the bfs is re-done before just using this tree with an incompatible frustum
-            this.treeIsFrustumTested = true;
-
             return;
         }
 
-        // generate a section tree result with the occlusion culler if there currently is none
-        if ((this.needsGraphUpdate() || treeCompatible || this.treeIsFrustumTested) && this.pendingTree == null) {
-            final var searchDistance = this.getSearchDistance();
-            final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
-
-            this.pendingTree = this.cullExecutor.submit(() -> {
-//                Thread.sleep(100);
-                var start = System.nanoTime();
-                var tree = new LinearSectionOctree(viewport, searchDistance);
-                this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, this.lastUpdatedFrame);
-                var end = System.nanoTime();
-                System.out.println("Graph search with tree build took " + (end - start) / 1000 + "µs");
-                return tree;
-            });
+        if (this.needsGraphUpdate()) {
+            this.lastGraphDirtyFrame = this.frame;
+            this.needsGraphUpdate = false;
         }
 
         if (this.needsRenderListUpdate()) {
-            // wait if there's no current tree (first frames)
-            if (this.currentTree == null) {
-                this.unpackPendingTree();
+            this.trees.remove(CullType.FRUSTUM);
+
+            // discard unusable tree
+            if (this.pendingTree != null && !this.pendingTree.isDone() && this.pendingCullType == CullType.FRUSTUM) {
+                this.pendingTree.cancel(true);
+                this.pendingTree = null;
+                this.pendingCullType = null;
             }
+        }
 
-            var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.lastUpdatedFrame);
+        // unpack the pending tree any time there is one
+        if (this.pendingTree != null && this.pendingTree.isDone()) {
+            this.unpackPendingTree();
+        }
 
-            var start = System.nanoTime();
-            this.currentTree.traverseVisible(visibleCollector, viewport);
-            var end = System.nanoTime();
+        // if we're not currently working on a tree, check if there's any more work that needs to be done
+        if (this.pendingTree == null) {
+            // regardless of whether the graph has been marked as dirty, working on the widest tree that hasn't yet been updated to match the current graph dirty frame is the best option. Since the graph dirty frame is updated if the graph has been marked as dirty, this also results in the whole cascade of trees being reset when the graph is marked as dirty.
 
-            if (this.traversalSamples.size() == 2000) {
-                long sum = 0;
-                for (int i = 0; i < this.traversalSamples.size(); i++) {
-                    sum += this.traversalSamples.getInt(i);
+            CullType workOnType = null;
+            for (var type : CullType.WIDE_TO_NARROW) {
+                var tree = this.trees.get(type);
+                if (tree == null) {
+                    workOnType = type;
+                    break;
+                } else {
+                    var treeUpdateFrame = tree.getUpdateFrame();
+                    if (treeUpdateFrame < this.lastGraphDirtyFrame) {
+                        workOnType = type;
+                        break;
+                    }
                 }
-                System.out.println("Tree traversal took " + sum / this.traversalSamples.size() + "µs on average over " + this.traversalSamples.size() + " samples");
-                this.traversalSamples.clear();
-            } else {
-                this.traversalSamples.add((int) (end - start) / 1000);
             }
 
-            this.renderLists = visibleCollector.createRenderLists();
+            if (workOnType != null) {
+                final var searchDistance = this.getSearchDistance();
+                final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
+                final var localType = workOnType;
+
+                this.pendingCullType = localType;
+                this.pendingTree = this.cullExecutor.submit(() -> {
+                    var tree = new LinearSectionOctree(viewport, searchDistance, this.frame, localType);
+                    this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, this.frame);
+                    return tree;
+                });
+            }
+        }
+
+        if (this.needsRenderListUpdate()) {
+            // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
+            LinearSectionOctree bestTree = null;
+            for (var type : CullType.NARROW_TO_WIDE) {
+                var tree = this.trees.get(type);
+                if (tree != null && (bestTree == null || tree.getUpdateFrame() > bestTree.getUpdateFrame())) {
+                    bestTree = tree;
+                }
+            }
 
             this.needsRenderListUpdate = false;
+
+            // wait if there's no current tree (first frames)
+            if (bestTree == null) {
+                this.unpackPendingTree();
+                bestTree = this.latestUpdatedTree;
+            }
+
+            var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
+            bestTree.traverseVisible(visibleCollector, viewport);
+            this.renderLists = visibleCollector.createRenderLists();
+
+            this.renderTree = bestTree;
         }
+    }
+
+    public void markGraphDirty() {
+        this.needsGraphUpdate = true;
+    }
+
+    public void markRenderListDirty() {
+        this.needsRenderListUpdate = true;
+    }
+
+    public boolean needsGraphUpdate() {
+        return this.needsGraphUpdate;
+    }
+
+    public boolean needsRenderListUpdate() {
+        return this.needsRenderListUpdate;
     }
 
     private float getSearchDistance() {
@@ -349,7 +404,7 @@ public class RenderSectionManager {
     }
 
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
-        return this.currentTree == null || this.currentTree.isBoxVisible(x1, y1, z1, x2, y2, z2);
+        return this.renderTree == null || this.renderTree.isBoxVisible(x1, y1, z1, x2, y2, z2);
     }
 
     public void uploadChunks() {
@@ -524,7 +579,7 @@ public class RenderSectionManager {
                 continue;
             }
 
-            int frame = this.lastUpdatedFrame;
+            int frame = this.frame;
             ChunkBuilderTask<? extends BuilderTaskOutput> task;
             if (type == ChunkUpdateType.SORT || type == ChunkUpdateType.IMPORTANT_SORT) {
                 task = this.createSortTask(section, frame);
@@ -584,26 +639,6 @@ public class RenderSectionManager {
 
     public void processGFNIMovement(CameraMovement movement) {
         this.sortTriggering.triggerSections(this::scheduleSort, movement);
-    }
-
-    public void markGraphDirty() {
-        this.needsGraphUpdate = true;
-    }
-
-    public void markRenderListDirty() {
-        this.needsRenderListUpdate = true;
-    }
-
-    public boolean needsAnyUpdate() {
-        return this.needsGraphUpdate || this.needsRenderListUpdate || (this.pendingTree != null && this.pendingTree.isDone());
-    }
-
-    public boolean needsGraphUpdate() {
-        return this.needsGraphUpdate;
-    }
-
-    public boolean needsRenderListUpdate() {
-        return this.needsRenderListUpdate;
     }
 
     public ChunkBuilder getBuilder() {

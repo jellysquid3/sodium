@@ -222,13 +222,10 @@ public class SodiumWorldRenderer {
         }
 
         int maxChunkUpdates = updateChunksImmediately ? this.renderDistance : 1;
-
         for (int i = 0; i < maxChunkUpdates; i++) {
-            if (this.renderSectionManager.needsAnyUpdate()) {
-                profiler.popPush("chunk_render_lists");
+            profiler.popPush("chunk_render_lists");
 
-                this.renderSectionManager.updateRenderLists(camera, viewport, spectator);
-            }
+            this.renderSectionManager.updateRenderLists(camera, viewport, spectator, updateChunksImmediately);
 
             profiler.popPush("chunk_update");
 
@@ -239,7 +236,7 @@ public class SodiumWorldRenderer {
 
             this.renderSectionManager.uploadChunks();
 
-            if (!this.renderSectionManager.needsAnyUpdate()) {
+            if (!this.renderSectionManager.needsGraphUpdate()) {
                 break;
             }
         }
