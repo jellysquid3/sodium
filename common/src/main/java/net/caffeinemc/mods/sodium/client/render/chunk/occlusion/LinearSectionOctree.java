@@ -25,26 +25,29 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
     final int baseOffsetX, baseOffsetY, baseOffsetZ;
     final int buildSectionX, buildSectionY, buildSectionZ;
 
-    private final int updateFrame;
-    private final CullType cullType;
     private final int bfsWidth;
     private final boolean isFrustumTested;
+    private final float buildDistance;
+    private final int frame;
+    private final CullType cullType;
 
     private VisibleSectionVisitor visitor;
     private Viewport viewport;
+    private float distanceLimit;
 
     public interface VisibleSectionVisitor {
         void visit(int x, int y, int z);
     }
 
-    public LinearSectionOctree(Viewport viewport, float searchDistance, int updateFrame, CullType cullType) {
-        this.updateFrame = updateFrame;
-        this.cullType = cullType;
+    public LinearSectionOctree(Viewport viewport, float buildDistance, int frame, CullType cullType) {
         this.bfsWidth = cullType.bfsWidth;
         this.isFrustumTested = cullType.isFrustumTested;
+        this.buildDistance = buildDistance;
+        this.frame = frame;
+        this.cullType = cullType;
 
         var transform = viewport.getTransform();
-        int offsetDistance = Mth.floor(searchDistance / 16.0f) + TREE_OFFSET;
+        int offsetDistance = Mth.floor(buildDistance / 16.0f) + TREE_OFFSET;
         this.buildSectionX = transform.intX >> 4;
         this.buildSectionY = transform.intY >> 4;
         this.buildSectionZ = transform.intZ >> 4;
@@ -55,12 +58,12 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
         this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }
 
-    public int getUpdateFrame() {
-        return this.updateFrame;
-    }
-
     public CullType getCullType() {
         return this.cullType;
+    }
+
+    public int getFrame() {
+        return this.frame;
     }
 
     @Override
@@ -134,9 +137,14 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                 (this.secondaryTree != null && this.secondaryTree.isSectionPresent(x, y, z));
     }
 
-    public void traverseVisible(VisibleSectionVisitor visitor, Viewport viewport) {
+    private boolean isDistanceLimitActive() {
+        return LinearSectionOctree.this.distanceLimit < LinearSectionOctree.this.buildDistance;
+    }
+
+    public void traverseVisible(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
         this.visitor = visitor;
         this.viewport = viewport;
+        this.distanceLimit = distanceLimit;
 
         this.mainTree.traverse(viewport);
         if (this.secondaryTree != null) {
@@ -154,6 +162,10 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
         private final int offsetX, offsetY, offsetZ;
 
         private int cameraOffsetX, cameraOffsetY, cameraOffsetZ;
+
+        private static final int INSIDE_FRUSTUM  = 0b01;
+        private static final int INSIDE_DISTANCE = 0b10;
+        private static final int FULLY_INSIDE    = 0b11;
 
         Tree(int offsetX, int offsetY, int offsetZ) {
             this.offsetX = offsetX;
@@ -224,10 +236,11 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
             this.cameraOffsetY = (transform.intY >> 4) - this.offsetY + 1;
             this.cameraOffsetZ = (transform.intZ >> 4) - this.offsetZ + 1;
 
-            this.traverse(0, 0, 0, 0, 5, false);
+            var initialInside = LinearSectionOctree.this.isDistanceLimitActive() ? 0 : INSIDE_DISTANCE;
+            this.traverse(0, 0, 0, 0, 5, initialInside);
         }
 
-        void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level, boolean inside) {
+        void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level, int inside) {
             int childHalfDim = 1 << (level + 3); // * 16 / 2
             int orderModulator = getChildOrderModulator(nodeX, nodeY, nodeZ, childHalfDim >> 3);
             if ((level & 1) == 1) {
@@ -251,7 +264,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                             int y = deinterleave6(sectionOrigin >> 1) + this.offsetY;
                             int z = deinterleave6(sectionOrigin >> 2) + this.offsetZ;
 
-                            if (inside || testNode(x, y, z, childHalfDim)) {
+                            if (inside == FULLY_INSIDE || testLeafNode(x, y, z, inside)) {
                                 LinearSectionOctree.this.visitor.visit(x, y, z);
                             }
                         }
@@ -272,7 +285,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                     int startBit = (nodeOrigin >> 6) & 0b111111;
                     int endBit = startBit + 8;
 
-                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex ++) {
+                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex++) {
                         int childIndex = bitIndex ^ orderModulator;
                         if ((map & (1L << childIndex)) != 0) {
                             this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level, inside);
@@ -291,7 +304,7 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                     int startBit = nodeOrigin >> 12;
                     int endBit = startBit + 8;
 
-                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex ++) {
+                    for (int bitIndex = startBit; bitIndex < endBit; bitIndex++) {
                         int childIndex = bitIndex ^ orderModulator;
                         if ((this.treeDoubleReduced & (1L << childIndex)) != 0) {
                             this.testChild(childIndex << 12, childHalfDim, level, inside);
@@ -308,42 +321,134 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
             }
         }
 
-        void testChild(int childOrigin, int childDim, int level, boolean inside) {
+        void testChild(int childOrigin, int childHalfDim, int level, int inside) {
+            // calculate section coordinates in tree-space
             int x = deinterleave6(childOrigin);
             int y = deinterleave6(childOrigin >> 1);
             int z = deinterleave6(childOrigin >> 2);
 
-            boolean intersection = false;
-            if (!inside) {
-                // TODO: actually measure time to generate a render list on dev and compare
-                var result = intersectNode(x + this.offsetX, y + this.offsetY, z + this.offsetZ, childDim);
-                inside = result == FrustumIntersection.INSIDE;
-                intersection = result == FrustumIntersection.INTERSECT;
+            // immediately traverse if fully inside
+            if (inside == FULLY_INSIDE) {
+                this.traverse(x, y, z, childOrigin, level - 1, inside);
+                return;
             }
 
-            if (inside || intersection) {
+            // convert to world-space section origin in blocks, then to camera space
+            var transform = LinearSectionOctree.this.viewport.getTransform();
+            x = ((x + this.offsetX) << 4) - transform.intX;
+            y = ((y + this.offsetY) << 4) - transform.intY;
+            z = ((z + this.offsetZ) << 4) - transform.intZ;
+
+            boolean visible = true;
+
+            if ((inside & INSIDE_FRUSTUM) == 0) {
+                var intersectionResult = LinearSectionOctree.this.viewport.getBoxIntersectionDirect(
+                        (x + childHalfDim) - transform.fracX,
+                        (y + childHalfDim) - transform.fracY,
+                        (z + childHalfDim) - transform.fracZ,
+                        childHalfDim + OcclusionCuller.CHUNK_SECTION_MARGIN);
+                if (intersectionResult == FrustumIntersection.INSIDE) {
+                    inside |= INSIDE_FRUSTUM;
+                } else {
+                    visible = intersectionResult == FrustumIntersection.INTERSECT;
+                }
+            }
+
+            if ((inside & INSIDE_DISTANCE) == 0) {
+                // calculate the point of the node closest to the camera
+                int childFullDim = childHalfDim << 1;
+                float dx = nearestToZero(x, x + childFullDim) - transform.fracX;
+                float dy = nearestToZero(y, y + childFullDim) - transform.fracY;
+                float dz = nearestToZero(z, z + childFullDim) - transform.fracZ;
+
+                // check if closest point inside the cylinder
+                visible = cylindricalDistanceTest(dx, dy, dz, LinearSectionOctree.this.distanceLimit);
+                if (visible) {
+                    // if the farthest point is also visible, the node is fully inside
+                    dx = farthestFromZero(x, x + childFullDim) - transform.fracX;
+                    dy = farthestFromZero(y, y + childFullDim) - transform.fracY;
+                    dz = farthestFromZero(z, z + childFullDim) - transform.fracZ;
+
+                    if (cylindricalDistanceTest(dx, dy, dz, LinearSectionOctree.this.distanceLimit)) {
+                        inside |= INSIDE_DISTANCE;
+                    }
+                }
+            }
+
+            if (visible) {
                 this.traverse(x, y, z, childOrigin, level - 1, inside);
             }
         }
 
-        boolean testNode(int x, int y, int z, int childDim) {
-            return LinearSectionOctree.this.viewport.isBoxVisible(
-                    (x << 4) + childDim,
-                    (y << 4) + childDim,
-                    (z << 4) + childDim,
-                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
-                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
-                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE);
+        boolean testLeafNode(int x, int y, int z, int inside) {
+            // input coordinates are section coordinates in world-space
+
+            var transform = LinearSectionOctree.this.viewport.getTransform();
+
+            // convert to blocks and move into integer camera space
+            x = (x << 4) - transform.intX;
+            y = (y << 4) - transform.intY;
+            z = (z << 4) - transform.intZ;
+
+            // test frustum if not already inside frustum
+            if ((inside & INSIDE_FRUSTUM) == 0 && !LinearSectionOctree.this.viewport.isBoxVisibleDirect(
+                    (x + 8) - transform.fracX,
+                    (y + 8) - transform.fracY,
+                    (z + 8) - transform.fracZ,
+                    OcclusionCuller.CHUNK_SECTION_RADIUS)) {
+                return false;
+            }
+
+            // test distance if not already inside distance
+            if ((inside & INSIDE_DISTANCE) == 0) {
+                // coordinates of the point to compare (in view space)
+                // this is the closest point within the bounding box to the center (0, 0, 0)
+                float dx = nearestToZero(x, x + 16) - transform.fracX;
+                float dy = nearestToZero(y, y + 16) - transform.fracY;
+                float dz = nearestToZero(z, z + 16) - transform.fracZ;
+
+                return cylindricalDistanceTest(dx, dy, dz, LinearSectionOctree.this.distanceLimit);
+            }
+
+            return true;
         }
 
-        int intersectNode(int x, int y, int z, int childDim) {
-            return LinearSectionOctree.this.viewport.getBoxIntersection(
-                    (x << 4) + childDim,
-                    (y << 4) + childDim,
-                    (z << 4) + childDim,
-                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
-                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
-                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE);
+        static boolean cylindricalDistanceTest(float dx, float dy, float dz, float distanceLimit) {
+            // vanilla's "cylindrical fog" algorithm
+            // max(length(distance.xz), abs(distance.y))
+            return (((dx * dx) + (dz * dz)) < (distanceLimit * distanceLimit)) &&
+                    (Math.abs(dy) < distanceLimit);
+        }
+
+        @SuppressWarnings("ManualMinMaxCalculation") // we know what we are doing.
+        private static int nearestToZero(int min, int max) {
+            // this compiles to slightly better code than Math.min(Math.max(0, min), max)
+            int clamped = 0;
+            if (min > 0) {
+                clamped = min;
+            }
+            if (max < 0) {
+                clamped = max;
+            }
+            return clamped;
+        }
+
+        private static int farthestFromZero(int min, int max) {
+            int clamped = 0;
+            if (min > 0) {
+                clamped = max;
+            }
+            if (max < 0) {
+                clamped = min;
+            }
+            if (clamped == 0) {
+                if (Math.abs(min) > Math.abs(max)) {
+                    clamped = min;
+                } else {
+                    clamped = max;
+                }
+            }
+            return clamped;
         }
 
         int getChildOrderModulator(int x, int y, int z, int childSectionDim) {
@@ -352,5 +457,4 @@ public class LinearSectionOctree extends PendingTaskCollector implements Occlusi
                     | ((z + childSectionDim - this.cameraOffsetZ) >>> 31) << 2;
         }
     }
-
 }

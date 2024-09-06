@@ -10,7 +10,6 @@ import net.caffeinemc.mods.sodium.client.util.collections.WriteQueue;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.NotNull;
 
 public class OcclusionCuller {
     private final Long2ReferenceMap<RenderSection> sections;
@@ -22,14 +21,15 @@ public class OcclusionCuller {
     // can extend outside a block volume by +/- 1.0 blocks on all axis. Additionally, we make use of a small epsilon
     // to deal with floating point imprecision during a frustum check (see GH#2132).
     static final float CHUNK_SECTION_RADIUS = 8.0f /* chunk bounds */;
-    static final float CHUNK_SECTION_SIZE = CHUNK_SECTION_RADIUS + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
+    static final float CHUNK_SECTION_MARGIN = 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
+    static final float CHUNK_SECTION_SIZE = CHUNK_SECTION_RADIUS + CHUNK_SECTION_MARGIN;
 
     public interface GraphOcclusionVisitor {
         void visit(RenderSection section);
 
         default boolean isWithinFrustum(Viewport viewport, RenderSection section) {
             return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
-                    CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE);
+                    CHUNK_SECTION_RADIUS, CHUNK_SECTION_RADIUS, CHUNK_SECTION_RADIUS);
         }
 
         default int getOutwardDirections(SectionPos origin, RenderSection section) {

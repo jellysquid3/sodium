@@ -176,7 +176,7 @@ public class RenderSectionManager {
             final var searchDistance = this.getSearchDistance();
             final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
-            // cancel running task to prevent two parallel calls to bfs which will cause race conditions
+            // cancel running task to prevent two bfs running at the same time, which will cause race conditions
             if (this.pendingTree != null) {
                 this.pendingTree.cancel(true);
                 this.pendingTree = null;
@@ -189,6 +189,10 @@ public class RenderSectionManager {
 
             this.trees.put(CullType.FRUSTUM, tree);
             this.renderTree = tree;
+
+            // remove the other trees, they're very wrong by now
+            this.trees.remove(CullType.WIDE);
+            this.trees.remove(CullType.REGULAR);
 
             this.renderLists = visibleCollector.createRenderLists();
             this.needsRenderListUpdate = false;
@@ -203,9 +207,8 @@ public class RenderSectionManager {
         }
 
         if (this.needsRenderListUpdate()) {
+            // discard unusable present and pending trees
             this.trees.remove(CullType.FRUSTUM);
-
-            // discard unusable tree
             if (this.pendingTree != null && !this.pendingTree.isDone() && this.pendingCullType == CullType.FRUSTUM) {
                 this.pendingTree.cancel(true);
                 this.pendingTree = null;
@@ -218,7 +221,7 @@ public class RenderSectionManager {
             this.unpackPendingTree();
         }
 
-        // if we're not currently working on a tree, check if there's any more work that needs to be done
+        // check if more work needs to be done if none is currently being done
         if (this.pendingTree == null) {
             // regardless of whether the graph has been marked as dirty, working on the widest tree that hasn't yet been updated to match the current graph dirty frame is the best option. Since the graph dirty frame is updated if the graph has been marked as dirty, this also results in the whole cascade of trees being reset when the graph is marked as dirty.
 
@@ -229,7 +232,7 @@ public class RenderSectionManager {
                     workOnType = type;
                     break;
                 } else {
-                    var treeUpdateFrame = tree.getUpdateFrame();
+                    var treeUpdateFrame = tree.getFrame();
                     if (treeUpdateFrame < this.lastGraphDirtyFrame) {
                         workOnType = type;
                         break;
@@ -238,14 +241,14 @@ public class RenderSectionManager {
             }
 
             if (workOnType != null) {
-                final var searchDistance = this.getSearchDistance();
-                final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
                 final var localType = workOnType;
+                final var localRenderDistance = this.getRenderDistance();
+                final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
                 this.pendingCullType = localType;
                 this.pendingTree = this.cullExecutor.submit(() -> {
-                    var tree = new LinearSectionOctree(viewport, searchDistance, this.frame, localType);
-                    this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, this.frame);
+                    var tree = new LinearSectionOctree(viewport, localRenderDistance, this.frame, localType);
+                    this.occlusionCuller.findVisible(tree, viewport, localRenderDistance, useOcclusionCulling, this.frame);
                     return tree;
                 });
             }
@@ -256,21 +259,21 @@ public class RenderSectionManager {
             LinearSectionOctree bestTree = null;
             for (var type : CullType.NARROW_TO_WIDE) {
                 var tree = this.trees.get(type);
-                if (tree != null && (bestTree == null || tree.getUpdateFrame() > bestTree.getUpdateFrame())) {
+                if (tree != null && (bestTree == null || tree.getFrame() > bestTree.getFrame())) {
                     bestTree = tree;
                 }
             }
 
             this.needsRenderListUpdate = false;
 
-            // wait if there's no current tree (first frames)
+            // wait if there's no current tree (first frames after initial load/reload)
             if (bestTree == null) {
                 this.unpackPendingTree();
                 bestTree = this.latestUpdatedTree;
             }
 
             var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
-            bestTree.traverseVisible(visibleCollector, viewport);
+            bestTree.traverseVisible(visibleCollector, viewport, this.getSearchDistance());
             this.renderLists = visibleCollector.createRenderLists();
 
             this.renderTree = bestTree;

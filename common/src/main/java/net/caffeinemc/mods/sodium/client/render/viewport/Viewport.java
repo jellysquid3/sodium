@@ -41,31 +41,27 @@ public final class Viewport {
         );
     }
 
-    public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
+    public boolean isBoxVisibleDirect(float floatOriginX, float floatOriginY, float floatOriginZ, float floatSize) {
         return this.frustum.testAab(
-                (float)((x1 - this.transform.intX) - this.transform.fracX),
-                (float)((y1 - this.transform.intY) - this.transform.fracY),
-                (float)((z1 - this.transform.intZ) - this.transform.fracZ),
+                floatOriginX - floatSize,
+                floatOriginY - floatSize,
+                floatOriginZ - floatSize,
 
-                (float)((x2 - this.transform.intX) - this.transform.fracX),
-                (float)((y2 - this.transform.intY) - this.transform.fracY),
-                (float)((z2 - this.transform.intZ) - this.transform.fracZ)
+                floatOriginX + floatSize,
+                floatOriginY + floatSize,
+                floatOriginZ + floatSize
         );
     }
 
-    public int getBoxIntersection(int intOriginX, int intOriginY, int intOriginZ, float floatSizeX, float floatSizeY, float floatSizeZ) {
-        float floatOriginX = (intOriginX - this.transform.intX) - this.transform.fracX;
-        float floatOriginY = (intOriginY - this.transform.intY) - this.transform.fracY;
-        float floatOriginZ = (intOriginZ - this.transform.intZ) - this.transform.fracZ;
-
+    public int getBoxIntersectionDirect(float floatOriginX, float floatOriginY, float floatOriginZ, float floatSize) {
         return this.frustum.intersectAab(
-                floatOriginX - floatSizeX,
-                floatOriginY - floatSizeY,
-                floatOriginZ - floatSizeZ,
+                floatOriginX - floatSize,
+                floatOriginY - floatSize,
+                floatOriginZ - floatSize,
 
-                floatOriginX + floatSizeX,
-                floatOriginY + floatSizeY,
-                floatOriginZ + floatSizeZ
+                floatOriginX + floatSize,
+                floatOriginY + floatSize,
+                floatOriginZ + floatSize
         );
     }
 
