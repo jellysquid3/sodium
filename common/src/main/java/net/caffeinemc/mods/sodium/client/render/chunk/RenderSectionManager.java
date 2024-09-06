@@ -176,7 +176,7 @@ public class RenderSectionManager {
             final var searchDistance = this.getSearchDistance();
             final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
-            // cancel running task to prevent parallel bfs which will cause race conditions
+            // cancel running task to prevent two parallel calls to bfs which will cause race conditions
             if (this.pendingTree != null) {
                 this.pendingTree.cancel(true);
                 this.pendingTree = null;
