@@ -176,6 +176,13 @@ public class RenderSectionManager {
             final var searchDistance = this.getSearchDistance();
             final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
+            // cancel running task to prevent parallel bfs which will cause race conditions
+            if (this.pendingTree != null) {
+                this.pendingTree.cancel(true);
+                this.pendingTree = null;
+                this.pendingCullType = null;
+            }
+
             var tree = new LinearSectionOctree(viewport, searchDistance, this.frame, CullType.FRUSTUM);
             var visibleCollector = new VisibleChunkCollectorSync(tree, this.frame);
             this.occlusionCuller.findVisible(visibleCollector, viewport, searchDistance, useOcclusionCulling, this.frame);

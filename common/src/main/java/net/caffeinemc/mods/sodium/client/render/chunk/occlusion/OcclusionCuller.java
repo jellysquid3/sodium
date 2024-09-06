@@ -201,7 +201,12 @@ public class OcclusionCuller {
         }
     }
 
-    private static void visitNode(final WriteQueue<RenderSection> queue, @NotNull RenderSection render, int incoming, int frame) {
+    private static void visitNode(final WriteQueue<RenderSection> queue, RenderSection render, int incoming, int frame) {
+        // isn't usually null, but can be null if the bfs is happening during loading or unloading of chunks
+        if (render == null) {
+            return;
+        }
+
         if (render.getLastVisibleFrame() != frame) {
             // This is the first time we are visiting this section during the given frame, so we must
             // reset the state.
