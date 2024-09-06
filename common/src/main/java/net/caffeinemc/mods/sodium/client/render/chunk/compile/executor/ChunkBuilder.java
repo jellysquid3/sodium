@@ -33,8 +33,9 @@ public class ChunkBuilder {
      */
     public static final int HIGH_EFFORT = 10;
     public static final int LOW_EFFORT = 1;
-    public static final int EFFORT_PER_THREAD_PER_FRAME = HIGH_EFFORT + LOW_EFFORT;
-    private static final float HIGH_EFFORT_BUDGET_FACTOR = (float)HIGH_EFFORT / EFFORT_PER_THREAD_PER_FRAME;
+    public static final int EFFORT_UNIT = HIGH_EFFORT + LOW_EFFORT;
+    public static final int EFFORT_PER_THREAD_PER_FRAME = 3 * EFFORT_UNIT;
+    private static final float HIGH_EFFORT_BUDGET_FACTOR = (float)HIGH_EFFORT / EFFORT_UNIT;
 
     static final Logger LOGGER = LogManager.getLogger("ChunkBuilder");
 
