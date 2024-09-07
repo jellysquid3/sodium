@@ -154,7 +154,7 @@ public class RenderSectionManager {
         this.pendingCullType = null;
 
         // use tree if it can be used (frustum tested bfs results can't be used if the frustum has changed)
-        if (!(this.needsRenderListUpdate() && tree.getCullType() == CullType.FRUSTUM)) {
+        if (!(this.needsRenderListUpdate && tree.getCullType() == CullType.FRUSTUM)) {
             this.trees.put(tree.getCullType(), tree);
             this.latestUpdatedTree = tree;
 
@@ -171,7 +171,7 @@ public class RenderSectionManager {
         // when updating immediately (flawless frame), just do sync bfs continuously.
         // if we're not updating immediately, the camera timing control should receive the new camera position each time.
         if ((updateImmediately || this.cameraTimingControl.getShouldRenderSync(camera)) &&
-                (this.needsGraphUpdate() || this.needsRenderListUpdate())) {
+                (this.needsGraphUpdate || this.needsRenderListUpdate)) {
             // switch to sync rendering if the camera moved too much
             final var searchDistance = this.getSearchDistance();
             final var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
@@ -201,12 +201,12 @@ public class RenderSectionManager {
             return;
         }
 
-        if (this.needsGraphUpdate()) {
+        if (this.needsGraphUpdate) {
             this.lastGraphDirtyFrame = this.frame;
             this.needsGraphUpdate = false;
         }
 
-        if (this.needsRenderListUpdate()) {
+        if (this.needsRenderListUpdate) {
             // discard unusable present and pending trees
             this.trees.remove(CullType.FRUSTUM);
             if (this.pendingTree != null && !this.pendingTree.isDone() && this.pendingCullType == CullType.FRUSTUM) {
@@ -228,6 +228,13 @@ public class RenderSectionManager {
             CullType workOnType = null;
             for (var type : CullType.WIDE_TO_NARROW) {
                 var tree = this.trees.get(type);
+
+                // don't schedule frustum-culled bfs until there hasn't been a dirty render list.
+                // otherwise a bfs is done each frame that gets thrown away each time.
+                if (type == CullType.FRUSTUM && this.needsRenderListUpdate) {
+                    continue;
+                }
+
                 if (tree == null) {
                     workOnType = type;
                     break;
@@ -254,7 +261,7 @@ public class RenderSectionManager {
             }
         }
 
-        if (this.needsRenderListUpdate()) {
+        if (this.needsRenderListUpdate) {
             // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
             LinearSectionOctree bestTree = null;
             for (var type : CullType.NARROW_TO_WIDE) {
@@ -288,12 +295,8 @@ public class RenderSectionManager {
         this.needsRenderListUpdate = true;
     }
 
-    public boolean needsGraphUpdate() {
+    public boolean needsUpdate() {
         return this.needsGraphUpdate;
-    }
-
-    public boolean needsRenderListUpdate() {
-        return this.needsRenderListUpdate;
     }
 
     private float getSearchDistance() {
