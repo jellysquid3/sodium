@@ -12,8 +12,8 @@ import org.joml.FrustumIntersection;
  * - make another tree similar to this one that is used to track invalidation cubes in the bfs to make it possible to reuse some of its results (?)
  */
 public class SectionTree extends PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
-    public final Tree mainTree;
-    Tree secondaryTree;
+    private final Tree mainTree;
+    private Tree secondaryTree;
 
     private final int bfsWidth;
 

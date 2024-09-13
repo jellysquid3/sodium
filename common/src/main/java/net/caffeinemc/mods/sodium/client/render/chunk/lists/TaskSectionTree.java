@@ -7,8 +7,8 @@ import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
 public class TaskSectionTree extends SectionTree {
-    final Tree mainTaskTree;
-    Tree secondaryTaskTree;
+    private final Tree mainTaskTree;
+    private Tree secondaryTaskTree;
 
     public TaskSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType) {
         super(viewport, buildDistance, frame, cullType);
