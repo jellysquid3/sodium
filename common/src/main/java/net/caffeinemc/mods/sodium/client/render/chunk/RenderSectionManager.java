@@ -96,6 +96,7 @@ public class RenderSectionManager {
 
     private boolean needsGraphUpdate = true;
     private boolean needsRenderListUpdate = true;
+    private boolean cameraChanged = false;
 
     private @Nullable BlockPos cameraBlockPos;
     private @Nullable Vector3dc cameraPosition;
@@ -138,11 +139,10 @@ public class RenderSectionManager {
 
     // TODO idea: increase and decrease chunk builder thread budget based on if the upload buffer was filled if the entire budget was used up. if the fallback way of uploading buffers is used, just doing 3 * the budget actually slows down frames while things are getting uploaded. For this it should limit how much (or how often?) things are uploaded. In the case of the mapped upload, just making sure we don't exceed its size is probably enough.
 
-    // TODO: use narrow-to-wide order for scheduling tasks if we can expect the player not to move much
-
     public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator, boolean updateImmediately) {
         this.frame += 1;
         this.lastFrameAtTime = System.nanoTime();
+        this.needsRenderListUpdate |= this.cameraChanged;
 
         // do sync bfs based on update immediately (flawless frames) or if the camera moved too much
         var shouldRenderSync = this.cameraTimingControl.getShouldRenderSync(camera);
@@ -153,11 +153,10 @@ public class RenderSectionManager {
 
         if (this.needsGraphUpdate) {
             this.lastGraphDirtyFrame = this.frame;
-            this.needsGraphUpdate = false;
         }
 
         // discard unusable present and pending frustum-tested trees
-        if (this.needsRenderListUpdate) {
+        if (this.cameraChanged) {
             this.trees.remove(CullType.FRUSTUM);
 
             this.pendingTasks.removeIf(task -> {
@@ -186,8 +185,9 @@ public class RenderSectionManager {
             processRenderListUpdate(viewport);
         }
 
-        var frameEnd = System.nanoTime();
-//        System.out.println("Frame " + this.frame + " took " + (frameEnd - this.lastFrameAtTime) / 1000 + "µs");
+        this.needsRenderListUpdate = false;
+        this.needsGraphUpdate = false;
+        this.cameraChanged = false;
     }
 
     private void renderSync(Camera camera, Viewport viewport, boolean spectator) {
@@ -201,20 +201,22 @@ public class RenderSectionManager {
         this.pendingTasks.clear();
 
         var tree = new VisibleChunkCollectorSync(viewport, searchDistance, this.frame, CullType.FRUSTUM);
-        this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, this.frame);
+        this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling);
 
         this.frustumTaskLists = tree.getPendingTaskLists();
         this.globalTaskLists = null;
         this.trees.put(CullType.FRUSTUM, tree);
         this.renderTree = tree;
 
+        this.renderLists = tree.createRenderLists();
+
         // remove the other trees, they're very wrong by now
         this.trees.remove(CullType.WIDE);
         this.trees.remove(CullType.REGULAR);
 
-        this.renderLists = tree.createRenderLists();
         this.needsRenderListUpdate = false;
         this.needsGraphUpdate = false;
+        this.cameraChanged = false;
     }
 
     private SectionTree unpackTaskResults(boolean wait) {
@@ -235,7 +237,7 @@ public class RenderSectionManager {
                     this.frustumTaskLists = result.getFrustumTaskLists();
 
                     // ensure no useless frustum tree is accepted
-                    if (!this.needsRenderListUpdate) {
+                    if (!this.cameraChanged) {
                         var tree = result.getTree();
                         this.trees.put(CullType.FRUSTUM, tree);
                         latestTree = tree;
@@ -271,16 +273,19 @@ public class RenderSectionManager {
             currentRunningTask = this.pendingTasks.getFirst();
         }
 
+        // pick a scheduling order based on if there's been a graph update and if the render list is dirty
+        var scheduleOrder = getScheduleOrder();
+
         var transform = viewport.getTransform();
         var cameraSectionX = transform.intX >> 4;
         var cameraSectionY = transform.intY >> 4;
         var cameraSectionZ = transform.intZ >> 4;
-        for (var type : CullType.WIDE_TO_NARROW) {
+        for (var type : scheduleOrder) {
             var tree = this.trees.get(type);
 
-            // don't schedule frustum-culled bfs until there hasn't been a dirty render list.
-            // otherwise a bfs is done each frame that always gets thrown away.
-            if (type == CullType.FRUSTUM && this.needsRenderListUpdate) {
+            // don't schedule frustum tasks if the camera just changed to prevent throwing them away constantly
+            // since they're going to be invalid in the next frame
+            if (type == CullType.FRUSTUM && this.cameraChanged) {
                 continue;
             }
 
@@ -292,16 +297,37 @@ public class RenderSectionManager {
                 var searchDistance = this.getSearchDistance();
                 var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
+                // use the last dirty frame as the frame timestamp to avoid wrongly marking task results as more recent if they're simply scheduled later but did work on the same state of the graph if there's been no graph invalidation since
                 var task = switch (type) {
                     case WIDE, REGULAR ->
-                            new GlobalCullTask(this.occlusionCuller, viewport, searchDistance, useOcclusionCulling, this.frame, this.sectionByPosition, type);
+                            new GlobalCullTask(this.occlusionCuller, viewport, searchDistance, useOcclusionCulling, this.lastGraphDirtyFrame, this.sectionByPosition, type);
                     case FRUSTUM ->
-                            new FrustumCullTask(this.occlusionCuller, viewport, searchDistance, useOcclusionCulling, this.frame);
+                            // note that there is some danger with only giving the frustum tasks the last graph dirty frame and not the real current frame, but these are mitigated by deleting the frustum result when the camera changes.
+                            new FrustumCullTask(this.occlusionCuller, viewport, searchDistance, useOcclusionCulling, this.lastGraphDirtyFrame);
                 };
                 task.submitTo(this.asyncCullExecutor);
                 this.pendingTasks.add(task);
             }
         }
+    }
+
+    private static final CullType[] WIDE_TO_NARROW = { CullType.WIDE, CullType.REGULAR, CullType.FRUSTUM };
+    private static final CullType[] NARROW_TO_WIDE = { CullType.FRUSTUM, CullType.REGULAR, CullType.WIDE };
+    private static final CullType[] COMPROMISE = { CullType.REGULAR, CullType.FRUSTUM, CullType.WIDE };
+
+    private CullType[] getScheduleOrder() {
+        // if the camera is stationary, do the FRUSTUM update to first to prevent the render count from oscillating
+        if (!this.cameraChanged) {
+            return NARROW_TO_WIDE;
+        }
+
+        // if only the render list is dirty but there's no graph update, do REGULAR first and potentially do FRUSTUM opportunistically
+        if (!this.needsGraphUpdate) {
+            return COMPROMISE;
+        }
+
+        // if both are dirty, the camera is moving and loading new sections, do WIDE first to ensure there's any correct result
+        return WIDE_TO_NARROW;
     }
 
     private void processRenderListUpdate(Viewport viewport) {
@@ -325,14 +351,12 @@ public class RenderSectionManager {
 
         // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
         SectionTree bestTree = null;
-        for (var type : CullType.NARROW_TO_WIDE) {
+        for (var type : NARROW_TO_WIDE) {
             var tree = this.trees.get(type);
             if (tree != null && (bestTree == null || tree.getFrame() > bestTree.getFrame())) {
                 bestTree = tree;
             }
         }
-
-        this.needsRenderListUpdate = false;
 
         // wait if there's no current tree (first frames after initial load/reload)
         if (bestTree == null) {
@@ -354,8 +378,8 @@ public class RenderSectionManager {
         this.needsGraphUpdate = true;
     }
 
-    public void markRenderListDirty() {
-        this.needsRenderListUpdate = true;
+    public void notifyChangedCamera() {
+        this.cameraChanged = true;
     }
 
     public boolean needsUpdate() {
