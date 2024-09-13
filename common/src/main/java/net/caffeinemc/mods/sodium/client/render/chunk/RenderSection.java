@@ -7,12 +7,31 @@ import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.VisibilityEncodi
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.TranslucentData;
 import net.caffeinemc.mods.sodium.client.util.task.CancellationToken;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+// TODO: idea for topic-related section data storage: have an array of encoded data as longs (or ints) and enter or remove sections from it as they get loaded and unloaded. Keep track of empty spots in this array by building a single-linked free-list, using a bit to see if there's actually still data there or if it's free now. Newly loaded sections get the first available free entry and the location of this entry is stored in the section object for reference. The index of the next free entry is stored in a "head" pointer, and when a section gets removed it needs to "mend" the hole created by the removal by pointing its entry to the head and the head to it. We could also store more data in multiple longs by just treating multiple as one "entry". It could regularly re-organize the data to compact it and move nearby sections to nearby positions in the array (z order curve). This structure should be generic so various types of section data can be stored in it.
+// problem: how does it initialize the occlusion culling? does it need to use the position-to-section hashmap to get the section objects and then extract the indexes? might be ok since it's just the init
+
+/* "struct" layout for occlusion culling:
+- 1 bit for entry management (is present or not), if zero, the rest of the first 8 bytes is the next free entry index
+- 24 bits = 3 bytes for the section position (x, y, z with each 0-255)
+- 36 bits for the visibility data (6 bits per direction, 6 directions)
+- 6 bits for adjacent mask
+- 6 bits for incoming directions
+- 144 bits = 18 bytes = 6 * 3 bytes for the adjacent sections (up to 6 directions, 3 bytes for section index)
+- 32 bits for the last visible frame
+ */
+
+/* "struct" layout for task management:
+- 1 bit for entry management (entry deleted if disposed)
+- 1 bit for if there's a running task
+- 5 bits for the pending update type (ChunkUpdateType)
+- 24 bits for the pending time since start in milliseconds
+- 24 bits = 3 bytes for the section position (x, y, z with each 0-255),
+ */
 
 /**
  * The render state object for a chunk section. This contains all the graphics state for each render pass along with
@@ -30,7 +49,7 @@ public class RenderSection {
     private long visibilityData = VisibilityEncoding.NULL;
 
     private int incomingDirections;
-    private int lastVisibleFrame = -1;
+    private int lastVisibleSearchToken = -1;
 
     private int adjacentMask;
     public RenderSection
@@ -40,7 +59,6 @@ public class RenderSection {
             adjacentSouth,
             adjacentWest,
             adjacentEast;
-
 
     // Rendering State
     @Nullable
@@ -52,6 +70,7 @@ public class RenderSection {
 
     @Nullable
     private ChunkUpdateType pendingUpdateType;
+    private long pendingUpdateSince;
 
     private int lastUploadFrame = -1;
     private int lastSubmittedFrame = -1;
@@ -267,12 +286,12 @@ public class RenderSection {
         return this.region;
     }
 
-    public void setLastVisibleFrame(int frame) {
-        this.lastVisibleFrame = frame;
+    public void setLastVisibleSearchToken(int frame) {
+        this.lastVisibleSearchToken = frame;
     }
 
-    public int getLastVisibleFrame() {
-        return this.lastVisibleFrame;
+    public int getLastVisibleSearchToken() {
+        return this.lastVisibleSearchToken;
     }
 
     public int getIncomingDirections() {
@@ -306,8 +325,17 @@ public class RenderSection {
         return this.pendingUpdateType;
     }
 
-    public void setPendingUpdate(@Nullable ChunkUpdateType type) {
+    public long getPendingUpdateSince() {
+        return this.pendingUpdateSince;
+    }
+
+    public void setPendingUpdate(ChunkUpdateType type, long now) {
         this.pendingUpdateType = type;
+        this.pendingUpdateSince = now;
+    }
+
+    public void clearPendingUpdate() {
+        this.pendingUpdateType = null;
     }
 
     public void prepareTrigger(boolean isDirectTrigger) {

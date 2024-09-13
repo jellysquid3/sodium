@@ -34,7 +34,7 @@ public class ChunkBuilder {
     public static final int HIGH_EFFORT = 10;
     public static final int LOW_EFFORT = 1;
     public static final int EFFORT_UNIT = HIGH_EFFORT + LOW_EFFORT;
-    public static final int EFFORT_PER_THREAD_PER_FRAME = 3 * EFFORT_UNIT;
+    public static final int EFFORT_PER_THREAD_PER_FRAME = EFFORT_UNIT;
     private static final float HIGH_EFFORT_BUDGET_FACTOR = (float)HIGH_EFFORT / EFFORT_UNIT;
 
     static final Logger LOGGER = LogManager.getLogger("ChunkBuilder");
@@ -70,7 +70,7 @@ public class ChunkBuilder {
      * Returns the remaining effort for tasks which should be scheduled this frame. If an attempt is made to
      * spawn more tasks than the budget allows, it will block until resources become available.
      */
-    private int getTotalRemainingBudget() {
+    public int getTotalRemainingBudget() {
         return Math.max(0, this.threads.size() * EFFORT_PER_THREAD_PER_FRAME - this.queue.getEffortSum());
     }
 

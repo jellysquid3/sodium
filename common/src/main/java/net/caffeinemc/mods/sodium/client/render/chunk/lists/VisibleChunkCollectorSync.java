@@ -1,30 +1,24 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.LinearSectionOctree;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.CullType;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
-import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegionManager;
+import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
-public class VisibleChunkCollectorSync implements OcclusionCuller.GraphOcclusionVisitor {
+public class VisibleChunkCollectorSync extends SectionTree {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
 
-    private final LinearSectionOctree tree;
-    private final int frame;
-
-    public VisibleChunkCollectorSync(LinearSectionOctree tree, int frame) {
-        this.tree = tree;
-        this.frame = frame;
-
+    public VisibleChunkCollectorSync(Viewport viewport, float buildDistance, int frame, CullType cullType) {
+        super(viewport, buildDistance, frame, cullType);
         this.sortedRenderLists = new ObjectArrayList<>();
     }
 
     @Override
     public void visit(RenderSection section, boolean visible) {
-        this.tree.visit(section, visible);
+        super.visit(section, visible);
 
         RenderRegion region = section.getRegion();
         ChunkRenderList renderList = region.getRenderList();

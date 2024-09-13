@@ -3,10 +3,7 @@ package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
-import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
-import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.LinearSectionOctree;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegionManager;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
@@ -20,7 +17,7 @@ import java.util.Queue;
  * The visible chunk collector is passed to the occlusion graph search culler to
  * collect the visible chunks.
  */
-public class VisibleChunkCollectorAsync implements LinearSectionOctree.VisibleSectionVisitor  {
+public class VisibleChunkCollectorAsync implements SectionTree.VisibleSectionVisitor  {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
 
     private final RenderRegionManager regions;

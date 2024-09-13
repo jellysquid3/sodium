@@ -1,20 +1,18 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder;
-
 public enum ChunkUpdateType {
-    SORT(Integer.MAX_VALUE, ChunkBuilder.LOW_EFFORT),
-    INITIAL_BUILD(128, ChunkBuilder.HIGH_EFFORT),
-    REBUILD(Integer.MAX_VALUE, ChunkBuilder.HIGH_EFFORT),
-    IMPORTANT_REBUILD(Integer.MAX_VALUE, ChunkBuilder.HIGH_EFFORT),
-    IMPORTANT_SORT(Integer.MAX_VALUE, ChunkBuilder.LOW_EFFORT);
+    SORT(DeferMode.ALWAYS, 2),
+    INITIAL_BUILD(DeferMode.ALWAYS, 0),
+    REBUILD(DeferMode.ALWAYS, 1),
+    IMPORTANT_REBUILD(DeferMode.ONE_FRAME, 1),
+    IMPORTANT_SORT(DeferMode.ZERO_FRAMES, 2);
 
-    private final int maximumQueueSize;
-    private final int taskEffort;
+    private final DeferMode deferMode;
+    private final float priorityValue;
 
-    ChunkUpdateType(int maximumQueueSize, int taskEffort) {
-        this.maximumQueueSize = maximumQueueSize;
-        this.taskEffort = taskEffort;
+    ChunkUpdateType(DeferMode deferMode, float priorityValue) {
+        this.deferMode = deferMode;
+        this.priorityValue = priorityValue;
     }
 
     public static ChunkUpdateType getPromotionUpdateType(ChunkUpdateType prev, ChunkUpdateType next) {
@@ -29,15 +27,15 @@ public enum ChunkUpdateType {
         return null;
     }
 
-    public int getMaximumQueueSize() {
-        return this.maximumQueueSize;
+    public DeferMode getDeferMode() {
+        return this.deferMode;
     }
 
     public boolean isImportant() {
         return this == IMPORTANT_REBUILD || this == IMPORTANT_SORT;
     }
 
-    public int getTaskEffort() {
-        return this.taskEffort;
+    public float getPriorityValue() {
+        return this.priorityValue;
     }
 }
