@@ -14,7 +14,7 @@ public class FrustumCullTask extends CullTask<FrustumCullResult> {
     @Override
     public FrustumCullResult runTask() {
         var tree = new SectionTree(this.viewport, this.buildDistance, this.frame, CullType.FRUSTUM);
-        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling, this.frame);
+        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
 
         var frustumTaskLists = tree.getPendingTaskLists();
 

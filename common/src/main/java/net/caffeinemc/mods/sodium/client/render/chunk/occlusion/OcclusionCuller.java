@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 public class OcclusionCuller {
     private final Long2ReferenceMap<RenderSection> sections;
     private final Level level;
+    private volatile int token = 0;
 
     private final DoubleBufferedQueue<RenderSection> queue = new DoubleBufferedQueue<>();
 
@@ -56,11 +57,15 @@ public class OcclusionCuller {
     public void findVisible(GraphOcclusionVisitor visitor,
                             Viewport viewport,
                             float searchDistance,
-                            boolean useOcclusionCulling,
-                            int token)
+                            boolean useOcclusionCulling)
     {
         final var queues = this.queue;
         queues.reset();
+
+        // get a token for this bfs run by incrementing the counter.
+        // It doesn't need to be atomic since there's no concurrent access, but it needs to be synced to other threads.
+        var token = this.token;
+        this.token = token + 1;
 
         this.init(visitor, queues.write(), viewport, searchDistance, useOcclusionCulling, token);
 

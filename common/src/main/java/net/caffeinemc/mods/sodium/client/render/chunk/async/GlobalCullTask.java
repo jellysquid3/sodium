@@ -22,7 +22,7 @@ public class GlobalCullTask extends CullTask<GlobalCullResult> {
     @Override
     public GlobalCullResult runTask() {
         var tree = new TaskSectionTree(this.viewport, this.buildDistance, this.frame, this.cullType);
-        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling, this.getOcclusionToken());
+        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
 
         var collector = new FrustumTaskCollector(this.viewport, this.buildDistance, this.sectionByPosition);
         tree.traverseVisiblePendingTasks(collector, this.viewport, this.buildDistance);
