@@ -33,7 +33,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     private static final float WITHIN_FRUSTUM_BIAS = -3.0f; // points for being within the frustum
     private static final float PROXIMITY_FACTOR = 3.0f; // penalty for being far away
     private static final float CLOSE_DISTANCE = 50.0f; // distance at which another proximity bonus is applied
-    private static final float CLOSE_PROXIMITY_FACTOR = 0.6f; // bonus for being very close
+    private static final float CLOSE_PROXIMITY_FACTOR = 0.6f; // penalty for being CLOSE_DISTANCE or farther away
     private static final float INV_MAX_DISTANCE_CLOSE = CLOSE_PROXIMITY_FACTOR / CLOSE_DISTANCE;
 
     private final LongArrayList[] pendingTasks = new LongArrayList[DeferMode.values().length];

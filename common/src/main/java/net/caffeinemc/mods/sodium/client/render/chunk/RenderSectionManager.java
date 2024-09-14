@@ -718,8 +718,9 @@ public class RenderSectionManager {
                 continue;
             }
 
-            // stop if the section doesn't need an update anymore
-            // TODO: check for section having a running task?
+            // don't schedule tasks for sections that don't need it anymore,
+            // since the pending update it cleared when a task is started, this includes
+            // sections for which there's a currently running task.
             var type = section.getPendingUpdate();
             if (type == null) {
                 continue;
