@@ -27,6 +27,7 @@ public class GlobalCullTask extends CullTask<GlobalCullResult> {
         var tree = new TaskSectionTree(this.viewport, this.buildDistance, this.frame, this.cullType);
         var start = System.nanoTime();
         this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
+        tree.finalizeTrees();
         var end = System.nanoTime();
         var time = end - start;
         timings.add(time);

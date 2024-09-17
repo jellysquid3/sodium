@@ -202,6 +202,7 @@ public class RenderSectionManager {
 
         var tree = new VisibleChunkCollectorSync(viewport, searchDistance, this.frame, CullType.FRUSTUM);
         this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling);
+        tree.finalizeTrees();
 
         this.frustumTaskLists = tree.getPendingTaskLists();
         this.globalTaskLists = null;

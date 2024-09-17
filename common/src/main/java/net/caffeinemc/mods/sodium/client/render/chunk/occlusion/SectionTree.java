@@ -103,6 +103,13 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         }
     }
 
+    public void finalizeTrees() {
+        this.mainTree.calculateReduced();
+        if (this.secondaryTree != null) {
+            this.secondaryTree.calculateReduced();
+        }
+    }
+
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
         // check if there's a section at any part of the box
         int minX = SectionPos.posToSectionCoord(x1 - 0.5D);
@@ -169,11 +176,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             }
 
             var bitIndex = interleave6x3(x, y, z);
-            int reducedBitIndex = bitIndex >> 6;
-            int doubleReducedBitIndex = bitIndex >> 12;
-            this.tree[reducedBitIndex] |= 1L << (bitIndex & 0b111111);
-            this.treeReduced[doubleReducedBitIndex] |= 1L << (reducedBitIndex & 0b111111);
-            this.treeDoubleReduced |= 1L << doubleReducedBitIndex;
+            this.tree[bitIndex >> 6] |= 1L << (bitIndex & 0b111111);
 
             return false;
         }
@@ -192,6 +195,20 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             n = (n | n << 4) & 0b000011000011000011;
             n = (n | n << 2) & 0b001001001001001001;
             return n;
+        }
+
+        public void calculateReduced() {
+            long doubleReduced = 0;
+            for (int i = 0; i < 64; i++) {
+                long reduced = 0;
+                var reducedOffset = i << 6;
+                for (int j = 0; j < 64; j++) {
+                    reduced |= this.tree[reducedOffset + j] == 0 ? 0L : 1L << j;
+                }
+                this.treeReduced[i] = reduced;
+                doubleReduced |= reduced == 0 ? 0L : 1L << i;
+            }
+            this.treeDoubleReduced = doubleReduced;
         }
 
         private static int deinterleave6(int n) {

@@ -34,6 +34,15 @@ public class TaskSectionTree extends RayOcclusionSectionTree {
         }
     }
 
+    @Override
+    public void finalizeTrees() {
+        super.finalizeTrees();
+        this.mainTaskTree.calculateReduced();
+        if (this.secondaryTaskTree != null) {
+            this.secondaryTaskTree.calculateReduced();
+        }
+    }
+
     public void traverseVisiblePendingTasks(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
         this.mainTaskTree.traverse(visitor, viewport, distanceLimit);
         if (this.secondaryTaskTree != null) {

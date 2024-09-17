@@ -20,6 +20,7 @@ public class FrustumCullTask extends CullTask<FrustumCullResult> {
         var tree = new RayOcclusionSectionTree(this.viewport, this.buildDistance, this.frame, CullType.FRUSTUM);
         var start = System.nanoTime();
         this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
+        tree.finalizeTrees();
         var end = System.nanoTime();
         var time = end - start;
         timings.add(time);
