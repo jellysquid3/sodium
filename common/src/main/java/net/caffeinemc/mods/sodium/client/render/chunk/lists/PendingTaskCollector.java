@@ -75,10 +75,6 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
 
     @Override
     public void visit(RenderSection section) {
-        if (!visible) {
-            return;
-        }
-
         this.checkForTask(section);
     }
 

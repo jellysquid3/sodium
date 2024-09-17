@@ -8,6 +8,9 @@ import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
+/**
+ * The sync visible chunk collector is passed into the graph search occlusion culler to collect visible chunks.
+ */
 public class VisibleChunkCollectorSync extends SectionTree {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
 
@@ -17,8 +20,8 @@ public class VisibleChunkCollectorSync extends SectionTree {
     }
 
     @Override
-    public void visit(RenderSection section, boolean visible) {
-        super.visit(section, visible);
+    public void visit(RenderSection section) {
+        super.visit(section);
 
         RenderRegion region = section.getRegion();
         ChunkRenderList renderList = region.getRenderList();
@@ -32,7 +35,7 @@ public class VisibleChunkCollectorSync extends SectionTree {
         }
 
         var index = section.getSectionIndex();
-        if (visible && (region.getSectionFlags(index) & RenderSectionFlags.MASK_NEEDS_RENDER) != 0) {
+        if ((region.getSectionFlags(index) & RenderSectionFlags.MASK_NEEDS_RENDER) != 0) {
             renderList.add(index);
         }
     }

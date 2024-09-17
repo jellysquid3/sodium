@@ -3,10 +3,10 @@ package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 import net.caffeinemc.mods.sodium.client.render.chunk.ChunkUpdateType;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.CullType;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.RayOcclusionSectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
-public class TaskSectionTree extends SectionTree {
+public class TaskSectionTree extends RayOcclusionSectionTree {
     private final Tree mainTaskTree;
     private Tree secondaryTaskTree;
 
@@ -29,7 +29,7 @@ public class TaskSectionTree extends SectionTree {
                 this.secondaryTaskTree = this.makeSecondaryTree();
             }
             if (this.secondaryTaskTree.add(x, y, z)) {
-                throw new IllegalStateException("Failed to add section to trees");
+                throw new IllegalStateException("Failed to add section to task trees");
             }
         }
     }

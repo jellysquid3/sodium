@@ -14,8 +14,7 @@ import java.util.Map;
 import java.util.Queue;
 
 /**
- * The visible chunk collector is passed to the occlusion graph search culler to
- * collect the visible chunks.
+ * The async visible chunk collector is passed into a section tree to collect visible chunks.
  */
 public class VisibleChunkCollectorAsync implements SectionTree.VisibleSectionVisitor  {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;

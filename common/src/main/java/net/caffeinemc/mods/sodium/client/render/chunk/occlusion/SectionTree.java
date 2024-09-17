@@ -15,6 +15,8 @@ import org.joml.FrustumIntersection;
  * - are incremental bfs updates possible or useful? Since bfs order doesn't matter with the render list being generated from the tree, that might reduce the load on the async cull thread. (essentially just bfs but with the queue initialized to the set of changed sections.) Problem: might result in more sections being visible than intended, since sections aren't removed when another bfs is run starting from updated sections.
  */
 public class SectionTree extends PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
+    protected static final int SECONDARY_TREE_OFFSET_XZ = 4;
+
     private final Tree mainTree;
     private Tree secondaryTree;
 
@@ -22,6 +24,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
     private final float buildDistance;
     protected final int frame;
+    protected boolean lastSectionKnownEmpty = false;
 
     public interface VisibleSectionVisitor {
         void visit(int x, int y, int z);
@@ -39,7 +42,10 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
     protected Tree makeSecondaryTree() {
         // offset diagonally to fully encompass the required area
-        return new Tree(this.baseOffsetX + 4, this.baseOffsetY, this.baseOffsetZ + 4);
+        return new Tree(
+                this.baseOffsetX + SECONDARY_TREE_OFFSET_XZ,
+                this.baseOffsetY,
+                this.baseOffsetZ + SECONDARY_TREE_OFFSET_XZ);
     }
 
     public int getFrame() {
@@ -77,15 +83,12 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
     public void visit(RenderSection section) {
         super.visit(section);
 
-        // discard invisible or sections that don't need to be rendered
-        if ((section.getRegion().getSectionFlags(section.getSectionIndex()) & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
+        // discard invisible or sections that don't need to be rendered,
+        // only perform this test if it hasn't already been done before
+        if (this.lastSectionKnownEmpty || (section.getRegion().getSectionFlags(section.getSectionIndex()) & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
             return;
         }
 
-        this.addToTree(section);
-    }
-
-    protected void addToTree(RenderSection section) {
         this.markPresent(section.getChunkX(), section.getChunkY(), section.getChunkZ());
     }
 
@@ -140,10 +143,10 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         private static final int INSIDE_DISTANCE = 0b10;
         private static final int FULLY_INSIDE = 0b11;
 
-        private final long[] tree = new long[64 * 64];
-        private final long[] treeReduced = new long[64];
+        protected final long[] tree = new long[64 * 64];
+        protected final long[] treeReduced = new long[64];
         public long treeDoubleReduced = 0L;
-        private final int offsetX, offsetY, offsetZ;
+        protected final int offsetX, offsetY, offsetZ;
 
         // set temporarily during traversal
         private int cameraOffsetX, cameraOffsetY, cameraOffsetZ;
@@ -161,7 +164,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             x -= this.offsetX;
             y -= this.offsetY;
             z -= this.offsetZ;
-            if (x > 63 || y > 63 || z > 63 || x < 0 || y < 0 || z < 0) {
+            if (isOutOfBounds(x, y, z)) {
                 return true;
             }
 
@@ -175,7 +178,11 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             return false;
         }
 
-        private static int interleave6x3(int x, int y, int z) {
+        public static boolean isOutOfBounds(int x, int y, int z) {
+            return x > 63 || y > 63 || z > 63 || x < 0 || y < 0 || z < 0;
+        }
+
+        protected static int interleave6x3(int x, int y, int z) {
             return interleave6(x) | interleave6(y) << 1 | interleave6(z) << 2;
         }
 
@@ -198,7 +205,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             x -= this.offsetX;
             y -= this.offsetY;
             z -= this.offsetZ;
-            if (x > 63 || y > 63 || z > 63 || x < 0 || y < 0 || z < 0) {
+            if (isOutOfBounds(x, y, z)) {
                 return false;
             }
 
