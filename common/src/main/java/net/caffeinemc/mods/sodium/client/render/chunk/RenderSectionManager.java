@@ -953,6 +953,8 @@ public class RenderSectionManager {
             count++;
         }
 
+        // TODO: information about pending async culling tasks, restore some information about task scheduling?
+
         list.add(String.format("Geometry Pool: %d/%d MiB (%d buffers)", MathUtil.toMib(deviceUsed), MathUtil.toMib(deviceAllocated), count));
         list.add(String.format("Transfer Queue: %s", this.regions.getStagingBuffer().toString()));
 
@@ -960,16 +962,42 @@ public class RenderSectionManager {
                 this.builder.getScheduledJobCount(), this.builder.getScheduledEffort(), this.builder.getBusyThreadCount(), this.builder.getTotalThreadCount())
         );
 
-//        list.add(String.format("Chunk Queues: U=%02d (P0=%03d | P1=%03d | P2=%03d)",
-//                this.buildResults.size(),
-//                this.frustumTaskLists.get(ChunkUpdateType.IMPORTANT_REBUILD).size() + this.frustumTaskLists.get(ChunkUpdateType.IMPORTANT_SORT).size(),
-//                this.frustumTaskLists.get(ChunkUpdateType.REBUILD).size() + this.frustumTaskLists.get(ChunkUpdateType.SORT).size(),
-//                this.frustumTaskLists.get(ChunkUpdateType.INITIAL_BUILD).size())
-//        );
+        list.add(String.format("Chunk Queues: U=%02d", this.buildResults.size()));
 
         this.sortTriggering.addDebugStrings(list);
 
         return list;
+    }
+
+    public String getChunksDebugString() {
+        // TODO: add dirty and queued counts
+
+        // C: visible/total D: distance
+        return String.format(
+                "C: %d/%d (%s) D: %d",
+                this.getVisibleChunkCount(),
+                this.getTotalSections(),
+                this.getCullTypeName(),
+                this.renderDistance);
+    }
+
+    private String getCullTypeName() {
+        CullType renderTreeCullType = null;
+        for (var type : CullType.values()) {
+            if (this.trees.get(type) == this.renderTree) {
+                renderTreeCullType = type;
+                break;
+            }
+        }
+        var cullTypeName = "-";
+        if (renderTreeCullType != null) {
+            cullTypeName = switch (renderTreeCullType) {
+                case WIDE -> "W";
+                case REGULAR -> "R";
+                case FRUSTUM -> "F";
+            };
+        }
+        return cullTypeName;
     }
 
     public @NotNull SortedRenderLists getRenderLists() {
