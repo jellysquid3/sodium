@@ -16,6 +16,7 @@ public class ChunkRenderList {
 
     private final byte[] sectionsWithGeometry = new byte[RenderRegion.REGION_SIZE];
     private int sectionsWithGeometryCount = 0;
+    private int prevSectionsWithGeometryCount = 0;
 
     private final byte[] sectionsWithSprites = new byte[RenderRegion.REGION_SIZE];
     private int sectionsWithSpritesCount = 0;
@@ -32,6 +33,9 @@ public class ChunkRenderList {
     }
 
     public void reset(int frame) {
+        // TODO: benchmark overall improvement and test if partial batch writing is worth it
+        this.prevSectionsWithGeometryCount = this.sectionsWithGeometryCount;
+
         this.sectionsWithGeometryCount = 0;
         this.sectionsWithSpritesCount = 0;
         this.sectionsWithEntitiesCount = 0;
@@ -83,14 +87,24 @@ public class ChunkRenderList {
         int index = render.getSectionIndex();
         int flags = render.getFlags();
 
-        this.sectionsWithGeometry[this.sectionsWithGeometryCount] = (byte) index;
-        this.sectionsWithGeometryCount += (flags >>> RenderSectionFlags.HAS_BLOCK_GEOMETRY) & 1;
+        if (((flags >>> RenderSectionFlags.HAS_BLOCK_GEOMETRY) & 1) != 0) {
+            var byteIndex = (byte) index;
+            if (this.sectionsWithGeometry[this.sectionsWithGeometryCount] != byteIndex) {
+                this.sectionsWithGeometry[this.sectionsWithGeometryCount] = byteIndex;
+                this.prevSectionsWithGeometryCount = -1;
+            }
+            this.sectionsWithGeometryCount++;
+        }
 
         this.sectionsWithSprites[this.sectionsWithSpritesCount] = (byte) index;
         this.sectionsWithSpritesCount += (flags >>> RenderSectionFlags.HAS_ANIMATED_SPRITES) & 1;
 
         this.sectionsWithEntities[this.sectionsWithEntitiesCount] = (byte) index;
         this.sectionsWithEntitiesCount += (flags >>> RenderSectionFlags.HAS_BLOCK_ENTITIES) & 1;
+    }
+
+    public boolean isCacheInvalidated() {
+        return this.prevSectionsWithGeometryCount != this.sectionsWithGeometryCount;
     }
 
     public @Nullable ByteIterator sectionsWithGeometryIterator(boolean reverse) {

@@ -274,7 +274,7 @@ public class GLRenderDevice implements RenderDevice {
                     batch.pElementCount,
                     indexType.getFormatId(),
                     batch.pElementPointer,
-                    batch.size(),
+                    batch.size,
                     batch.pBaseVertex);
         }
 
