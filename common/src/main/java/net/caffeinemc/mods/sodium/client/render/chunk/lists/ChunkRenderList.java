@@ -33,7 +33,6 @@ public class ChunkRenderList {
     }
 
     public void reset(int frame) {
-        // TODO: benchmark overall improvement and test if partial batch writing is worth it
         this.prevSectionsWithGeometryCount = this.sectionsWithGeometryCount;
 
         this.sectionsWithGeometryCount = 0;
