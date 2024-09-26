@@ -38,6 +38,7 @@ public class ParticleEngineMixin {
         double dx = pointA.x - pointB.x;
         double dz = pointA.z - pointB.z;
         double distance = (dx * dx + dz * dz);
+        double shaderFogDistance = RenderSystem.getShaderFogEnd();
 
         var renderDistance = Minecraft.getInstance().gameRenderer.getRenderDistance();
         var color = RenderSystem.getShaderFogColor();
@@ -46,9 +47,8 @@ public class ParticleEngineMixin {
             return false;
         }
 
-        var fogDist = Math.min(renderDistance,distance);
+        var fogDist = Math.min(renderDistance,shaderFogDistance);
 
         return distance < fogDist * fogDist;
     }
-
 }
