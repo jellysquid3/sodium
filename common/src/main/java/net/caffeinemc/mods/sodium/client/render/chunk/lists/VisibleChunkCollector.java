@@ -5,6 +5,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.ChunkUpdateType;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
 import java.util.*;
 
@@ -61,8 +62,31 @@ public class VisibleChunkCollector implements OcclusionCuller.Visitor {
         }
     }
 
-    public SortedRenderLists createRenderLists() {
-        return new SortedRenderLists(this.sortedRenderLists);
+    public SortedRenderLists createRenderLists(Viewport viewport) {
+        // sort the regions by distance to fix rare region ordering bugs
+        var transform = viewport.getTransform();
+        var cameraX = transform.intX >> (4 + RenderRegion.REGION_WIDTH_SH);
+        var cameraY = transform.intY >> (4 + RenderRegion.REGION_HEIGHT_SH);
+        var cameraZ = transform.intZ >> (4 + RenderRegion.REGION_LENGTH_SH);
+        var size = this.sortedRenderLists.size();
+
+        var items = new int[size];
+        for (var i = 0; i < size; i++) {
+            var region = this.sortedRenderLists.get(i).getRegion();
+            var x = Math.abs(region.getRawX() - cameraX);
+            var y = Math.abs(region.getRawY() - cameraY);
+            var z = Math.abs(region.getRawZ() - cameraZ);
+            items[i] = (x + y + z) << 16 | i;
+        }
+
+        Arrays.sort(items);
+
+        var sorted = new ObjectArrayList<ChunkRenderList>(size);
+        for (var key : items) {
+            sorted.add(this.sortedRenderLists.get(key & 0xFFFF));
+        }
+
+        return new SortedRenderLists(sorted);
     }
 
     public Map<ChunkUpdateType, ArrayDeque<RenderSection>> getRebuildLists() {
