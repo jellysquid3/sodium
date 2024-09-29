@@ -73,9 +73,9 @@ public class VisibleChunkCollector implements OcclusionCuller.Visitor {
         var items = new int[size];
         for (var i = 0; i < size; i++) {
             var region = this.sortedRenderLists.get(i).getRegion();
-            var x = Math.abs(region.getRawX() - cameraX);
-            var y = Math.abs(region.getRawY() - cameraY);
-            var z = Math.abs(region.getRawZ() - cameraZ);
+            var x = Math.abs(region.getX() - cameraX);
+            var y = Math.abs(region.getY() - cameraY);
+            var z = Math.abs(region.getZ() - cameraZ);
             items[i] = (x + y + z) << 16 | i;
         }
 

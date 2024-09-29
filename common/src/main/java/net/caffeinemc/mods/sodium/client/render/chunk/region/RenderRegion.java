@@ -64,15 +64,15 @@ public class RenderRegion {
         return SectionPos.asLong(x, y, z);
     }
 
-    public int getRawX() {
+    public int getX() {
         return this.x;
     }
 
-    public int getRawY() {
+    public int getY() {
         return this.y;
     }
 
-    public int getRawZ() {
+    public int getZ() {
         return this.z;
     }
 
