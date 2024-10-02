@@ -250,18 +250,17 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
             // everything is already inside the distance limit if the build distance is smaller
             var initialInside = this.distanceLimit >= SectionTree.this.buildDistance ? INSIDE_DISTANCE : 0;
-            this.traverse(0, 0, 0, 0, 5, initialInside);
+            this.traverse(getChildOrderModulator(0, 0, 0, 1 << 5), 0, 5, initialInside);
 
             this.visitor = null;
             this.viewport = null;
         }
 
-        void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level, int inside) {
+        void traverse(int orderModulator, int nodeOrigin, int level, int inside) {
             // half of the dimension of a child of this node, in blocks
             int childHalfDim = 1 << (level + 3); // * 16 / 2
 
-            // / 8 to get childFullDim in sections
-            int orderModulator = getChildOrderModulator(nodeX, nodeY, nodeZ, childHalfDim >> 3);
+            // even levels (the higher levels of each reduction) need to modulate indexes that are multiples of 8
             if ((level & 1) == 1) {
                 orderModulator <<= 3;
             }
@@ -351,7 +350,8 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
             // immediately traverse if fully inside
             if (inside == FULLY_INSIDE) {
-                this.traverse(x, y, z, childOrigin, level - 1, inside);
+                level --;
+                this.traverse(getChildOrderModulator(x, y, z, 1 << level), childOrigin, level, inside);
                 return;
             }
 
@@ -398,7 +398,8 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             }
 
             if (visible) {
-                this.traverse(x, y, z, childOrigin, level - 1, inside);
+                level --;
+                this.traverse(getChildOrderModulator(x, y, z, 1 << level), childOrigin, level, inside);
             }
         }
 
