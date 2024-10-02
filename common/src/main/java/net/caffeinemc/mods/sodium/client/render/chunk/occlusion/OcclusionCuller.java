@@ -11,6 +11,9 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 
+/*
+ * TODO idea: traverse octants of the world with separate threads for better performance?
+ */
 public class OcclusionCuller {
     private final Long2ReferenceMap<RenderSection> sections;
     private final Level level;
