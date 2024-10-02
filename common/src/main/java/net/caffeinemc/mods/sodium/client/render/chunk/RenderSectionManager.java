@@ -301,10 +301,10 @@ public class RenderSectionManager {
                 // use the last dirty frame as the frame timestamp to avoid wrongly marking task results as more recent if they're simply scheduled later but did work on the same state of the graph if there's been no graph invalidation since
                 var task = switch (type) {
                     case WIDE, REGULAR ->
-                            new GlobalCullTask(this.occlusionCuller, viewport, searchDistance, useOcclusionCulling, this.lastGraphDirtyFrame, this.sectionByPosition, type);
+                            new GlobalCullTask(viewport, searchDistance, this.occlusionCuller, useOcclusionCulling, this.lastGraphDirtyFrame, this.sectionByPosition, type, this.level);
                     case FRUSTUM ->
                             // note that there is some danger with only giving the frustum tasks the last graph dirty frame and not the real current frame, but these are mitigated by deleting the frustum result when the camera changes.
-                            new FrustumCullTask(this.occlusionCuller, viewport, searchDistance, useOcclusionCulling, this.lastGraphDirtyFrame);
+                            new FrustumCullTask(viewport, searchDistance, this.lastGraphDirtyFrame, this.occlusionCuller, useOcclusionCulling, this.level);
                 };
                 task.submitTo(this.asyncCullExecutor);
                 this.pendingTasks.add(task);

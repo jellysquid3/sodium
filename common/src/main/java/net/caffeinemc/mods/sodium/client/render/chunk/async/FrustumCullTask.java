@@ -7,17 +7,21 @@ import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.RayOcclusionSectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.minecraft.world.level.Level;
 
 public class FrustumCullTask extends CullTask<FrustumCullResult> {
-    public FrustumCullTask(OcclusionCuller occlusionCuller, Viewport viewport, float buildDistance, boolean useOcclusionCulling, int frame) {
+    private final Level level;
+
+    public FrustumCullTask(Viewport viewport, float buildDistance, int frame, OcclusionCuller occlusionCuller, boolean useOcclusionCulling, Level level) {
         super(viewport, buildDistance, frame, occlusionCuller, useOcclusionCulling);
+        this.level = level;
     }
 
     private static final LongArrayList timings = new LongArrayList();
 
     @Override
     public FrustumCullResult runTask() {
-        var tree = new RayOcclusionSectionTree(this.viewport, this.buildDistance, this.frame, CullType.FRUSTUM);
+        var tree = new RayOcclusionSectionTree(this.viewport, this.buildDistance, this.frame, CullType.FRUSTUM, this.level);
         var start = System.nanoTime();
         this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
         tree.finalizeTrees();

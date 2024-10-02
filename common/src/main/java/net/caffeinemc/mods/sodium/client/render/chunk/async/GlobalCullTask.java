@@ -9,22 +9,25 @@ import net.caffeinemc.mods.sodium.client.render.chunk.lists.TaskSectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.CullType;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.minecraft.world.level.Level;
 
 public class GlobalCullTask extends CullTask<GlobalCullResult> {
     private final Long2ReferenceMap<RenderSection> sectionByPosition;
     private final CullType cullType;
+    private final Level level;
 
-    public GlobalCullTask(OcclusionCuller occlusionCuller, Viewport viewport, float buildDistance, boolean useOcclusionCulling, int frame, Long2ReferenceMap<RenderSection> sectionByPosition, CullType cullType) {
+    public GlobalCullTask(Viewport viewport, float buildDistance, OcclusionCuller occlusionCuller, boolean useOcclusionCulling, int frame, Long2ReferenceMap<RenderSection> sectionByPosition, CullType cullType, Level level) {
         super(viewport, buildDistance, frame, occlusionCuller, useOcclusionCulling);
         this.sectionByPosition = sectionByPosition;
         this.cullType = cullType;
+        this.level = level;
     }
 
     private static final LongArrayList timings = new LongArrayList();
 
     @Override
     public GlobalCullResult runTask() {
-        var tree = new TaskSectionTree(this.viewport, this.buildDistance, this.frame, this.cullType);
+        var tree = new TaskSectionTree(this.viewport, this.buildDistance, this.frame, this.cullType, this.level);
         var start = System.nanoTime();
         this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
         tree.finalizeTrees();

@@ -4,6 +4,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
 import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.minecraft.world.level.Level;
 
 public class RayOcclusionSectionTree extends SectionTree {
     private static final float SECTION_HALF_DIAGONAL = (float) Math.sqrt(8 * 8 * 3);
@@ -11,16 +12,24 @@ public class RayOcclusionSectionTree extends SectionTree {
     private static final int RAY_TEST_MAX_STEPS = 12;
     private static final int MIN_RAY_TEST_DISTANCE_SQ = (int) Math.pow(16 * 3, 2);
 
+    private static final int IS_OBSTRUCTED = 0;
+    private static final int NOT_OBSTRUCTED = 1;
+    private static final int OUT_OF_BOUNDS = 2;
+
     private final CameraTransform transform;
+    private final int minSection, maxSection;
 
     private final PortalMap mainPortalTree;
     private PortalMap secondaryPortalTree;
 
-    public RayOcclusionSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType) {
+    public RayOcclusionSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
         super(viewport, buildDistance, frame, cullType);
 
         this.transform = viewport.getTransform();
         this.mainPortalTree = new PortalMap(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
+
+        this.minSection = level.getMinSection();
+        this.maxSection = level.getMaxSection();
     }
 
     @Override
@@ -74,16 +83,19 @@ public class RayOcclusionSectionTree extends SectionTree {
             y += dY;
             z += dZ;
 
-            if (this.blockHasObstruction((int) x, (int) y, (int) z)) {
+            var result = this.blockHasObstruction((int) x, (int) y, (int) z);
+            if (result == IS_OBSTRUCTED) {
                 // also test radius around to avoid false negatives
                 var radius = SECTION_HALF_DIAGONAL * (steps - i) * stepsInv;
 
                 // this pattern simulates a shape similar to the sweep of the section towards the camera
-                if (!this.blockHasObstruction((int) (x - radius), (int) (y - radius), (int) (z - radius)) ||
-                        !this.blockHasObstruction((int) (x + radius), (int) (y + radius), (int) (z + radius))) {
+                if (this.blockHasObstruction((int) (x - radius), (int) (y - radius), (int) (z - radius)) != IS_OBSTRUCTED ||
+                        this.blockHasObstruction((int) (x + radius), (int) (y + radius), (int) (z + radius)) != IS_OBSTRUCTED) {
                     continue;
                 }
                 return true;
+            } else if (result == OUT_OF_BOUNDS) {
+                break;
             }
         }
 
@@ -104,21 +116,20 @@ public class RayOcclusionSectionTree extends SectionTree {
         }
     }
 
-    private static final int IS_OBSTRUCTED = 0;
-    private static final int NOT_OBSTRUCTED = 1;
-    private static final int OUT_OF_BOUNDS = 2;
+    private int blockHasObstruction(int x, int y, int z) {
+        x >>= 4;
+        y >>= 4;
+        z >>= 4;
 
-    private boolean blockHasObstruction(int x, int y, int z) {
-        return this.hasObstruction(x >> 4, y >> 4, z >> 4);
-    }
-
-    private boolean hasObstruction(int x, int y, int z) {
-        var result = this.mainPortalTree.getObstruction(x, y, z);
-        if (result == OUT_OF_BOUNDS) {
-            return this.secondaryPortalTree != null &&
-                    this.secondaryPortalTree.getObstruction(x, y, z) == IS_OBSTRUCTED;
+        if (y < this.minSection || y >= this.maxSection) {
+            return OUT_OF_BOUNDS;
         }
-        return result == IS_OBSTRUCTED;
+
+        var result = this.mainPortalTree.getObstruction(x, y, z);
+        if (result == OUT_OF_BOUNDS && this.secondaryPortalTree != null) {
+            return this.secondaryPortalTree.getObstruction(x, y, z);
+        }
+        return result;
     }
 
     protected class PortalMap {

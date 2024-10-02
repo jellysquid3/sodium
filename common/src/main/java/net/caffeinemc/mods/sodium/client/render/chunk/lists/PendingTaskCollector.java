@@ -57,7 +57,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         var cameraSectionY = transform.intY >> 4;
         var cameraSectionZ = transform.intZ >> 4;
         this.baseOffsetX = cameraSectionX - offsetDistance;
-        this.baseOffsetY = cameraSectionY - offsetDistance;
+        this.baseOffsetY = -4; // bottom of a normal world
         this.baseOffsetZ = cameraSectionZ - offsetDistance;
 
         this.invMaxDistance = PROXIMITY_FACTOR / buildDistance;

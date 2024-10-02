@@ -5,13 +5,14 @@ import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.CullType;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.RayOcclusionSectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.minecraft.world.level.Level;
 
 public class TaskSectionTree extends RayOcclusionSectionTree {
     private final Tree mainTaskTree;
     private Tree secondaryTaskTree;
 
-    public TaskSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType) {
-        super(viewport, buildDistance, frame, cullType);
+    public TaskSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
+        super(viewport, buildDistance, frame, cullType, level);
 
         this.mainTaskTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }

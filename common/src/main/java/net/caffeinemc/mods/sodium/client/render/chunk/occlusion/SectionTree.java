@@ -67,11 +67,11 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
     public int getOutwardDirections(SectionPos origin, RenderSection section) {
         int planes = 0;
 
-        planes |= section.getChunkX() <= origin.getX() + this.bfsWidth ? 1 << GraphDirection.WEST  : 0;
-        planes |= section.getChunkX() >= origin.getX() - this.bfsWidth ? 1 << GraphDirection.EAST  : 0;
+        planes |= section.getChunkX() <= origin.getX() + this.bfsWidth ? 1 << GraphDirection.WEST : 0;
+        planes |= section.getChunkX() >= origin.getX() - this.bfsWidth ? 1 << GraphDirection.EAST : 0;
 
-        planes |= section.getChunkY() <= origin.getY() + this.bfsWidth ? 1 << GraphDirection.DOWN  : 0;
-        planes |= section.getChunkY() >= origin.getY() - this.bfsWidth ? 1 << GraphDirection.UP    : 0;
+        planes |= section.getChunkY() <= origin.getY() + this.bfsWidth ? 1 << GraphDirection.DOWN : 0;
+        planes |= section.getChunkY() >= origin.getY() - this.bfsWidth ? 1 << GraphDirection.UP : 0;
 
         planes |= section.getChunkZ() <= origin.getZ() + this.bfsWidth ? 1 << GraphDirection.NORTH : 0;
         planes |= section.getChunkZ() >= origin.getZ() - this.bfsWidth ? 1 << GraphDirection.SOUTH : 0;
@@ -339,9 +339,6 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             }
         }
 
-        // TODO: move the modulator calculation to the caller to avoid passing coordinates
-        // TODO: fix flickering when above the world height (?)
-
         void testChild(int childOrigin, int childHalfDim, int level, int inside) {
             // calculate section coordinates in tree-space
             int x = deinterleave6(childOrigin);
@@ -350,7 +347,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
             // immediately traverse if fully inside
             if (inside == FULLY_INSIDE) {
-                level --;
+                level--;
                 this.traverse(getChildOrderModulator(x, y, z, 1 << level), childOrigin, level, inside);
                 return;
             }
@@ -398,7 +395,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             }
 
             if (visible) {
-                level --;
+                level--;
                 this.traverse(getChildOrderModulator(x, y, z, 1 << level), childOrigin, level, inside);
             }
         }
