@@ -257,7 +257,10 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         }
 
         void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level, int inside) {
+            // half of the dimension of a child of this node, in blocks
             int childHalfDim = 1 << (level + 3); // * 16 / 2
+
+            // / 8 to get childFullDim in sections
             int orderModulator = getChildOrderModulator(nodeX, nodeY, nodeZ, childHalfDim >> 3);
             if ((level & 1) == 1) {
                 orderModulator <<= 3;
@@ -337,6 +340,9 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             }
         }
 
+        // TODO: move the modulator calculation to the caller to avoid passing coordinates
+        // TODO: fix flickering when above the world height (?)
+
         void testChild(int childOrigin, int childHalfDim, int level, int inside) {
             // calculate section coordinates in tree-space
             int x = deinterleave6(childOrigin);
@@ -351,17 +357,17 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
             // convert to world-space section origin in blocks, then to camera space
             var transform = this.viewport.getTransform();
-            x = ((x + this.offsetX) << 4) - transform.intX;
-            y = ((y + this.offsetY) << 4) - transform.intY;
-            z = ((z + this.offsetZ) << 4) - transform.intZ;
+            int worldX = ((x + this.offsetX) << 4) - transform.intX;
+            int worldY = ((y + this.offsetY) << 4) - transform.intY;
+            int worldZ = ((z + this.offsetZ) << 4) - transform.intZ;
 
             boolean visible = true;
 
             if ((inside & INSIDE_FRUSTUM) == 0) {
                 var intersectionResult = this.viewport.getBoxIntersectionDirect(
-                        (x + childHalfDim) - transform.fracX,
-                        (y + childHalfDim) - transform.fracY,
-                        (z + childHalfDim) - transform.fracZ,
+                        (worldX + childHalfDim) - transform.fracX,
+                        (worldY + childHalfDim) - transform.fracY,
+                        (worldZ + childHalfDim) - transform.fracZ,
                         childHalfDim + OcclusionCuller.CHUNK_SECTION_MARGIN);
                 if (intersectionResult == FrustumIntersection.INSIDE) {
                     inside |= INSIDE_FRUSTUM;
@@ -373,17 +379,17 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             if ((inside & INSIDE_DISTANCE) == 0) {
                 // calculate the point of the node closest to the camera
                 int childFullDim = childHalfDim << 1;
-                float dx = nearestToZero(x, x + childFullDim) - transform.fracX;
-                float dy = nearestToZero(y, y + childFullDim) - transform.fracY;
-                float dz = nearestToZero(z, z + childFullDim) - transform.fracZ;
+                float dx = nearestToZero(worldX, worldX + childFullDim) - transform.fracX;
+                float dy = nearestToZero(worldY, worldY + childFullDim) - transform.fracY;
+                float dz = nearestToZero(worldZ, worldZ + childFullDim) - transform.fracZ;
 
                 // check if closest point inside the cylinder
                 visible = cylindricalDistanceTest(dx, dy, dz, this.distanceLimit);
                 if (visible) {
                     // if the farthest point is also visible, the node is fully inside
-                    dx = farthestFromZero(x, x + childFullDim) - transform.fracX;
-                    dy = farthestFromZero(y, y + childFullDim) - transform.fracY;
-                    dz = farthestFromZero(z, z + childFullDim) - transform.fracZ;
+                    dx = farthestFromZero(worldX, worldX + childFullDim) - transform.fracX;
+                    dy = farthestFromZero(worldY, worldY + childFullDim) - transform.fracY;
+                    dz = farthestFromZero(worldZ, worldZ + childFullDim) - transform.fracZ;
 
                     if (cylindricalDistanceTest(dx, dy, dz, this.distanceLimit)) {
                         inside |= INSIDE_DISTANCE;
@@ -467,10 +473,10 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             return clamped;
         }
 
-        int getChildOrderModulator(int x, int y, int z, int childSectionDim) {
-            return (x + childSectionDim - this.cameraOffsetX) >>> 31
-                    | ((y + childSectionDim - this.cameraOffsetY) >>> 31) << 1
-                    | ((z + childSectionDim - this.cameraOffsetZ) >>> 31) << 2;
+        int getChildOrderModulator(int x, int y, int z, int childFullSectionDim) {
+            return (x + childFullSectionDim - this.cameraOffsetX) >>> 31
+                    | ((y + childFullSectionDim - this.cameraOffsetY) >>> 31) << 1
+                    | ((z + childFullSectionDim - this.cameraOffsetZ) >>> 31) << 2;
         }
     }
 }
