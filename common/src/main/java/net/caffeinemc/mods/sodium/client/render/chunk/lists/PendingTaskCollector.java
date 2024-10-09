@@ -48,7 +48,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     public PendingTaskCollector(Viewport viewport, float buildDistance, boolean frustumTested) {
         this.creationTime = System.nanoTime();
         this.isFrustumTested = frustumTested;
-        var offsetDistance = Mth.floor(buildDistance / 16.0f) + DISTANCE_OFFSET;
+        var offsetDistance = Mth.ceil(buildDistance / 16.0f) + DISTANCE_OFFSET;
 
         var transform = viewport.getTransform();
 
