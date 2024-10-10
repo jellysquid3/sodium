@@ -22,7 +22,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
     private final int bfsWidth;
 
-    private final float buildDistance;
+    public final float buildDistance;
     protected final int frame;
     protected boolean lastSectionKnownEmpty = false;
 
@@ -52,10 +52,15 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         return this.frame;
     }
 
-    public boolean isValidFor(int newCameraSectionX, int newCameraSectionY, int newCameraSectionZ) {
-        return this.cameraX >> 4 == newCameraSectionX &&
-                this.cameraY >> 4 == newCameraSectionY &&
-                this.cameraZ >> 4 == newCameraSectionZ;
+    public boolean isValidFor(Viewport viewport, float searchDistance) {
+        var transform = viewport.getTransform();
+        var cameraSectionX = transform.intX >> 4;
+        var cameraSectionY = transform.intY >> 4;
+        var cameraSectionZ = transform.intZ >> 4;
+        return this.cameraX >> 4 == cameraSectionX &&
+                this.cameraY >> 4 == cameraSectionY &&
+                this.cameraZ >> 4 == cameraSectionZ &&
+                this.buildDistance >= searchDistance;
     }
 
     @Override

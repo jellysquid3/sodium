@@ -277,10 +277,6 @@ public class RenderSectionManager {
         // pick a scheduling order based on if there's been a graph update and if the render list is dirty
         var scheduleOrder = getScheduleOrder();
 
-        var transform = viewport.getTransform();
-        var cameraSectionX = transform.intX >> 4;
-        var cameraSectionY = transform.intY >> 4;
-        var cameraSectionZ = transform.intZ >> 4;
         for (var type : scheduleOrder) {
             var tree = this.trees.get(type);
 
@@ -290,20 +286,20 @@ public class RenderSectionManager {
                 continue;
             }
 
+            var searchDistance = this.getSearchDistanceForCullType(type);
             if ((tree == null || tree.getFrame() < this.lastGraphDirtyFrame ||
-                    !tree.isValidFor(cameraSectionX, cameraSectionY, cameraSectionZ)) && (
+                    !tree.isValidFor(viewport, searchDistance)) && (
                     currentRunningTask == null ||
                             currentRunningTask instanceof CullTask<?> cullTask && cullTask.getCullType() != type ||
                             currentRunningTask.getFrame() < this.lastGraphDirtyFrame)) {
-                var searchDistance = this.getSearchDistance();
                 var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
 
                 // use the last dirty frame as the frame timestamp to avoid wrongly marking task results as more recent if they're simply scheduled later but did work on the same state of the graph if there's been no graph invalidation since
                 var task = switch (type) {
                     case WIDE, REGULAR ->
-                            new GlobalCullTask(viewport, searchDistance, this.occlusionCuller, useOcclusionCulling, this.lastGraphDirtyFrame, this.sectionByPosition, type, this.level);
+                            new GlobalCullTask(viewport, searchDistance, this.lastGraphDirtyFrame, this.occlusionCuller, useOcclusionCulling, this.sectionByPosition, type, this.level);
                     case FRUSTUM ->
-                            // note that there is some danger with only giving the frustum tasks the last graph dirty frame and not the real current frame, but these are mitigated by deleting the frustum result when the camera changes.
+                        // note that there is some danger with only giving the frustum tasks the last graph dirty frame and not the real current frame, but these are mitigated by deleting the frustum result when the camera changes.
                             new FrustumCullTask(viewport, searchDistance, this.lastGraphDirtyFrame, this.occlusionCuller, useOcclusionCulling, this.level);
                 };
                 task.submitTo(this.asyncCullExecutor);
@@ -352,10 +348,21 @@ public class RenderSectionManager {
 
         // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
         SectionTree bestTree = null;
+        CullType bestType = null;
+        boolean bestTreeValid = false;
         for (var type : NARROW_TO_WIDE) {
             var tree = this.trees.get(type);
-            if (tree != null && (bestTree == null || tree.getFrame() > bestTree.getFrame())) {
+            if (tree == null) {
+                continue;
+            }
+
+            // pick the most recent and most valid tree
+            float searchDistance = this.getSearchDistanceForCullType(type);
+            var treeIsValid = tree.isValidFor(viewport, searchDistance);
+            if (bestTree == null || tree.getFrame() > bestTree.getFrame() || !bestTreeValid && treeIsValid) {
                 bestTree = tree;
+                bestTreeValid = treeIsValid;
+                bestType = type;
             }
         }
 
@@ -385,6 +392,14 @@ public class RenderSectionManager {
 
     public boolean needsUpdate() {
         return this.needsGraphUpdate;
+    }
+
+    private float getSearchDistanceForCullType(CullType cullType) {
+        if (cullType.isFogCulled) {
+            return this.getSearchDistance();
+        } else {
+            return this.getRenderDistance();
+        }
     }
 
     private float getSearchDistance() {

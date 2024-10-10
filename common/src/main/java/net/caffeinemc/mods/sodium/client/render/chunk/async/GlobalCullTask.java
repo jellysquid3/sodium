@@ -16,7 +16,7 @@ public class GlobalCullTask extends CullTask<GlobalCullResult> {
     private final CullType cullType;
     private final Level level;
 
-    public GlobalCullTask(Viewport viewport, float buildDistance, OcclusionCuller occlusionCuller, boolean useOcclusionCulling, int frame, Long2ReferenceMap<RenderSection> sectionByPosition, CullType cullType, Level level) {
+    public GlobalCullTask(Viewport viewport, float buildDistance, int frame, OcclusionCuller occlusionCuller, boolean useOcclusionCulling, Long2ReferenceMap<RenderSection> sectionByPosition, CullType cullType, Level level) {
         super(viewport, buildDistance, frame, occlusionCuller, useOcclusionCulling);
         this.sectionByPosition = sectionByPosition;
         this.cullType = cullType;
