@@ -348,7 +348,6 @@ public class RenderSectionManager {
 
         // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
         SectionTree bestTree = null;
-        CullType bestType = null;
         boolean bestTreeValid = false;
         for (var type : NARROW_TO_WIDE) {
             var tree = this.trees.get(type);
@@ -362,7 +361,6 @@ public class RenderSectionManager {
             if (bestTree == null || tree.getFrame() > bestTree.getFrame() || !bestTreeValid && treeIsValid) {
                 bestTree = tree;
                 bestTreeValid = treeIsValid;
-                bestType = type;
             }
         }
 
