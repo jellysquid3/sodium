@@ -1,10 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
-import it.unimi.dsi.fastutil.longs.Long2ReferenceMaps;
-import it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongHeapPriorityQueue;
+import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.*;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.gl.device.CommandList;
@@ -37,6 +34,7 @@ import net.caffeinemc.mods.sodium.client.render.util.RenderAsserts;
 import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
+import net.caffeinemc.mods.sodium.client.util.task.CancellationToken;
 import net.caffeinemc.mods.sodium.client.world.LevelSlice;
 import net.caffeinemc.mods.sodium.client.world.cloned.ChunkRenderContext;
 import net.caffeinemc.mods.sodium.client.world.cloned.ClonedChunkSectionCache;
@@ -161,7 +159,7 @@ public class RenderSectionManager {
 
             this.pendingTasks.removeIf(task -> {
                 if (task instanceof CullTask<?> cullTask && cullTask.getCullType() == CullType.FRUSTUM) {
-                    cullTask.cancelImmediately();
+                    cullTask.setCancelled();
                     return true;
                 }
                 return false;
@@ -169,13 +167,7 @@ public class RenderSectionManager {
         }
 
         // remove all tasks that aren't in progress yet
-        this.pendingTasks.removeIf(task -> {
-            if (!task.hasStarted()) {
-                task.cancelImmediately();
-                return true;
-            }
-            return false;
-        });
+        this.pendingTasks.removeIf(AsyncRenderTask::cancelIfNotStarted);
 
         this.unpackTaskResults(false);
 
@@ -196,12 +188,13 @@ public class RenderSectionManager {
 
         // cancel running tasks to prevent two bfs running at the same time, which will cause race conditions
         for (var task : this.pendingTasks) {
-            task.cancelImmediately();
+            task.setCancelled();
+            task.getResult();
         }
         this.pendingTasks.clear();
 
         var tree = new VisibleChunkCollectorSync(viewport, searchDistance, this.frame, CullType.FRUSTUM);
-        this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling);
+        this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, CancellationToken.NEVER_CANCELLED);
         tree.finalizeTrees();
 
         this.frustumTaskLists = tree.getPendingTaskLists();
@@ -327,6 +320,8 @@ public class RenderSectionManager {
         return WIDE_TO_NARROW;
     }
 
+    private static final LongArrayList timings = new LongArrayList();
+
     private void processRenderListUpdate(Viewport viewport) {
         // schedule generating a frustum task list if there's no frustum tree task running
         if (this.globalTaskTree != null) {
@@ -373,9 +368,18 @@ public class RenderSectionManager {
             }
         }
 
+        var start = System.nanoTime();
         var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
         bestTree.traverseVisible(visibleCollector, viewport, this.getSearchDistance());
         this.renderLists = visibleCollector.createRenderLists();
+        var end = System.nanoTime();
+        var time = end - start;
+        timings.add(time);
+        if (timings.size() >= 500) {
+            var average = timings.longStream().average().orElse(0);
+            System.out.println("Render list generation took " + (average) / 1000 + "µs over " + timings.size() + " samples");
+            timings.clear();
+        }
 
         this.renderTree = bestTree;
     }

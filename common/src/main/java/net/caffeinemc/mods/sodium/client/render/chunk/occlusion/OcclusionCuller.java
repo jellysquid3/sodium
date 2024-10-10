@@ -7,6 +7,7 @@ import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.caffeinemc.mods.sodium.client.util.collections.DoubleBufferedQueue;
 import net.caffeinemc.mods.sodium.client.util.collections.ReadQueue;
 import net.caffeinemc.mods.sodium.client.util.collections.WriteQueue;
+import net.caffeinemc.mods.sodium.client.util.task.CancellationToken;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -70,7 +71,8 @@ public class OcclusionCuller {
     public void findVisible(GraphOcclusionVisitor visitor,
                             Viewport viewport,
                             float searchDistance,
-                            boolean useOcclusionCulling) {
+                            boolean useOcclusionCulling,
+                            CancellationToken cancellationToken) {
         this.visitor = visitor;
         this.viewport = viewport;
         this.searchDistance = searchDistance;
@@ -87,6 +89,10 @@ public class OcclusionCuller {
         this.init(queues.write());
 
         while (this.queue.flip()) {
+            if (cancellationToken.isCancelled()) {
+                break;
+            }
+
             processQueue(this.queue.read(), this.queue.write());
         }
 

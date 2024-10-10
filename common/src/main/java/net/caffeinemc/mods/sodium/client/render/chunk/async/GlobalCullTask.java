@@ -29,15 +29,14 @@ public class GlobalCullTask extends CullTask<GlobalCullResult> {
     public GlobalCullResult runTask() {
         var tree = new TaskSectionTree(this.viewport, this.buildDistance, this.frame, this.cullType, this.level);
         var start = System.nanoTime();
-        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
+        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling, this);
         tree.finalizeTrees();
         var end = System.nanoTime();
         var time = end - start;
         timings.add(time);
-        final var count = 500;
-        if (timings.size() > count) {
+        if (timings.size() >= 500) {
             var average = timings.longStream().average().orElse(0);
-            System.out.println("Global culling took " + (average) / 1000 + "µs over " + count + " samples");
+            System.out.println("Global culling took " + (average) / 1000 + "µs over " + timings.size() + " samples");
             timings.clear();
         }
         var collector = new FrustumTaskCollector(this.viewport, this.buildDistance, this.sectionByPosition);

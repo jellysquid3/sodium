@@ -23,15 +23,14 @@ public class FrustumCullTask extends CullTask<FrustumCullResult> {
     public FrustumCullResult runTask() {
         var tree = new RayOcclusionSectionTree(this.viewport, this.buildDistance, this.frame, CullType.FRUSTUM, this.level);
         var start = System.nanoTime();
-        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling);
+        this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling, this);
         tree.finalizeTrees();
         var end = System.nanoTime();
         var time = end - start;
         timings.add(time);
-        final var count = 500;
-        if (timings.size() > count) {
+        if (timings.size() >= 500) {
             var average = timings.longStream().average().orElse(0);
-            System.out.println("Frustum culling took " + (average) / 1000 + "µs over " + count + " samples");
+            System.out.println("Frustum culling took " + (average) / 1000 + "µs over " + timings.size() + " samples");
             timings.clear();
         }
 
