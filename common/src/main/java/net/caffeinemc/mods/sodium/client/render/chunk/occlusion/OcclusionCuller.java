@@ -116,7 +116,8 @@ public class OcclusionCuller {
 
                     // occlude paths through the section if it's being viewed at an angle where
                     // the other side can't possibly be seen
-                    sectionVisibilityData &= getAngleVisibilityMask(viewport, section);
+                    sectionVisibilityData &= getAngleVisibilityMask(this.viewport, section);
+
                     // When using occlusion culling, we can only traverse into neighbors for which there is a path of
                     // visibility through this chunk. This is determined by taking all the incoming paths to this chunk and
                     // creating a union of the outgoing paths from those.
