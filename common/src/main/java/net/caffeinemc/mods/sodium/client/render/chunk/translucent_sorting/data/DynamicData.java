@@ -20,6 +20,8 @@ public abstract class DynamicData extends MixedDirectionData {
         return SortType.DYNAMIC;
     }
 
+    public abstract DynamicSorter getSorter();
+
     public GeometryPlanes getGeometryPlanes() {
         return this.geometryPlanes;
     }

@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks;
 
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.JobEffortEstimator;
 import org.joml.Vector3dc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -25,6 +26,8 @@ public abstract class ChunkBuilderTask<OUTPUT extends BuilderTaskOutput> impleme
     protected final int submitTime;
     protected final Vector3dc absoluteCameraPos;
     protected final Vector3fc cameraPos;
+
+    private long estimatedDuration;
 
     /**
      * Constructs a new build task for the given chunk and converts the absolute camera position to a relative position. While the absolute position is stored as a double vector, the relative position is stored as a float vector.
@@ -54,7 +57,15 @@ public abstract class ChunkBuilderTask<OUTPUT extends BuilderTaskOutput> impleme
      */
     public abstract OUTPUT execute(ChunkBuildContext context, CancellationToken cancellationToken);
 
-    public abstract int getEffort();
+    public abstract long getEffort();
+
+    public void estimateDurationWith(JobEffortEstimator estimator) {
+        this.estimatedDuration = estimator.estimateJobDuration(this.getClass(), this.getEffort());
+    }
+
+    public long getEstimatedDuration() {
+        return this.estimatedDuration;
+    }
 
     @Override
     public Vector3fc getRelativeCameraPos() {

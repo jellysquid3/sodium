@@ -8,5 +8,5 @@ public interface ChunkJob extends CancellationToken {
 
     boolean isStarted();
 
-    int getEffort();
+    long getEstimatedDuration();
 }

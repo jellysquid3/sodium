@@ -32,6 +32,14 @@ public class ChunkBuildOutput extends ChunkSortOutput {
         return this.meshes.get(pass);
     }
 
+    public long getEffort() {
+        long size = 0;
+        for (var data : this.meshes.values()) {
+            size += data.getVertexData().getLength();
+        }
+        return 1 + (size >> 8); // make sure the number isn't huge
+    }
+
     @Override
     public void destroy() {
         super.destroy();

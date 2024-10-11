@@ -37,7 +37,7 @@ public class DynamicBSPData extends DynamicData {
     }
 
     @Override
-    public Sorter getSorter() {
+    public DynamicSorter getSorter() {
         return new DynamicBSPSorter(this.getQuadCount());
     }
 

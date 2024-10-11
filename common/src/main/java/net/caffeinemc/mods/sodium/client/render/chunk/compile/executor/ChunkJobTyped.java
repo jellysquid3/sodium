@@ -42,6 +42,7 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT extends
         ChunkJobResult<OUTPUT> result;
 
         try {
+            var start = System.nanoTime();
             var output = this.task.execute(context, this);
 
             // Task was cancelled while executing
@@ -49,7 +50,7 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT extends
                 return;
             }
 
-            result = ChunkJobResult.successfully(output);
+            result = ChunkJobResult.successfully(output, JobEffort.untilNowWithEffort(this.task.getClass(), start, this.task.getEffort()));
         } catch (Throwable throwable) {
             result = ChunkJobResult.exceptionally(throwable);
             ChunkBuilder.LOGGER.error("Chunk build failed", throwable);
@@ -68,7 +69,7 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT extends
     }
 
     @Override
-    public int getEffort() {
-        return this.task.getEffort();
+    public long getEstimatedDuration() {
+        return this.task.getEstimatedDuration();
     }
 }

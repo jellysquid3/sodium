@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks;
 
-import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.Sorter;
+import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.DynamicSorter;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import org.joml.Vector3dc;
@@ -8,14 +8,13 @@ import org.joml.Vector3dc;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkBuildContext;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkSortOutput;
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.DynamicData;
 import net.caffeinemc.mods.sodium.client.util.task.CancellationToken;
 
 public class ChunkBuilderSortingTask extends ChunkBuilderTask<ChunkSortOutput> {
-    private final Sorter sorter;
+    private final DynamicSorter sorter;
 
-    public ChunkBuilderSortingTask(RenderSection render, int frame, Vector3dc absoluteCameraPos, Sorter sorter) {
+    public ChunkBuilderSortingTask(RenderSection render, int frame, Vector3dc absoluteCameraPos, DynamicSorter sorter) {
         super(render, frame, absoluteCameraPos);
         this.sorter = sorter;
     }
@@ -43,7 +42,7 @@ public class ChunkBuilderSortingTask extends ChunkBuilderTask<ChunkSortOutput> {
     }
 
     @Override
-    public int getEffort() {
-        return ChunkBuilder.LOW_EFFORT;
+    public long getEffort() {
+        return this.sorter.getQuadCount();
     }
 }

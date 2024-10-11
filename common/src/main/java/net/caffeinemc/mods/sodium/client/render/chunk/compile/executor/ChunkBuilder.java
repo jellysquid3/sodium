@@ -31,20 +31,11 @@ public class ChunkBuilder {
      * min((mesh task upload size) / (sort task upload size), (mesh task time) /
      * (sort task time)).
      */
-    public static final int HIGH_EFFORT = 10;
-    public static final int LOW_EFFORT = 1;
-    public static final int EFFORT_UNIT = HIGH_EFFORT + LOW_EFFORT;
-    public static final int EFFORT_PER_THREAD_PER_FRAME = EFFORT_UNIT;
-    private static final float HIGH_EFFORT_BUDGET_FACTOR = (float)HIGH_EFFORT / EFFORT_UNIT;
-
     static final Logger LOGGER = LogManager.getLogger("ChunkBuilder");
 
     private final ChunkJobQueue queue = new ChunkJobQueue();
-
     private final List<Thread> threads = new ArrayList<>();
-
     private final AtomicInteger busyThreadCount = new AtomicInteger();
-
     private final ChunkBuildContext localContext;
 
     public ChunkBuilder(ClientLevel level, ChunkVertexType vertexType) {
@@ -70,16 +61,8 @@ public class ChunkBuilder {
      * Returns the remaining effort for tasks which should be scheduled this frame. If an attempt is made to
      * spawn more tasks than the budget allows, it will block until resources become available.
      */
-    public int getTotalRemainingBudget() {
-        return Math.max(0, this.threads.size() * EFFORT_PER_THREAD_PER_FRAME - this.queue.getEffortSum());
-    }
-
-    public int getHighEffortSchedulingBudget() {
-        return Math.max(HIGH_EFFORT, (int) (this.getTotalRemainingBudget() * HIGH_EFFORT_BUDGET_FACTOR));
-    }
-
-    public int getLowEffortSchedulingBudget() {
-        return Math.max(LOW_EFFORT, this.getTotalRemainingBudget() - this.getHighEffortSchedulingBudget());
+    public long getTotalRemainingDuration(long durationPerThread) {
+        return Math.max(0, this.threads.size() * durationPerThread - this.queue.getJobDurationSum());
     }
 
     /**
@@ -173,8 +156,8 @@ public class ChunkBuilder {
         return this.queue.size();
     }
 
-    public int getScheduledEffort() {
-        return this.queue.getEffortSum();
+    public float getBusyFraction(long frameDuration) {
+        return (float) this.queue.getJobDurationSum() / (frameDuration * this.threads.size());
     }
 
     public int getBusyThreadCount() {

@@ -67,6 +67,7 @@ public class RenderSection {
     // Pending Update State
     @Nullable
     private CancellationToken taskCancellationToken = null;
+    private long lastMeshingTaskEffort = 1;
 
     @Nullable
     private ChunkUpdateType pendingUpdateType;
@@ -180,6 +181,14 @@ public class RenderSection {
 
         // changes to data if it moves from built to not built don't matter, so only build state changes matter
         return wasBuilt;
+    }
+
+    public void setLastMeshingTaskEffort(long effort) {
+        this.lastMeshingTaskEffort = effort;
+    }
+
+    public long getLastMeshingTaskEffort() {
+        return this.lastMeshingTaskEffort;
     }
 
     /**

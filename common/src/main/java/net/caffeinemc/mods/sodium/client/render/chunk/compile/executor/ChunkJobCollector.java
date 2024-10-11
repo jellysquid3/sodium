@@ -12,15 +12,15 @@ public class ChunkJobCollector {
     private final Consumer<ChunkJobResult<? extends BuilderTaskOutput>> collector;
     private final List<ChunkJob> submitted = new ArrayList<>();
 
-    private int budget;
+    private long duration;
 
     public ChunkJobCollector(Consumer<ChunkJobResult<? extends BuilderTaskOutput>> collector) {
-        this.budget = Integer.MAX_VALUE;
+        this.duration = Long.MAX_VALUE;
         this.collector = collector;
     }
 
-    public ChunkJobCollector(int budget, Consumer<ChunkJobResult<? extends BuilderTaskOutput>> collector) {
-        this.budget = budget;
+    public ChunkJobCollector(long duration, Consumer<ChunkJobResult<? extends BuilderTaskOutput>> collector) {
+        this.duration = duration;
         this.collector = collector;
     }
 
@@ -47,10 +47,10 @@ public class ChunkJobCollector {
 
     public void addSubmittedJob(ChunkJob job) {
         this.submitted.add(job);
-        this.budget -= job.getEffort();
+        this.duration -= job.getEstimatedDuration();
     }
 
     public boolean hasBudgetRemaining() {
-        return this.budget > 0;
+        return this.duration > 0;
     }
 }

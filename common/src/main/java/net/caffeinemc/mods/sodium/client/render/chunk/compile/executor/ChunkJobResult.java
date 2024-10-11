@@ -5,18 +5,24 @@ import net.minecraft.ReportedException;
 public class ChunkJobResult<OUTPUT> {
     private final OUTPUT output;
     private final Throwable throwable;
+    private final JobEffort jobEffort;
 
-    private ChunkJobResult(OUTPUT output, Throwable throwable) {
+    private ChunkJobResult(OUTPUT output, Throwable throwable, JobEffort jobEffort) {
         this.output = output;
         this.throwable = throwable;
+        this.jobEffort = jobEffort;
     }
 
     public static <OUTPUT> ChunkJobResult<OUTPUT> exceptionally(Throwable throwable) {
-        return new ChunkJobResult<>(null, throwable);
+        return new ChunkJobResult<>(null, throwable, null);
+    }
+
+    public static <OUTPUT> ChunkJobResult<OUTPUT> successfully(OUTPUT output, JobEffort jobEffort) {
+        return new ChunkJobResult<>(output, null, jobEffort);
     }
 
     public static <OUTPUT> ChunkJobResult<OUTPUT> successfully(OUTPUT output) {
-        return new ChunkJobResult<>(output, null);
+        return new ChunkJobResult<>(output, null, null);
     }
 
     public OUTPUT unwrap() {
@@ -28,5 +34,9 @@ public class ChunkJobResult<OUTPUT> {
         }
 
         return this.output;
+    }
+
+    public JobEffort getJobEffort() {
+        return this.jobEffort;
     }
 }

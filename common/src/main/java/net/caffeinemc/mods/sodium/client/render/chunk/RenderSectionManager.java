@@ -13,6 +13,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkSortOutput;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobCollector;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobResult;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.JobEffortEstimator;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderSortingTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderTask;
@@ -53,7 +54,9 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3dc;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class RenderSectionManager {
     private static final float NEARBY_REBUILD_DISTANCE = Mth.square(16.0f);
@@ -67,6 +70,8 @@ public class RenderSectionManager {
     private final Long2ReferenceMap<RenderSection> sectionByPosition = new Long2ReferenceOpenHashMap<>();
 
     private final ConcurrentLinkedDeque<ChunkJobResult<? extends BuilderTaskOutput>> buildResults = new ConcurrentLinkedDeque<>();
+    private ChunkJobCollector lastBlockingCollector;
+    private final JobEffortEstimator jobEffortEstimator = new JobEffortEstimator();
 
     private final ChunkRenderer chunkRenderer;
 
@@ -80,8 +85,6 @@ public class RenderSectionManager {
 
     private final SortTriggering sortTriggering;
 
-    private ChunkJobCollector lastBlockingCollector;
-
     @NotNull
     private SortedRenderLists renderLists;
 
@@ -90,7 +93,10 @@ public class RenderSectionManager {
 
     private int frame;
     private int lastGraphDirtyFrame;
+    private long lastFrameDuration = -1;
+    private long averageFrameDuration = -1;
     private long lastFrameAtTime = System.nanoTime();
+    private static final float AVERAGE_FRAME_DURATION_FACTOR = 0.05f;
 
     private boolean needsGraphUpdate = true;
     private boolean needsRenderListUpdate = true;
@@ -138,8 +144,18 @@ public class RenderSectionManager {
     // TODO idea: increase and decrease chunk builder thread budget based on if the upload buffer was filled if the entire budget was used up. if the fallback way of uploading buffers is used, just doing 3 * the budget actually slows down frames while things are getting uploaded. For this it should limit how much (or how often?) things are uploaded. In the case of the mapped upload, just making sure we don't exceed its size is probably enough.
 
     public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator, boolean updateImmediately) {
+        var now = System.nanoTime();
+        this.lastFrameDuration = now - this.lastFrameAtTime;
+        this.lastFrameAtTime = now;
+        if (this.averageFrameDuration == -1) {
+            this.averageFrameDuration = this.lastFrameDuration;
+        } else {
+            this.averageFrameDuration = (long)(this.lastFrameDuration * AVERAGE_FRAME_DURATION_FACTOR) +
+                (long)(this.averageFrameDuration * (1 - AVERAGE_FRAME_DURATION_FACTOR));
+        }
+        this.averageFrameDuration = Mth.clamp(this.averageFrameDuration, 1_000_100, 100_000_000);
+
         this.frame += 1;
-        this.lastFrameAtTime = System.nanoTime();
         this.needsRenderListUpdate |= this.cameraChanged;
 
         // do sync bfs based on update immediately (flawless frames) or if the camera moved too much
@@ -555,6 +571,7 @@ public class RenderSectionManager {
             TranslucentData oldData = result.render.getTranslucentData();
             if (result instanceof ChunkBuildOutput chunkBuildOutput) {
                 touchedSectionInfo |= this.updateSectionInfo(result.render, chunkBuildOutput.info);
+                result.render.setLastMeshingTaskEffort(chunkBuildOutput.getEffort());
 
                 if (chunkBuildOutput.translucentData != null) {
                     this.sortTriggering.integrateTranslucentData(oldData, chunkBuildOutput.translucentData, this.cameraPosition, this::scheduleSort);
@@ -614,11 +631,18 @@ public class RenderSectionManager {
 
     private ArrayList<BuilderTaskOutput> collectChunkBuildResults() {
         ArrayList<BuilderTaskOutput> results = new ArrayList<>();
+
         ChunkJobResult<? extends BuilderTaskOutput> result;
 
         while ((result = this.buildResults.poll()) != null) {
             results.add(result.unwrap());
+            var jobEffort = result.getJobEffort();
+            if (jobEffort != null) {
+                this.jobEffortEstimator.addJobEffort(jobEffort);
+            }
         }
+
+        this.jobEffortEstimator.flushNewData();
 
         return results;
     }
@@ -643,9 +667,8 @@ public class RenderSectionManager {
             thisFrameBlockingCollector.awaitCompletion(this.builder);
         } else {
             var nextFrameBlockingCollector = new ChunkJobCollector(this.buildResults::add);
-            var deferredCollector = new ChunkJobCollector(
-                    this.builder.getTotalRemainingBudget(),
-                    this.buildResults::add);
+            var remainingDuration = this.builder.getTotalRemainingDuration(this.averageFrameDuration);
+            var deferredCollector = new ChunkJobCollector(remainingDuration, this.buildResults::add);
 
             // if zero frame delay is allowed, submit important sorts with the current frame blocking collector.
             // otherwise submit with the collector that the next frame is blocking on.
@@ -795,11 +818,17 @@ public class RenderSectionManager {
             return null;
         }
 
-        return new ChunkBuilderMeshingTask(render, frame, this.cameraPosition, context);
+        var task = new ChunkBuilderMeshingTask(render, frame, this.cameraPosition, context);
+        task.estimateDurationWith(this.jobEffortEstimator);
+        return task;
     }
 
     public ChunkBuilderSortingTask createSortTask(RenderSection render, int frame) {
-        return ChunkBuilderSortingTask.createTask(render, frame, this.cameraPosition);
+        var task = ChunkBuilderSortingTask.createTask(render, frame, this.cameraPosition);
+        if (task != null) {
+            task.estimateDurationWith(this.jobEffortEstimator);
+        }
+        return task;
     }
 
     public void processGFNIMovement(CameraMovement movement) {
@@ -975,8 +1004,8 @@ public class RenderSectionManager {
         list.add(String.format("Geometry Pool: %d/%d MiB (%d buffers)", MathUtil.toMib(deviceUsed), MathUtil.toMib(deviceAllocated), count));
         list.add(String.format("Transfer Queue: %s", this.regions.getStagingBuffer().toString()));
 
-        list.add(String.format("Chunk Builder: Permits=%02d (E %03d) | Busy=%02d | Total=%02d",
-                this.builder.getScheduledJobCount(), this.builder.getScheduledEffort(), this.builder.getBusyThreadCount(), this.builder.getTotalThreadCount())
+        list.add(String.format("Chunk Builder: Permits=%02d (%04d%%) | Busy=%02d | Total=%02d",
+                this.builder.getScheduledJobCount(), (int)(this.builder.getBusyFraction(this.lastFrameDuration) * 100), this.builder.getBusyThreadCount(), this.builder.getTotalThreadCount())
         );
 
         list.add(String.format("Chunk Queues: U=%02d", this.buildResults.size()));
