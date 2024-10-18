@@ -27,8 +27,8 @@ public class GlShader extends GlObject {
         String log = GL20C.glGetShaderInfoLog(handle);
 
         if (!log.isEmpty()) {
-            LOGGER.warn("Shader compilation log for " + this.name + ": " + parsedShader.remapShaderErrorLog(name, log));
-            LOGGER.warn("Include table: " + Arrays.toString(parsedShader.includeIds()));
+            LOGGER.warn("Shader compilation log for {}: {}", this.name, log);
+            LOGGER.warn("Include table: {}", Arrays.toString(parsedShader.includeIds()));
         }
 
         int result = GlStateManager.glGetShaderi(handle, GL20C.GL_COMPILE_STATUS);

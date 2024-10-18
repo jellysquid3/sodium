@@ -14,31 +14,6 @@ import java.util.regex.Pattern;
 
 public class ShaderParser {
     public record ParsedShader(String src, String[] includeIds) {
-        private static final Pattern LINE_REF_PATTERN = Pattern.compile("(?<source>\\d+):(?<line>\\d+):");
-
-        public String remapShaderErrorLog(ResourceLocation name, String log) {
-            // remap all line references with the include id table
-            Matcher matcher = LINE_REF_PATTERN.matcher(log);
-            StringBuilder builder = new StringBuilder();
-
-            while (matcher.find()) {
-                String source = matcher.group("source");
-                var line = matcher.group("line");
-                var id = Integer.parseInt(source);
-
-                if (id >= this.includeIds.length) {
-                    matcher.appendReplacement(builder, "unknown_source" + "(#" + id + "):" + line + ":");
-                    continue;
-                }
-
-                String includeName = id == 0 ? name.toString() : this.includeIds[id];
-
-                matcher.appendReplacement(builder, includeName + "(#" + id + "):" + line + ":");
-            }
-
-            matcher.appendTail(builder);
-            return builder.toString();
-        }
     }
 
     public static ParsedShader parseShader(String src, ShaderConstants constants) {
