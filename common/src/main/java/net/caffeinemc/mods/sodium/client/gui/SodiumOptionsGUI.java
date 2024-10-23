@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.data.fingerprint.HashedFingerprint;
 import net.caffeinemc.mods.sodium.client.console.Console;
@@ -11,6 +12,7 @@ import net.caffeinemc.mods.sodium.client.gui.options.storage.OptionStorage;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
 import net.caffeinemc.mods.sodium.client.gui.screen.ConfigCorruptedScreen;
+import net.caffeinemc.mods.sodium.client.gui.widgets.CenteredFlatWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -54,6 +56,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     private ControlElement<?> hoveredElement;
 
     private @Nullable ScreenPrompt prompt;
+    private FlatButtonWidget searchButton;
 
     private SodiumOptionsGUI(Screen prevScreen) {
         super(Component.literal("Sodium Renderer Settings"));
@@ -161,13 +164,14 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         }
 
         this.rebuildGUIPages();
-        this.rebuildGUIOptions();
+        int pageY = this.rebuildGUIOptions();
 
-        this.undoButton = new FlatButtonWidget(new Dim2i(this.width - 211, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges);
-        this.applyButton = new FlatButtonWidget(new Dim2i(this.width - 142, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.apply"), this::applyChanges);
-        this.closeButton = new FlatButtonWidget(new Dim2i(this.width - 73, this.height - 30, 65, 20), Component.translatable("gui.done"), this::onClose);
-        this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, 6, 100, 20), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage);
-        this.hideDonateButton = new FlatButtonWidget(new Dim2i(this.width - 26, 6, 20, 20), Component.literal("x"), this::hideDonationButton);
+        this.undoButton = new FlatButtonWidget(new Dim2i(270, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
+        this.applyButton = new FlatButtonWidget(new Dim2i(130, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.apply"), this::applyChanges, true, false);
+        this.closeButton = new FlatButtonWidget(new Dim2i(200, this.height - 30, 65, 20), Component.translatable("gui.done"), this::onClose, true, false);
+        this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, 6, 100, 20), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage, true, false);
+        this.hideDonateButton = new FlatButtonWidget(new Dim2i(this.width - 26, 6, 20, 20), Component.literal("x"), this::hideDonationButton, true, false);
+        this.searchButton = new FlatButtonWidget(new Dim2i(0, this.height - 30, 125, 20), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), this::hideDonationButton, true, true);
 
         if (SodiumClientMod.options().notifications.hasClearedDonationButton) {
             this.setDonationButtonVisibility(false);
@@ -176,6 +180,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         this.addRenderableWidget(this.undoButton);
         this.addRenderableWidget(this.applyButton);
         this.addRenderableWidget(this.closeButton);
+        this.addRenderableWidget(this.searchButton);
         this.addRenderableWidget(this.donateButton);
         this.addRenderableWidget(this.hideDonateButton);
     }
@@ -199,24 +204,45 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     }
 
     private void rebuildGUIPages() {
-        int x = 6;
-        int y = 6;
+        int x = 0;
+        int y = 5;
+        int width = 125;
+
+        CenteredFlatWidget header = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), Component.literal("Sodium Renderer"), () -> {}, false);
+
+        y += font.lineHeight * 2;
+
+        this.addRenderableWidget(header);
 
         for (OptionPage page : this.pages) {
-            int width = 12 + this.font.width(page.getName());
 
-            FlatButtonWidget button = new FlatButtonWidget(new Dim2i(x, y, width, 18), page.getName(), () -> this.setPage(page));
+            CenteredFlatWidget button = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), page.getName(), () -> this.setPage(page), true);
             button.setSelected(this.currentPage == page);
 
-            x += width + 6;
+            y += font.lineHeight * 2;
 
             this.addRenderableWidget(button);
         }
+/*
+
+        CenteredFlatWidget button = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), Component.literal("" +
+                "Iris Shaders"), () -> {}, false);
+
+        y += font.lineHeight * 2;
+
+        this.addRenderableWidget(button);
+
+        CenteredFlatWidget button2 = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), Component.literal("Shader Packs"), () -> {}, true);
+
+        y += font.lineHeight * 2;
+
+        this.addRenderableWidget(button2);
+        */
     }
 
-    private void rebuildGUIOptions() {
-        int x = 6;
-        int y = 28;
+    private int rebuildGUIOptions() {
+        int x = (int) (130);
+        int y = 23;
 
         for (OptionGroup group : this.currentPage.getGroups()) {
             // Add each option's control element
@@ -235,11 +261,14 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
             // Add padding beneath each option group
             y += 4;
         }
+
+        return y;
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         this.updateControls();
+
 
         super.render(graphics, this.prompt != null ? -1 : mouseX, this.prompt != null ? -1 : mouseY, delta);
 
@@ -250,6 +279,13 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         if (this.prompt != null) {
             this.prompt.render(graphics, mouseX, mouseY, delta);
         }
+    }
+
+    @Override
+    protected void renderMenuBackground(GuiGraphics guiGraphics, int i, int j, int k, int l) {
+        guiGraphics.fillGradient(0, 0, 125, this.minecraft.getMainRenderTarget().height, 0x40000000, 0x90000000);
+        //graphics.fill(0, 0, 335, 20, 0x40000000);
+        RenderSystem.enableBlend();
     }
 
     private void updateControls() {
@@ -292,8 +328,8 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     private void renderOptionTooltip(GuiGraphics graphics, ControlElement<?> element) {
         Dim2i dim = element.getDimensions();
 
-        int textPadding = 3;
-        int boxPadding = 3;
+        int textPadding = 5;
+        int boxPadding = 5;
 
         int boxY = dim.y();
         int boxX = dim.getLimitX() + boxPadding;
@@ -321,7 +357,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
             boxY -= boxYLimit - boxYCutoff;
         }
 
-        graphics.fillGradient(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0xE0000000, 0xE0000000);
+        graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x40000000);
 
         for (int i = 0; i < tooltip.size(); i++) {
             graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * 12), 0xFFFFFFFF);

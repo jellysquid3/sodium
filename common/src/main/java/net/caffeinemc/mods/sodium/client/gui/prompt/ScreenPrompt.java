@@ -40,10 +40,10 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
         int boxX = (parentDimensions.width() / 2) - (width / 2);
         int boxY = (parentDimensions.height() / 2) - (height / 2);
 
-        this.closeButton = new FlatButtonWidget(new Dim2i((boxX + width) - 84, (boxY + height) - 24, 80, 20), Component.literal("Close"), this::close);
+        this.closeButton = new FlatButtonWidget(new Dim2i((boxX + width) - 84, (boxY + height) - 24, 80, 20), Component.literal("Close"), this::close, true, false);
         this.closeButton.setStyle(createButtonStyle());
 
-        this.actionButton = new FlatButtonWidget(new Dim2i((boxX + width) - 198, (boxY + height) - 24, 110, 20), this.action.label, this::runAction);
+        this.actionButton = new FlatButtonWidget(new Dim2i((boxX + width) - 198, (boxY + height) - 24, 110, 20), this.action.label, this::runAction, true, false);
         this.actionButton.setStyle(createButtonStyle());
     }
 

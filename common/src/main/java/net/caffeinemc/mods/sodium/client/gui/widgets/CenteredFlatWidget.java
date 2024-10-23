@@ -13,11 +13,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class FlatButtonWidget extends AbstractWidget implements Renderable {
+public class CenteredFlatWidget extends AbstractWidget implements Renderable {
     private final Dim2i dim;
     private final Runnable action;
-    private final boolean drawBackground;
-    private final boolean leftAlign;
+    private final boolean isSelectable;
 
     private @NotNull Style style = Style.defaults();
 
@@ -27,12 +26,11 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
 
     private Component label;
 
-    public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean leftAlign) {
+    public CenteredFlatWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable) {
         this.dim = dim;
         this.label = label;
         this.action = action;
-        this.drawBackground = drawBackground;
-        this.leftAlign = leftAlign;
+        this.isSelectable = isSelectable;
     }
 
     @Override
@@ -43,24 +41,23 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
 
         this.hovered = this.dim.containsCursor(mouseX, mouseY);
 
-        int backgroundColor = this.enabled ? (this.hovered ? this.style.bgHovered : this.style.bgDefault) : this.style.bgDisabled;
-        int textColor = this.enabled ? this.style.textDefault : this.style.textDisabled;
+        int backgroundColor = this.hovered ? 0x40001101 : (this.selected ? 0x80000000 : 0x40000000);
+        int textColor = this.selected || !this.isSelectable ? this.style.textDefault : this.style.textDisabled;
 
         int strWidth = this.font.width(this.label);
 
-        if (drawBackground) {
+        if (isSelectable) {
             this.drawRect(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), backgroundColor);
         }
 
-        this.drawString(graphics, this.label, this.leftAlign ? this.dim.x() + 5 : (this.dim.getCenterX() - (strWidth / 2)), this.dim.getCenterY() - 4, textColor);
-
-        if (this.enabled && this.selected) {
-            this.drawRect(graphics, this.dim.x(), this.dim.getLimitY() - 1, this.dim.getLimitX(), this.dim.getLimitY(), 0xFF94E4D3);
+        if (selected) {
+            this.drawRect(graphics, this.dim.getLimitX() - 3, this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), 0xFFccfdee);
         }
 
-        if (!drawBackground) {
-            this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), 0x8000FFEE);
+        this.drawString(graphics, this.label, (int) (this.dim.x() + 8), (int) Math.ceil(((this.dim.getCenterY() - (font.lineHeight * 0.5f)))), textColor);
 
+        if (this.enabled && this.isFocused()) {
+            this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), -1);
         }
     }
 
@@ -131,11 +128,6 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
     }
 
     @Override
-    public boolean isMouseOver(double x, double y) {
-        return this.dim.containsCursor(x, y);
-    }
-
-    @Override
     public ScreenRectangle getRectangle() {
         return new ScreenRectangle(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height());
     }
@@ -149,8 +141,8 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
             style.bgHovered = 0xE0000000;
             style.bgDefault = 0x90000000;
             style.bgDisabled = 0x60000000;
-            style.textDefault = 0xFFFFFFFF;
-            style.textDisabled = 0x90FFFFFF;
+            style.textDefault = 0xccfdee;
+            style.textDisabled = 0xF06f9090;
 
             return style;
         }

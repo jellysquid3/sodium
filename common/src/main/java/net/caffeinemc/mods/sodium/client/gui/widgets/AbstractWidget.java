@@ -35,6 +35,10 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, Na
         graphics.drawString(this.font, text, x, y, color);
     }
 
+    protected void drawCenteredString(GuiGraphics graphics, Component text, int x, int y, int color) {
+        graphics.drawCenteredString(this.font, text, x, y, color);
+    }
+
     public boolean isHovered() {
         return this.hovered;
     }
