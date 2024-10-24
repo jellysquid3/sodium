@@ -115,7 +115,7 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                 return this.value;
             }
         }
-        builder.registerModConfig("foo", "Foo", "1.0")
+        ModOptionsBuilder options = builder.registerModConfig("foo", "Foo", "1.0")
                 .addPage(builder.createOptionPage()
                         .setName(Component.literal("Foo Page"))
                         .addOptionGroup(builder.createOptionGroup().addOption(
@@ -127,7 +127,24 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                                         .setDefaultValue(true)
                                         .setBinding(new LocalBinding<>(true))
                                         .setImpact(OptionImpact.LOW)
-                        )));
+                        ))
+                )
+        ;
+        for (int i = 0; i < 10; i++) {
+            options.addPage(builder.createOptionPage()
+                    .setName(Component.literal("Foo " + i))
+                    .addOptionGroup(builder.createOptionGroup().addOption(
+                            builder.createBooleanOption(ResourceLocation.parse("foo:" + i))
+                                    .setStorageHandler(() -> {
+                                    })
+                                    .setName(Component.literal("Bar " + i))
+                                    .setTooltip(Component.literal("Baz " + i))
+                                    .setDefaultValue(true)
+                                    .setBinding(new LocalBinding<>(true))
+                                    .setImpact(OptionImpact.LOW)
+                    ))
+            );
+        }
     }
 
     private OptionPageBuilder buildGeneralPage(ConfigBuilder builder) {

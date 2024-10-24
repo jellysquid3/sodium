@@ -19,13 +19,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractWidget implements Renderable, GuiEventListener, NarratableEntry {
-    protected final Font font;
+    protected final Font font = Minecraft.getInstance().font;
     protected boolean focused;
     protected boolean hovered;
-
-    protected AbstractWidget() {
-        this.font = Minecraft.getInstance().font;
-    }
 
     protected void drawString(GuiGraphics graphics, String text, int x, int y, int color) {
         graphics.drawString(this.font, text, x, y, color);

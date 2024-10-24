@@ -39,26 +39,55 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
             return;
         }
 
-        this.hovered = this.dim.containsCursor(mouseX, mouseY);
+        this.hovered = this.isMouseOver(mouseX, mouseY);
 
         int backgroundColor = this.hovered ? 0x40001101 : (this.selected ? 0x80000000 : 0x40000000);
         int textColor = this.selected || !this.isSelectable ? this.style.textDefault : this.style.textDisabled;
 
         int strWidth = this.font.width(this.label);
 
+        int x1 = this.getX();
+        int y1 = this.getY();
+        int x2 = this.getLimitX();
+        int y2 = this.getLimitY();
+
         if (isSelectable) {
-            this.drawRect(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), backgroundColor);
+            this.drawRect(graphics, x1, y1, x2, y2, backgroundColor);
         }
 
         if (selected) {
-            this.drawRect(graphics, this.dim.getLimitX() - 3, this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), 0xFFccfdee);
+            this.drawRect(graphics, x2 - 3, y1, x2, y2, 0xFFccfdee);
         }
 
-        this.drawString(graphics, this.label, (int) (this.dim.x() + 8), (int) Math.ceil(((this.dim.getCenterY() - (font.lineHeight * 0.5f)))), textColor);
+        this.drawString(graphics, this.label, x1 + 8, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
 
         if (this.enabled && this.isFocused()) {
-            this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), -1);
+            this.drawBorder(graphics, x1, y1, x2, y2, -1);
         }
+    }
+
+    public int getX() {
+        return this.dim.x();
+    }
+
+    public int getY() {
+        return this.dim.y();
+    }
+
+    public int getWidth() {
+        return this.dim.width();
+    }
+
+    public int getHeight() {
+        return this.dim.height();
+    }
+
+    public int getLimitX() {
+        return this.dim.getLimitX();
+    }
+
+    public int getLimitY() {
+        return this.dim.getLimitY();
     }
 
     public void setStyle(@NotNull Style style) {
@@ -77,13 +106,18 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
             return false;
         }
 
-        if (button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
+        if (button == 0 && this.isMouseOver(mouseX, mouseY)) {
             doAction();
 
             return true;
         }
 
         return false;
+    }
+
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        return mouseX >= this.getX() && mouseX < this.getLimitX() && mouseY >= this.getY() && mouseY < this.getLimitY();
     }
 
     @Override
@@ -129,7 +163,7 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
 
     @Override
     public ScreenRectangle getRectangle() {
-        return new ScreenRectangle(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height());
+        return new ScreenRectangle(this.getX(), this.getY(), this.getWidth(), this.getHeight());
     }
 
     public static class Style {

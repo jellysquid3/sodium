@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
@@ -16,8 +15,8 @@ import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
 import net.caffeinemc.mods.sodium.client.gui.screen.ConfigCorruptedScreen;
-import net.caffeinemc.mods.sodium.client.gui.widgets.CenteredFlatWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
+import net.caffeinemc.mods.sodium.client.gui.widgets.PageListWidget;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
@@ -49,12 +48,15 @@ import java.util.stream.Stream;
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
 // TODO: the donation button is gone when the search button is clicked?
 // TODO: "setting unavailable" overlaps with the label, even though the label should be automatically truncated to fit
+// TODO: make use of the theme color given by the mod config
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final List<ControlElement<?>> controls = new ArrayList<>();
 
     private final Screen prevScreen;
 
     private OptionPage currentPage;
+
+    private PageListWidget pageList;
 
     private FlatButtonWidget applyButton, closeButton, undoButton;
     private FlatButtonWidget donateButton, hideDonateButton;
@@ -63,7 +65,6 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private ControlElement<?> hoveredElement;
 
     private @Nullable ScreenPrompt prompt;
-    private FlatButtonWidget searchButton;
 
     private VideoSettingsScreen(Screen prevScreen) {
         super(Component.literal("Sodium Renderer Settings"));
@@ -134,6 +135,10 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         }
     }
 
+    public OptionPage getPage() {
+        return this.currentPage;
+    }
+
     public void setPage(OptionPage page) {
         this.currentPage = page;
 
@@ -166,24 +171,23 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             this.currentPage = ConfigManager.CONFIG.getModConfigs().getFirst().pages().getFirst();
         }
 
-        this.rebuildGUIPages();
         int pageY = this.rebuildGUIOptions();
 
+        this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
         this.undoButton = new FlatButtonWidget(new Dim2i(270, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
         this.applyButton = new FlatButtonWidget(new Dim2i(130, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.apply"), this::applyChanges, true, false);
         this.closeButton = new FlatButtonWidget(new Dim2i(200, this.height - 30, 65, 20), Component.translatable("gui.done"), this::onClose, true, false);
         this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, 6, 100, 20), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage, true, false);
         this.hideDonateButton = new FlatButtonWidget(new Dim2i(this.width - 26, 6, 20, 20), Component.literal("x"), this::hideDonationButton, true, false);
-        this.searchButton = new FlatButtonWidget(new Dim2i(0, this.height - 30, 125, 20), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), this::hideDonationButton, true, true);
 
         if (SodiumClientMod.options().notifications.hasClearedDonationButton) {
             this.setDonationButtonVisibility(false);
         }
 
+        this.addRenderableWidget(this.pageList);
         this.addRenderableWidget(this.undoButton);
         this.addRenderableWidget(this.applyButton);
         this.addRenderableWidget(this.closeButton);
-        this.addRenderableWidget(this.searchButton);
         this.addRenderableWidget(this.donateButton);
         this.addRenderableWidget(this.hideDonateButton);
     }
@@ -204,45 +208,6 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         }
 
         this.setDonationButtonVisibility(false);
-    }
-
-    private void rebuildGUIPages() {
-        int x = 0;
-        int y = 5;
-        int width = 125;
-
-        for (var modConfig : ConfigManager.CONFIG.getModConfigs()) {
-            CenteredFlatWidget header = new CenteredFlatWidget(new Dim2i(x, y, width, this.font.lineHeight * 2), Component.literal(modConfig.name()), () -> {
-            }, false);
-
-            y += this.font.lineHeight * 2;
-
-            this.addRenderableWidget(header);
-
-            for (OptionPage page : modConfig.pages()) {
-                CenteredFlatWidget button = new CenteredFlatWidget(new Dim2i(x, y, width, this.font.lineHeight * 2), page.name(), () -> this.setPage(page), true);
-                button.setSelected(this.currentPage == page);
-
-                y += this.font.lineHeight * 2;
-
-                this.addRenderableWidget(button);
-            }
-        }
-/*
-
-        CenteredFlatWidget button = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), Component.literal("" +
-                "Iris Shaders"), () -> {}, false);
-
-        y += font.lineHeight * 2;
-
-        this.addRenderableWidget(button);
-
-        CenteredFlatWidget button2 = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), Component.literal("Shader Packs"), () -> {}, true);
-
-        y += font.lineHeight * 2;
-
-        this.addRenderableWidget(button2);
-        */
     }
 
     private int rebuildGUIOptions() {
@@ -286,10 +251,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     @Override
-    protected void renderMenuBackground(GuiGraphics guiGraphics, int i, int j, int k, int l) {
-        guiGraphics.fillGradient(0, 0, 125, this.minecraft.getMainRenderTarget().height, 0x40000000, 0x90000000);
-        //graphics.fill(0, 0, 335, 20, 0x40000000);
-        RenderSystem.enableBlend();
+    protected void renderMenuBackground(@NotNull GuiGraphics guiGraphics, int i, int j, int k, int l) {
     }
 
     private void updateControls() {
