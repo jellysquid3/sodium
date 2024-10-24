@@ -1,4 +1,4 @@
-package net.caffeinemc.mods.sodium.client.gui.options;
+package net.caffeinemc.mods.sodium.api.config.option;
 
 public enum OptionFlag {
     REQUIRES_RENDERER_RELOAD,

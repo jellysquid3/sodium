@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
-import net.caffeinemc.mods.sodium.client.gui.options.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.gui.widgets.AbstractWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
@@ -30,7 +30,7 @@ public class ControlElement<T> extends AbstractWidget {
         String name = this.option.getName().getString();
 
         // add the star suffix before truncation to prevent it from overlapping with the label text
-        if (this.option.isAvailable() && this.option.hasChanged()) {
+        if (this.option.isEnabled() && this.option.hasChanged()) {
             name = name + " *";
         }
 
@@ -40,7 +40,7 @@ public class ControlElement<T> extends AbstractWidget {
         }
 
         String label;
-        if (this.option.isAvailable()) {
+        if (this.option.isEnabled()) {
             if (this.option.hasChanged()) {
                 label = ChatFormatting.ITALIC + name;
             } else {
@@ -97,13 +97,14 @@ public class ControlElement<T> extends AbstractWidget {
 
     @Override
     public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent event) {
-        if (!this.option.isAvailable())
+        if (!this.option.isEnabled()) {
             return null;
+        }
         return super.nextFocusPath(event);
     }
 
     @Override
-    public ScreenRectangle getRectangle() {
+    public @NotNull ScreenRectangle getRectangle() {
         return new ScreenRectangle(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height());
     }
 

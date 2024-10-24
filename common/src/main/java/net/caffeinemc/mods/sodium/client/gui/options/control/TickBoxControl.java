@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
-import net.caffeinemc.mods.sodium.client.gui.options.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.CommonInputs;
@@ -46,8 +46,8 @@ public class TickBoxControl implements Control<Boolean> {
             final int w = x + this.button.getWidth();
             final int h = y + this.button.getHeight();
 
-            final boolean enabled = this.option.isAvailable();
-            final boolean ticked = enabled && this.option.getValue();
+            final boolean enabled = this.option.isEnabled();
+            final boolean ticked = enabled && this.option.getValidatedValue();
 
             final int color;
 
@@ -66,7 +66,7 @@ public class TickBoxControl implements Control<Boolean> {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (this.option.isAvailable() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
+            if (this.option.isEnabled() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
                 toggleControl();
                 this.playClickSound();
 
@@ -91,7 +91,7 @@ public class TickBoxControl implements Control<Boolean> {
         }
 
         public void toggleControl() {
-            this.option.setValue(!this.option.getValue());
+            this.option.modifyValue(!this.option.getValidatedValue());
         }
     }
 }

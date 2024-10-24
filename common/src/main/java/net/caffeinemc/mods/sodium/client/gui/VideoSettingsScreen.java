@@ -1,14 +1,18 @@
 package net.caffeinemc.mods.sodium.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
+import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
+import net.caffeinemc.mods.sodium.client.config.*;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
+import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
 import net.caffeinemc.mods.sodium.client.data.fingerprint.HashedFingerprint;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
-import net.caffeinemc.mods.sodium.client.gui.options.*;
 import net.caffeinemc.mods.sodium.client.gui.options.control.Control;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
-import net.caffeinemc.mods.sodium.client.gui.options.storage.OptionStorage;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
 import net.caffeinemc.mods.sodium.client.gui.screen.ConfigCorruptedScreen;
@@ -22,11 +26,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -34,15 +38,18 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Stream;
 
-// TODO: Rename in Sodium 0.6
-public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
-    private final List<OptionPage> pages = new ArrayList<>();
-
+// TODO: scrolling in the page list, the options themselves, and the tooltip if necessary
+// TODO: make the search bar work
+// TODO: constrain the tooltip to its safe area if it's too big, then show a scroll bar if it's still too big
+// TODO: wrap options within groups in two columns
+// TODO: stop the options from overlapping the bottom or top buttons
+// TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
+// TODO: the donation button is gone when the search button is clicked?
+// TODO: "setting unavailable" overlaps with the label, even though the label should be automatically truncated to fit
+public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final List<ControlElement<?>> controls = new ArrayList<>();
 
     private final Screen prevScreen;
@@ -58,15 +65,10 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     private @Nullable ScreenPrompt prompt;
     private FlatButtonWidget searchButton;
 
-    private SodiumOptionsGUI(Screen prevScreen) {
+    private VideoSettingsScreen(Screen prevScreen) {
         super(Component.literal("Sodium Renderer Settings"));
 
         this.prevScreen = prevScreen;
-
-        this.pages.add(SodiumGameOptionPages.general());
-        this.pages.add(SodiumGameOptionPages.quality());
-        this.pages.add(SodiumGameOptionPages.performance());
-        this.pages.add(SodiumGameOptionPages.advanced());
 
         this.checkPromptTimers();
     }
@@ -109,7 +111,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         }
     }
 
-    private void openDonationPrompt(SodiumGameOptions options) {
+    private void openDonationPrompt(SodiumOptions options) {
         var prompt = new ScreenPrompt(this, DONATION_PROMPT_MESSAGE, 320, 190,
                 new ScreenPrompt.Action(Component.literal("Buy us a coffee"), this::openDonationPage));
         prompt.setFocused(true);
@@ -117,7 +119,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         options.notifications.hasSeenDonationPrompt = true;
 
         try {
-            SodiumGameOptions.writeToDisk(options);
+            SodiumOptions.writeToDisk(options);
         } catch (IOException e) {
             SodiumClientMod.logger()
                     .error("Failed to update config file", e);
@@ -126,9 +128,9 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
 
     public static Screen createScreen(Screen currentScreen) {
         if (SodiumClientMod.options().isReadOnly()) {
-            return new ConfigCorruptedScreen(currentScreen, SodiumOptionsGUI::new);
+            return new ConfigCorruptedScreen(currentScreen, VideoSettingsScreen::new);
         } else {
-            return new SodiumOptionsGUI(currentScreen);
+            return new VideoSettingsScreen(currentScreen);
         }
     }
 
@@ -155,12 +157,13 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         this.clearWidgets();
 
         if (this.currentPage == null) {
-            if (this.pages.isEmpty()) {
-                throw new IllegalStateException("No pages are available?!");
-            }
+//            if (this.pages.isEmpty()) {
+//                throw new IllegalStateException("No pages are available?!");
+//            }
 
             // Just use the first page for now
-            this.currentPage = this.pages.get(0);
+            // TODO: fix
+            this.currentPage = ConfigManager.CONFIG.getModConfigs().getFirst().pages().getFirst();
         }
 
         this.rebuildGUIPages();
@@ -191,11 +194,11 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     }
 
     private void hideDonationButton() {
-        SodiumGameOptions options = SodiumClientMod.options();
+        SodiumOptions options = SodiumClientMod.options();
         options.notifications.hasClearedDonationButton = true;
 
         try {
-            SodiumGameOptions.writeToDisk(options);
+            SodiumOptions.writeToDisk(options);
         } catch (IOException e) {
             throw new RuntimeException("Failed to save configuration", e);
         }
@@ -208,20 +211,22 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         int y = 5;
         int width = 125;
 
-        CenteredFlatWidget header = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), Component.literal("Sodium Renderer"), () -> {}, false);
+        for (var modConfig : ConfigManager.CONFIG.getModConfigs()) {
+            CenteredFlatWidget header = new CenteredFlatWidget(new Dim2i(x, y, width, this.font.lineHeight * 2), Component.literal(modConfig.name()), () -> {
+            }, false);
 
-        y += font.lineHeight * 2;
+            y += this.font.lineHeight * 2;
 
-        this.addRenderableWidget(header);
+            this.addRenderableWidget(header);
 
-        for (OptionPage page : this.pages) {
+            for (OptionPage page : modConfig.pages()) {
+                CenteredFlatWidget button = new CenteredFlatWidget(new Dim2i(x, y, width, this.font.lineHeight * 2), page.name(), () -> this.setPage(page), true);
+                button.setSelected(this.currentPage == page);
 
-            CenteredFlatWidget button = new CenteredFlatWidget(new Dim2i(x, y, width, font.lineHeight * 2), page.getName(), () -> this.setPage(page), true);
-            button.setSelected(this.currentPage == page);
+                y += this.font.lineHeight * 2;
 
-            y += font.lineHeight * 2;
-
-            this.addRenderableWidget(button);
+                this.addRenderableWidget(button);
+            }
         }
 /*
 
@@ -241,14 +246,14 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     }
 
     private int rebuildGUIOptions() {
-        int x = (int) (130);
+        int x = 130;
         int y = 23;
 
-        for (OptionGroup group : this.currentPage.getGroups()) {
+        for (OptionGroup group : this.currentPage.groups()) {
             // Add each option's control element
-            for (Option<?> option : group.getOptions()) {
+            for (Option<?> option : group.options()) {
                 Control<?> control = option.getControl();
-                ControlElement<?> element = control.createElement(new Dim2i(x, y, 240, 18));
+                ControlElement<?> element = control.createElement(new Dim2i(x, y, 200, 18));
 
                 this.addRenderableWidget(element);
 
@@ -266,9 +271,8 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         this.updateControls();
-
 
         super.render(graphics, this.prompt != null ? -1 : mouseX, this.prompt != null ? -1 : mouseY, delta);
 
@@ -297,16 +301,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
                         .findFirst()
                         .orElse(null));
 
-        boolean hasChanges = this.getAllOptions()
-                .anyMatch(Option::hasChanged);
-
-        for (OptionPage page : this.pages) {
-            for (Option<?> option : page.getOptions()) {
-                if (option.hasChanged()) {
-                    hasChanges = true;
-                }
-            }
-        }
+        boolean hasChanges = ConfigManager.CONFIG.anyOptionChanged();
 
         this.applyButton.setEnabled(hasChanges);
         this.undoButton.setVisible(hasChanges);
@@ -314,11 +309,6 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
 
         this.hasPendingChanges = hasChanges;
         this.hoveredElement = hovered;
-    }
-
-    private Stream<Option<?>> getAllOptions() {
-        return this.pages.stream()
-                .flatMap(s -> s.getOptions().stream());
     }
 
     private Stream<ControlElement<?>> getActiveControls() {
@@ -331,21 +321,18 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         int textPadding = 5;
         int boxPadding = 5;
 
+        int boxWidth = this.width - 340;
+
         int boxY = dim.y();
         int boxX = dim.getLimitX() + boxPadding;
 
-        int boxWidth = Math.min(200, this.width - boxX - boxPadding);
-
         Option<?> option = element.getOption();
-        var splitWidth = boxWidth - (textPadding * 2);
-        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(),splitWidth));
+        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), boxWidth - (textPadding * 2)));
 
         OptionImpact impact = option.getImpact();
 
         if (impact != null) {
-            var impactText = Component.translatable("sodium.options.performance_impact_string",
-                    impact.getLocalizedName());
-            tooltip.addAll(this.font.split(impactText.withStyle(ChatFormatting.GRAY), splitWidth));
+            tooltip.add(Language.getInstance().getVisualOrder(Component.translatable("sodium.options.performance_impact_string", impact.getName()).withStyle(ChatFormatting.GRAY)));
         }
 
         int boxHeight = (tooltip.size() * 12) + boxPadding;
@@ -365,19 +352,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
     }
 
     private void applyChanges() {
-        final HashSet<OptionStorage<?>> dirtyStorages = new HashSet<>();
-        final EnumSet<OptionFlag> flags = EnumSet.noneOf(OptionFlag.class);
-
-        this.getAllOptions().forEach((option -> {
-            if (!option.hasChanged()) {
-                return;
-            }
-
-            option.applyChanges();
-
-            flags.addAll(option.getFlags());
-            dirtyStorages.add(option.getStorage());
-        }));
+        var flags = ConfigManager.CONFIG.applyAllOptions();
 
         Minecraft client = Minecraft.getInstance();
 
@@ -402,15 +377,10 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
             Console.instance().logMessage(MessageLevel.WARN,
                     "sodium.console.game_restart", true, 10.0);
         }
-
-        for (OptionStorage<?> storage : dirtyStorages) {
-            storage.save();
-        }
     }
 
     private void undoChanges() {
-        this.getAllOptions()
-                .forEach(Option::reset);
+        ConfigManager.CONFIG.resetAllOptions();
     }
 
     private void openDonationPage() {
@@ -425,7 +395,7 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         }
 
         if (this.prompt == null && keyCode == GLFW.GLFW_KEY_P && (modifiers & GLFW.GLFW_MOD_SHIFT) != 0) {
-            Minecraft.getInstance().setScreen(new VideoSettingsScreen(this.prevScreen, Minecraft.getInstance(), Minecraft.getInstance().options));
+            Minecraft.getInstance().setScreen(new net.minecraft.client.gui.screens.options.VideoSettingsScreen(this.prevScreen, Minecraft.getInstance(), Minecraft.getInstance().options));
 
             return true;
         }
@@ -446,7 +416,12 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
             return true;
         }
 
-        return clicked;
+        return true;
+    }
+
+    @Override
+    public boolean mouseScrolled(double d, double e, double f, double g) {
+        return super.mouseScrolled(d, e, f, g);
     }
 
     @Override

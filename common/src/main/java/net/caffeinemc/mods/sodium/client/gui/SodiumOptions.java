@@ -16,8 +16,7 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-// TODO: Rename in Sodium 0.6
-public class SodiumGameOptions {
+public class SodiumOptions {
     private static final String DEFAULT_FILE_NAME = "sodium-options.json";
 
     public final QualitySettings quality = new QualitySettings();
@@ -27,12 +26,12 @@ public class SodiumGameOptions {
 
     private boolean readOnly;
 
-    private SodiumGameOptions() {
+    private SodiumOptions() {
         // NO-OP
     }
 
-    public static SodiumGameOptions defaults() {
-        return new SodiumGameOptions();
+    public static SodiumOptions defaults() {
+        return new SodiumOptions();
     }
 
     public static class PerformanceSettings {
@@ -100,18 +99,18 @@ public class SodiumGameOptions {
             .excludeFieldsWithModifiers(Modifier.PRIVATE)
             .create();
 
-    public static SodiumGameOptions loadFromDisk() {
+    public static SodiumOptions loadFromDisk() {
         Path path = getConfigPath();
-        SodiumGameOptions config;
+        SodiumOptions config;
 
         if (Files.exists(path)) {
             try (FileReader reader = new FileReader(path.toFile())) {
-                config = GSON.fromJson(reader, SodiumGameOptions.class);
+                config = GSON.fromJson(reader, SodiumOptions.class);
             } catch (IOException e) {
                 throw new RuntimeException("Could not parse config", e);
             }
         } else {
-            config = new SodiumGameOptions();
+            config = new SodiumOptions();
         }
 
         try {
@@ -128,7 +127,7 @@ public class SodiumGameOptions {
                 .resolve(DEFAULT_FILE_NAME);
     }
 
-    public static void writeToDisk(SodiumGameOptions config) throws IOException {
+    public static void writeToDisk(SodiumOptions config) throws IOException {
         if (config.isReadOnly()) {
             throw new IllegalStateException("Config file is read-only");
         }

@@ -1,7 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
-import net.caffeinemc.mods.sodium.client.gui.options.Option;
-import net.caffeinemc.mods.sodium.client.gui.options.TextProvider;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.CommonInputs;
@@ -9,45 +8,21 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.Validate;
 
+import java.util.function.Function;
+
 public class CyclingControl<T extends Enum<T>> implements Control<T> {
     private final Option<T> option;
     private final T[] allowedValues;
-    private final Component[] names;
+    private final Function<T, Component> elementNameProvider;
 
-    public CyclingControl(Option<T> option, Class<T> enumType) {
-        this(option, enumType, enumType.getEnumConstants());
-    }
-
-    public CyclingControl(Option<T> option, Class<T> enumType, Component[] names) {
+    public CyclingControl(Option<T> option, Class<T> enumType, Function<T, Component> elementNameProvider, T[] allowedValues) {
         T[] universe = enumType.getEnumConstants();
 
-        Validate.isTrue(universe.length == names.length, "Mismatch between universe length and names array length");
         Validate.notEmpty(universe, "The enum universe must contain at least one item");
 
         this.option = option;
-        this.allowedValues = universe;
-        this.names = names;
-    }
-
-    public CyclingControl(Option<T> option, Class<T> enumType, T[] allowedValues) {
-        T[] universe = enumType.getEnumConstants();
-
-        this.option = option;
         this.allowedValues = allowedValues;
-        this.names = new Component[universe.length];
-
-        for (int i = 0; i < this.names.length; i++) {
-            Component name;
-            T value = universe[i];
-
-            if (value instanceof TextProvider) {
-                name = ((TextProvider) value).getLocalizedName();
-            } else {
-                name = Component.literal(value.name());
-            }
-
-            this.names[i] = name;
-        }
+        this.elementNameProvider = elementNameProvider;
     }
 
     @Override
@@ -57,7 +32,7 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
 
     @Override
     public ControlElement<T> createElement(Dim2i dim) {
-        return new CyclingControlElement<>(this.option, dim, this.allowedValues, this.names);
+        return new CyclingControlElement<>(this.option, dim, this.allowedValues, this.elementNameProvider);
     }
 
     @Override
@@ -67,18 +42,19 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
 
     private static class CyclingControlElement<T extends Enum<T>> extends ControlElement<T> {
         private final T[] allowedValues;
-        private final Component[] names;
+        private final Function<T, Component> elementNameProvider;
         private int currentIndex;
 
-        public CyclingControlElement(Option<T> option, Dim2i dim, T[] allowedValues, Component[] names) {
+        public CyclingControlElement(Option<T> option, Dim2i dim, T[] allowedValues, Function<T, Component> elementNameProvider) {
             super(option, dim);
 
             this.allowedValues = allowedValues;
-            this.names = names;
+            this.elementNameProvider = elementNameProvider;
             this.currentIndex = 0;
 
+            var optionValue = option.getValidatedValue();
             for (int i = 0; i < allowedValues.length; i++) {
-                if (allowedValues[i] == option.getValue()) {
+                if (allowedValues[i] == optionValue) {
                     this.currentIndex = i;
                     break;
                 }
@@ -89,8 +65,8 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
         public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
             super.render(graphics, mouseX, mouseY, delta);
 
-            Enum<T> value = this.option.getValue();
-            Component name = this.names[value.ordinal()];
+            var value = this.option.getValidatedValue();
+            Component name = this.elementNameProvider.apply(value);
 
             int strWidth = this.getStringWidth(name);
             this.drawString(graphics, name, this.dim.getLimitX() - strWidth - 6, this.dim.getCenterY() - 4, 0xFFFFFFFF);
@@ -98,7 +74,7 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (this.option.isAvailable() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
+            if (this.option.isEnabled() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
                 cycleControl(Screen.hasShiftDown());
                 this.playClickSound();
 
@@ -126,7 +102,7 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
             } else {
                 this.currentIndex = (this.currentIndex + 1) % this.allowedValues.length;
             }
-            this.option.setValue(this.allowedValues[this.currentIndex]);
+            this.option.modifyValue(this.allowedValues[this.currentIndex]);
         }
     }
 }

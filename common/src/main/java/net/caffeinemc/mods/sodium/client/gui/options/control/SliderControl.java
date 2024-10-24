@@ -1,7 +1,8 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.caffeinemc.mods.sodium.client.gui.options.Option;
+import net.caffeinemc.mods.sodium.api.config.option.ControlValueFormatter;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -68,7 +69,7 @@ public class SliderControl implements Control<Integer> {
             this.max = max;
             this.range = max - min;
             this.interval = interval;
-            this.thumbPosition = this.getThumbPositionForValue(option.getValue());
+            this.thumbPosition = this.getThumbPositionForValue(option.getValidatedValue());
             this.formatter = formatter;
 
             this.sliderBounds = new Rect2i(dim.getLimitX() - 96, dim.getCenterY() - 5, 90, 10);
@@ -82,10 +83,12 @@ public class SliderControl implements Control<Integer> {
             int sliderWidth = this.sliderBounds.getWidth();
             int sliderHeight = this.sliderBounds.getHeight();
 
-            var label = this.formatter.format(this.option.getValue())
-                    .copy();
+            var value = this.option.getValidatedValue();
+            var isEnabled = this.option.isEnabled();
 
-            if (!this.option.isAvailable()) {
+            var label = this.formatter.format(value).copy();
+
+            if (!isEnabled) {
                 label.setStyle(Style.EMPTY
                         .withColor(ChatFormatting.GRAY)
                         .withItalic(true));
@@ -93,7 +96,7 @@ public class SliderControl implements Control<Integer> {
 
             int labelWidth = this.font.width(label);
 
-            boolean drawSlider = this.option.isAvailable() && (this.hovered || this.isFocused());
+            boolean drawSlider = isEnabled && (this.hovered || this.isFocused());
             if (drawSlider) {
                 this.contentWidth = sliderWidth + labelWidth;
             } else {
@@ -104,7 +107,7 @@ public class SliderControl implements Control<Integer> {
             super.render(graphics, mouseX, mouseY, delta);
 
             if (drawSlider) {
-                this.thumbPosition = this.getThumbPositionForValue(this.option.getValue());
+                this.thumbPosition = this.getThumbPositionForValue(value);
 
                 double thumbOffset = Mth.clamp((double) (this.getIntValue() - this.min) / this.range * sliderWidth, 0, sliderWidth);
 
@@ -141,7 +144,7 @@ public class SliderControl implements Control<Integer> {
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             this.sliderHeld = false;
 
-            if (this.option.isAvailable() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
+            if (this.option.isEnabled() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
                 if (this.sliderBounds.contains((int) mouseX, (int) mouseY)) {
                     this.setValueFromMouse(mouseX);
                     this.sliderHeld = true;
@@ -162,8 +165,8 @@ public class SliderControl implements Control<Integer> {
 
             int value = this.getIntValue();
 
-            if (this.option.getValue() != value) {
-                this.option.setValue(value);
+            if (this.option.getValidatedValue() != value) {
+                this.option.modifyValue(value);
             }
         }
 
@@ -172,10 +175,10 @@ public class SliderControl implements Control<Integer> {
             if (!isFocused()) return false;
 
             if (keyCode == InputConstants.KEY_LEFT) {
-                this.option.setValue(Mth.clamp(this.option.getValue() - this.interval, this.min, this.max));
+                this.option.modifyValue(Mth.clamp(this.option.getValidatedValue() - this.interval, this.min, this.max));
                 return true;
             } else if (keyCode == InputConstants.KEY_RIGHT) {
-                this.option.setValue(Mth.clamp(this.option.getValue() + this.interval, this.min, this.max));
+                this.option.modifyValue(Mth.clamp(this.option.getValidatedValue() + this.interval, this.min, this.max));
                 return true;
             }
 
@@ -184,7 +187,7 @@ public class SliderControl implements Control<Integer> {
 
         @Override
         public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-            if (this.option.isAvailable() && button == 0) {
+            if (this.option.isEnabled() && button == 0) {
                 if (this.sliderHeld) {
                     this.setValueFromMouse(mouseX);
                 }
