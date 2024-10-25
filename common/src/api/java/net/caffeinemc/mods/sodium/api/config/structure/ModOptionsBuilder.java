@@ -5,9 +5,7 @@ public interface ModOptionsBuilder {
 
     ModOptionsBuilder setVersion(String version);
 
-    ModOptionsBuilder setColorThemeRGB(int theme, int themeHighlight, int themeDisabled);
+    ModOptionsBuilder setColorTheme(ColorThemeBuilder colorTheme);
 
-    ModOptionsBuilder setColorThemeRGB(int theme);
-
-    ModOptionsBuilder addPage(OptionPageBuilder page);
+    ModOptionsBuilder addPage(PageBuilder page);
 }

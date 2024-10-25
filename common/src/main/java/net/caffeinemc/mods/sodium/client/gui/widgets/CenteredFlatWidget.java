@@ -58,7 +58,7 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         }
 
         if (this.selected) {
-            this.drawRect(graphics, x2 - 3, y1, x2, y2, Colors.THEME_LIGHTER);
+            this.drawRect(graphics, x2 - 3, y1, x2, y2, this.theme.themeLighter);
         }
 
         this.drawString(graphics, text, x1 + 8, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);

@@ -2,12 +2,10 @@ package net.caffeinemc.mods.sodium.client.gui;
 
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
+import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.config.*;
-import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
-import net.caffeinemc.mods.sodium.client.config.structure.Option;
-import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
-import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
+import net.caffeinemc.mods.sodium.client.config.structure.*;
 import net.caffeinemc.mods.sodium.client.data.fingerprint.HashedFingerprint;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
@@ -38,6 +36,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -163,9 +162,29 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         this.clearWidgets();
 
+        // find the first non-external page
         if (this.currentPage == null) {
-            this.currentMod = ConfigManager.CONFIG.getModOptions().getFirst();
-            this.currentPage = this.currentMod.pages().getFirst();
+            var modOptionsIt = ConfigManager.CONFIG.getModOptions().iterator();
+            Iterator<Page> pagesIt = null;
+            while (this.currentPage == null) {
+                if (pagesIt == null) {
+                    if (!modOptionsIt.hasNext()) {
+                        throw new IllegalStateException("No non-external pages found to display");
+                    }
+                    this.currentMod = modOptionsIt.next();
+                    pagesIt = this.currentMod.pages().iterator();
+                }
+
+                if (!pagesIt.hasNext()) {
+                    pagesIt = null;
+                    continue;
+                }
+
+                var page = pagesIt.next();
+                if (page instanceof OptionPage optionPage) {
+                    this.currentPage = optionPage;
+                }
+            }
         }
 
         int pageY = this.rebuildGUIOptions(this.currentMod.theme());

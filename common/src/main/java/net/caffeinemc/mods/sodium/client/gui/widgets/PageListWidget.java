@@ -1,7 +1,9 @@
 package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.client.config.ConfigManager;
+import net.caffeinemc.mods.sodium.client.config.structure.ExternalPage;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
+import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -55,9 +57,18 @@ public class PageListWidget extends AbstractParentWidget {
 
             this.addRenderableChild(header);
 
-            for (OptionPage page : modOptions.pages()) {
-                CenteredFlatWidget button = new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), page.name(), () -> this.parent.setPage(modOptions, page), true, theme);
-                button.setSelected(this.parent.getPage() == page);
+            for (Page page : modOptions.pages()) {
+                CenteredFlatWidget button;
+                if (page instanceof OptionPage optionPage) {
+                    button = createEntryWidget(() -> this.parent.setPage(modOptions, optionPage),
+                            page, x, y, listHeight, width, entryHeight, theme);
+                    button.setSelected(this.parent.getPage() == page);
+                } else if (page instanceof ExternalPage externalPage) {
+                    button = createEntryWidget(() -> externalPage.currentScreenConsumer().accept(this.parent),
+                            page, x, y, listHeight, width, entryHeight, theme);
+                } else {
+                    throw new IllegalStateException("Unknown page type: " + page.getClass());
+                }
 
                 listHeight += entryHeight;
 
@@ -66,6 +77,10 @@ public class PageListWidget extends AbstractParentWidget {
         }
 
         this.scrollbar.setScrollbarContext(height - 30, listHeight + 5);
+    }
+
+    private @NotNull EntryWidget createEntryWidget(Runnable clickHandler, Page page, int x, int y, int listHeight, int width, int entryHeight, ColorTheme theme) {
+        return new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), page.name(), clickHandler, true, theme);
     }
 
     @Override

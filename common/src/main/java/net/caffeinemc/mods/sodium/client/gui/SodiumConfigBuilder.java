@@ -16,6 +16,8 @@ import net.caffeinemc.mods.sodium.client.gl.device.RenderDevice;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlValueFormatterImpls;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.minecraft.client.*;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
@@ -87,6 +89,8 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
 
     private void buildFullConfig(ConfigBuilder builder) {
         builder.registerOwnModOptions()
+                .setColorTheme(builder.createColorTheme().setFullThemeRGB(
+                        Colors.THEME, Colors.THEME_LIGHTER, Colors.THEME_DARKER))
                 .setName("Sodium Renderer")
                 .addPage(this.buildGeneralPage(builder))
                 .addPage(this.buildQualityPage(builder))
@@ -119,9 +123,20 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
         // for testing cycle detection
         // .setEnabledProvider((state) -> state.readIntOption(ResourceLocation.parse("foo:baz")) == 0, ResourceLocation.parse("foo:baz"))
 
-        // more colors: 0xFFAB94E4, 0xFFCDE494, 0xFFD394E4, 0xFFE4D394
         ModOptionsBuilder options = builder.registerModOptions("foo", "Foo", "1.0")
-                .setColorThemeRGB(0xFFE494A5)
+                .addPage(
+                        builder.createExternalPage()
+                                .setName(Component.literal("External Page"))
+                                .setScreenProvider((prevScreen) -> {
+                                    Minecraft.getInstance().setScreen(new Screen(Component.literal("External Page")) {
+                                        @Override
+                                        public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+                                            super.render(graphics, mouseX, mouseY, delta);
+                                            graphics.drawString(Minecraft.getInstance().font, Component.literal("Hello, world!"), 10, 10, 0xFFFFFF);
+                                        }
+                                    });
+                                })
+                )
                 .addPage(builder.createOptionPage()
                         .setName(Component.literal("Foo Pagej fdjfjfl jfdskl fdjkllfffsdldfskjl j"))
                         .addOptionGroup(builder.createOptionGroup()

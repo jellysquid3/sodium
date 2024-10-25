@@ -1,8 +1,9 @@
 package net.caffeinemc.mods.sodium.client.config.structure;
 
 import com.google.common.collect.ImmutableList;
+import net.caffeinemc.mods.sodium.api.config.structure.ColorThemeBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.ModOptionsBuilder;
-import net.caffeinemc.mods.sodium.api.config.structure.OptionPageBuilder;
+import net.caffeinemc.mods.sodium.api.config.structure.PageBuilder;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import org.apache.commons.lang3.Validate;
@@ -15,7 +16,7 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
     private String name;
     private String version;
     private ColorTheme theme;
-    private final List<OptionPage> pages = new ArrayList<>();
+    private final List<Page> pages = new ArrayList<>();
 
     ModOptionsBuilderImpl(String namespace, String name, String version) {
         this.namespace = namespace;
@@ -29,7 +30,7 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
         Validate.notEmpty(this.pages, "At least one page must be added");
 
         if (this.theme == null) {
-            this.theme = ColorTheme.DEFAULT;
+            this.theme = ColorTheme.PRESETS[Math.abs(this.namespace.hashCode()) % ColorTheme.PRESETS.length];
         }
 
         return new ModOptions(this.namespace, this.name, this.version, this.theme, ImmutableList.copyOf(this.pages));
@@ -48,19 +49,14 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
     }
 
     @Override
-    public ModOptionsBuilder setColorThemeRGB(int theme, int themeLighter, int themeDarker) {
-        this.theme = new ColorTheme(theme, themeLighter, themeDarker);
+    public ModOptionsBuilder setColorTheme(ColorThemeBuilder theme) {
+        this.theme = ((ColorThemeBuilderImpl) theme).build();
         return this;
     }
 
     @Override
-    public ModOptionsBuilder setColorThemeRGB(int theme) {
-        return this.setColorThemeRGB(theme, Colors.lighten(theme), Colors.darken(theme));
-    }
-
-    @Override
-    public ModOptionsBuilder addPage(OptionPageBuilder builder) {
-        this.pages.add(((OptionPageBuilderImpl) builder).build());
+    public ModOptionsBuilder addPage(PageBuilder builder) {
+        this.pages.add(((PageBuilderImpl) builder).build());
         return this;
     }
 }

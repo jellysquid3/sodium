@@ -9,10 +9,11 @@ import org.apache.commons.lang3.Validate;
 import java.util.ArrayList;
 import java.util.List;
 
-class OptionPageBuilderImpl implements OptionPageBuilder {
+class OptionPageBuilderImpl extends PageBuilderImpl implements OptionPageBuilder {
     private Component name;
     private final List<OptionGroup> groups = new ArrayList<>();
 
+    @Override
     OptionPage build() {
         Validate.notNull(this.name, "Name must not be null");
         Validate.notEmpty(this.groups, "At least one group must be added");

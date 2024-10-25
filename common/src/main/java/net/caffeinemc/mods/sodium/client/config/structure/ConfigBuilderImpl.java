@@ -33,8 +33,18 @@ public class ConfigBuilderImpl implements ConfigBuilder {
     }
 
     @Override
+    public ColorThemeBuilder createColorTheme() {
+        return new ColorThemeBuilderImpl();
+    }
+
+    @Override
     public OptionPageBuilder createOptionPage() {
         return new OptionPageBuilderImpl();
+    }
+
+    @Override
+    public ExternalPageBuilder createExternalPage() {
+        return new ExternalPageBuilderImpl();
     }
 
     @Override
