@@ -112,7 +112,7 @@ public class Config implements ConfigState {
         this.pendingStorageHandlers.clear();
     }
 
-    public ImmutableList<ModOptions> getModConfigs() {
+    public ImmutableList<ModOptions> getModOptions() {
         return this.modOptions;
     }
 

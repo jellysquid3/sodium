@@ -96,6 +96,32 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, Na
         }
     }
 
+    protected String truncateTextToFit(String name, int targetWidth) {
+        var suffix = "...";
+        var suffixWidth = this.font.width(suffix);
+        var nameFontWidth = this.font.width(name);
+        if (nameFontWidth > targetWidth) {
+            targetWidth -= suffixWidth;
+            int maxLabelChars = name.length() - 3;
+            int minLabelChars = 1;
+
+            // binary search on how many chars fit
+            while (maxLabelChars - minLabelChars > 1) {
+                var mid = (maxLabelChars + minLabelChars) / 2;
+                var midName = name.substring(0, mid);
+                var midWidth = this.font.width(midName);
+                if (midWidth > targetWidth) {
+                    maxLabelChars = mid;
+                } else {
+                    minLabelChars = mid;
+                }
+            }
+
+            name = name.substring(0, minLabelChars).trim() + suffix;
+        }
+        return name;
+    }
+
     protected void drawBorder(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color) {
         graphics.fill(x1, y1, x2, y1 + 1, color);
         graphics.fill(x1, y2 - 1, x2, y2, color);

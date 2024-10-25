@@ -1,5 +1,8 @@
 package net.caffeinemc.mods.sodium.client.gui.widgets;
 
+import net.caffeinemc.mods.sodium.client.gui.ButtonTheme;
+import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
+import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -11,26 +14,24 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-
 public class CenteredFlatWidget extends AbstractWidget implements Renderable {
     private final Dim2i dim;
     private final Runnable action;
     private final boolean isSelectable;
-
-    private @NotNull Style style = Style.defaults();
+    private final ButtonTheme theme;
 
     private boolean selected;
     private boolean enabled = true;
     private boolean visible = true;
 
-    private Component label;
+    private final Component label;
 
-    public CenteredFlatWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable) {
+    public CenteredFlatWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable, ColorTheme theme) {
         this.dim = dim;
         this.label = label;
         this.action = action;
         this.isSelectable = isSelectable;
+        this.theme = new ButtonTheme(theme, 0x05FFFFFF, 0x90000000, 0x40000000);
     }
 
     @Override
@@ -41,28 +42,29 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
 
         this.hovered = this.isMouseOver(mouseX, mouseY);
 
-        int backgroundColor = this.hovered ? 0x40001101 : (this.selected ? 0x80000000 : 0x40000000);
-        int textColor = this.selected || !this.isSelectable ? this.style.textDefault : this.style.textDisabled;
+        int backgroundColor = this.hovered ? this.theme.bgHighlight : (this.selected ? this.theme.bgDefault : this.theme.bgInactive);
+        int textColor = this.selected || !this.isSelectable ? this.theme.themeLighter : this.theme.themeDarker;
 
-        int strWidth = this.font.width(this.label);
+        var text = this.label.getString();
+        text = this.truncateTextToFit(text, this.dim.width() - 16);
 
         int x1 = this.getX();
         int y1 = this.getY();
         int x2 = this.getLimitX();
         int y2 = this.getLimitY();
 
-        if (isSelectable) {
+        if (this.isSelectable) {
             this.drawRect(graphics, x1, y1, x2, y2, backgroundColor);
         }
 
-        if (selected) {
-            this.drawRect(graphics, x2 - 3, y1, x2, y2, 0xFFccfdee);
+        if (this.selected) {
+            this.drawRect(graphics, x2 - 3, y1, x2, y2, Colors.THEME_LIGHTER);
         }
 
-        this.drawString(graphics, this.label, x1 + 8, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
+        this.drawString(graphics, text, x1 + 8, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
 
         if (this.enabled && this.isFocused()) {
-            this.drawBorder(graphics, x1, y1, x2, y2, -1);
+            this.drawBorder(graphics, x1, y1, x2, y2, Colors.FOREGROUND);
         }
     }
 
@@ -88,12 +90,6 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
 
     public int getLimitY() {
         return this.dim.getLimitY();
-    }
-
-    public void setStyle(@NotNull Style style) {
-        Objects.requireNonNull(style);
-
-        this.style = style;
     }
 
     public void setSelected(boolean selected) {
@@ -146,14 +142,6 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         this.visible = visible;
     }
 
-    public void setLabel(Component text) {
-        this.label = text;
-    }
-
-    public Component getLabel() {
-        return this.label;
-    }
-
     @Override
     public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent event) {
         if (!this.enabled || !this.visible)
@@ -162,23 +150,7 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
     }
 
     @Override
-    public ScreenRectangle getRectangle() {
+    public @NotNull ScreenRectangle getRectangle() {
         return new ScreenRectangle(this.getX(), this.getY(), this.getWidth(), this.getHeight());
-    }
-
-    public static class Style {
-        public int bgHovered, bgDefault, bgDisabled;
-        public int textDefault, textDisabled;
-
-        public static Style defaults() {
-            var style = new Style();
-            style.bgHovered = 0xE0000000;
-            style.bgDefault = 0x90000000;
-            style.bgDisabled = 0x60000000;
-            style.textDefault = 0xccfdee;
-            style.textDisabled = 0xF06f9090;
-
-            return style;
-        }
     }
 }

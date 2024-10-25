@@ -2,6 +2,7 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.client.config.ConfigManager;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
+import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
@@ -44,16 +45,18 @@ public class PageListWidget extends AbstractParentWidget {
 
         int listHeight = 5;
         int entryHeight = this.font.lineHeight * 2;
-        for (var modConfig : ConfigManager.CONFIG.getModConfigs()) {
-            CenteredFlatWidget header = new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), Component.literal(modConfig.name()), () -> {
-            }, false);
+        for (var modOptions : ConfigManager.CONFIG.getModOptions()) {
+            var theme = modOptions.theme();
+
+            CenteredFlatWidget header = new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), Component.literal(modOptions.name()), () -> {
+            }, false, theme);
 
             listHeight += entryHeight;
 
             this.addRenderableChild(header);
 
-            for (OptionPage page : modConfig.pages()) {
-                CenteredFlatWidget button = new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), page.name(), () -> this.parent.setPage(page), true);
+            for (OptionPage page : modOptions.pages()) {
+                CenteredFlatWidget button = new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), page.name(), () -> this.parent.setPage(modOptions, page), true, theme);
                 button.setSelected(this.parent.getPage() == page);
 
                 listHeight += entryHeight;
@@ -77,8 +80,8 @@ public class PageListWidget extends AbstractParentWidget {
     }
 
     public class EntryWidget extends CenteredFlatWidget {
-        public EntryWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable) {
-            super(dim, label, action, isSelectable);
+        public EntryWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable, ColorTheme theme) {
+            super(dim, label, action, isSelectable, theme);
         }
 
         @Override

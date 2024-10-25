@@ -4,6 +4,7 @@ import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.config.*;
+import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
@@ -47,13 +48,13 @@ import java.util.stream.Stream;
 // TODO: stop the options from overlapping the bottom or top buttons
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
 // TODO: the donation button is gone when the search button is clicked?
-// TODO: "setting unavailable" overlaps with the label, even though the label should be automatically truncated to fit
-// TODO: make use of the theme color given by the mod config
+// TODO: display each mod's version somewhere (truncate if too long?)
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final List<ControlElement<?>> controls = new ArrayList<>();
 
     private final Screen prevScreen;
 
+    private ModOptions currentMod;
     private OptionPage currentPage;
 
     private PageListWidget pageList;
@@ -139,7 +140,8 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         return this.currentPage;
     }
 
-    public void setPage(OptionPage page) {
+    public void setPage(ModOptions modOptions, OptionPage page) {
+        this.currentMod = modOptions;
         this.currentPage = page;
 
         this.rebuildGUI();
@@ -162,16 +164,11 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.clearWidgets();
 
         if (this.currentPage == null) {
-//            if (this.pages.isEmpty()) {
-//                throw new IllegalStateException("No pages are available?!");
-//            }
-
-            // Just use the first page for now
-            // TODO: fix
-            this.currentPage = ConfigManager.CONFIG.getModConfigs().getFirst().pages().getFirst();
+            this.currentMod = ConfigManager.CONFIG.getModOptions().getFirst();
+            this.currentPage = this.currentMod.pages().getFirst();
         }
 
-        int pageY = this.rebuildGUIOptions();
+        int pageY = this.rebuildGUIOptions(this.currentMod.theme());
 
         this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
         this.undoButton = new FlatButtonWidget(new Dim2i(270, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
@@ -210,7 +207,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.setDonationButtonVisibility(false);
     }
 
-    private int rebuildGUIOptions() {
+    private int rebuildGUIOptions(ColorTheme theme) {
         int x = 130;
         int y = 23;
 
@@ -218,7 +215,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             // Add each option's control element
             for (Option<?> option : group.options()) {
                 Control<?> control = option.getControl();
-                ControlElement<?> element = control.createElement(new Dim2i(x, y, 200, 18));
+                ControlElement<?> element = control.createElement(new Dim2i(x, y, 200, 18), theme);
 
                 this.addRenderableWidget(element);
 
@@ -301,7 +298,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         int boxYLimit = boxY + boxHeight;
         int boxYCutoff = this.height - 40;
 
-        // If the box is going to be cutoff on the Y-axis, move it back up the difference
+        // If the box is going to be cut off on the Y-axis, move it back up the difference
         if (boxYLimit > boxYCutoff) {
             boxY -= boxYLimit - boxYCutoff;
         }
@@ -309,7 +306,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x40000000);
 
         for (int i = 0; i < tooltip.size(); i++) {
-            graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * 12), 0xFFFFFFFF);
+            graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * 12), Colors.FOREGROUND);
         }
     }
 

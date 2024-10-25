@@ -3,6 +3,8 @@ package net.caffeinemc.mods.sodium.client.gui.options.control;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.caffeinemc.mods.sodium.api.config.option.ControlValueFormatter;
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
+import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,8 +34,8 @@ public class SliderControl implements Control<Integer> {
     }
 
     @Override
-    public ControlElement<Integer> createElement(Dim2i dim) {
-        return new Button(this.option, dim, this.min, this.max, this.interval, this.mode);
+    public ControlElement<Integer> createElement(Dim2i dim, ColorTheme theme) {
+        return new Button(this.option, dim, this.min, this.max, this.interval, this.mode, theme);
     }
 
     @Override
@@ -43,7 +45,7 @@ public class SliderControl implements Control<Integer> {
 
     @Override
     public int getMaxWidth() {
-        return 170;
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     private static class Button extends ControlElement<Integer> {
@@ -52,6 +54,7 @@ public class SliderControl implements Control<Integer> {
         private final Rect2i sliderBounds;
         private int contentWidth;
         private final ControlValueFormatter formatter;
+        private final ColorTheme theme;
 
         private final int min;
         private final int max;
@@ -62,7 +65,7 @@ public class SliderControl implements Control<Integer> {
 
         private boolean sliderHeld;
 
-        public Button(Option<Integer> option, Dim2i dim, int min, int max, int interval, ControlValueFormatter formatter) {
+        public Button(Option<Integer> option, Dim2i dim, int min, int max, int interval, ControlValueFormatter formatter, ColorTheme theme) {
             super(option, dim);
 
             this.min = min;
@@ -71,6 +74,7 @@ public class SliderControl implements Control<Integer> {
             this.interval = interval;
             this.thumbPosition = this.getThumbPositionForValue(option.getValidatedValue());
             this.formatter = formatter;
+            this.theme = theme;
 
             this.sliderBounds = new Rect2i(dim.getLimitX() - 96, dim.getCenterY() - 5, 90, 10);
             this.sliderHeld = false;
@@ -114,12 +118,12 @@ public class SliderControl implements Control<Integer> {
                 int thumbX = (int) (sliderX + thumbOffset - THUMB_WIDTH);
                 int trackY = (int) (sliderY + (sliderHeight / 2f) - ((double) TRACK_HEIGHT / 2));
 
-                this.drawRect(graphics, thumbX, sliderY, thumbX + (THUMB_WIDTH * 2), sliderY + sliderHeight, 0xFFFFFFFF);
-                this.drawRect(graphics, sliderX, trackY, sliderX + sliderWidth, trackY + TRACK_HEIGHT, 0xFFFFFFFF);
+                this.drawRect(graphics, sliderX, trackY, sliderX + sliderWidth, trackY + TRACK_HEIGHT, this.theme.themeLighter);
+                this.drawRect(graphics, thumbX, sliderY, thumbX + (THUMB_WIDTH * 2), sliderY + sliderHeight, Colors.FOREGROUND);
 
-                this.drawString(graphics, label, sliderX - labelWidth - 6, sliderY + (sliderHeight / 2) - 4, 0xFFFFFFFF);
+                this.drawString(graphics, label, sliderX - labelWidth - 6, sliderY + (sliderHeight / 2) - 4, Colors.FOREGROUND);
             } else {
-                this.drawString(graphics, label, sliderX + sliderWidth - labelWidth, sliderY + (sliderHeight / 2) - 4, 0xFFFFFFFF);
+                this.drawString(graphics, label, sliderX + sliderWidth - labelWidth, sliderY + (sliderHeight / 2) - 4, Colors.FOREGROUND);
             }
         }
 

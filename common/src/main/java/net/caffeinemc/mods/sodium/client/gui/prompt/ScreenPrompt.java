@@ -1,5 +1,7 @@
 package net.caffeinemc.mods.sodium.client.gui.prompt;
 
+import net.caffeinemc.mods.sodium.client.gui.ButtonTheme;
+import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.AbstractWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -15,6 +17,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class ScreenPrompt implements GuiEventListener, Renderable {
+    private static final ButtonTheme PROMPT_THEME = new ButtonTheme(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xff393939, 0xff2b2b2b, 0xff2b2b2b);
+
     private final ScreenPromptable parent;
     private final List<FormattedText> text;
 
@@ -37,14 +41,12 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
     public void init() {
         var parentDimensions = this.parent.getDimensions();
 
-        int boxX = (parentDimensions.width() / 2) - (width / 2);
-        int boxY = (parentDimensions.height() / 2) - (height / 2);
+        int boxX = (parentDimensions.width() / 2) - (this.width / 2);
+        int boxY = (parentDimensions.height() / 2) - (this.height / 2);
 
-        this.closeButton = new FlatButtonWidget(new Dim2i((boxX + width) - 84, (boxY + height) - 24, 80, 20), Component.literal("Close"), this::close, true, false);
-        this.closeButton.setStyle(createButtonStyle());
+        this.closeButton = new FlatButtonWidget(new Dim2i((boxX + this.width) - 84, (boxY + this.height) - 24, 80, 20), Component.literal("Close"), this::close, true, false, PROMPT_THEME);
 
-        this.actionButton = new FlatButtonWidget(new Dim2i((boxX + width) - 198, (boxY + height) - 24, 110, 20), this.action.label, this::runAction, true, false);
-        this.actionButton.setStyle(createButtonStyle());
+        this.actionButton = new FlatButtonWidget(new Dim2i((boxX + this.width) - 198, (boxY + this.height) - 24, 110, 20), this.action.label, this::runAction, true, false, PROMPT_THEME);
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -58,11 +60,11 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
 
         matrices.translate(0.0f, 0.0f, 50.0f);
 
-        int boxX = (parentDimensions.width() / 2) - (width / 2);
-        int boxY = (parentDimensions.height() / 2) - (height / 2);
+        int boxX = (parentDimensions.width() / 2) - (this.width / 2);
+        int boxY = (parentDimensions.height() / 2) - (this.height / 2);
 
-        graphics.fill(boxX, boxY, boxX + width, boxY + height, 0xFF171717);
-        graphics.renderOutline(boxX, boxY, width, height, 0xFF121212);
+        graphics.fill(boxX, boxY, boxX + this.width, boxY + this.height, 0xFF171717);
+        graphics.renderOutline(boxX, boxY, this.width, this.height, 0xFF121212);
 
         matrices.translate(0.0f, 0.0f, 50.0f);
 
@@ -71,8 +73,8 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
         int textX = boxX + padding;
         int textY = boxY + padding;
 
-        int textMaxWidth = width - (padding * 2);
-        int textMaxHeight = height - (padding * 2);
+        int textMaxWidth = this.width - (padding * 2);
+        int textMaxHeight = this.height - (padding * 2);
 
         var font = Minecraft.getInstance().font;
 
@@ -80,7 +82,7 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
             var formatted = font.split(paragraph, textMaxWidth);
 
             for (var line : formatted) {
-                graphics.drawString(font, line, textX, textY, 0xFFFFFFFF, true);
+                graphics.drawString(font, line, textX, textY, Colors.FOREGROUND, true);
                 textY += font.lineHeight + 2;
             }
 
@@ -92,18 +94,6 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
         }
 
         matrices.popPose();
-    }
-
-    private static FlatButtonWidget.Style createButtonStyle() {
-        var style = new FlatButtonWidget.Style();
-        style.bgDefault = 0xff2b2b2b;
-        style.bgHovered = 0xff393939;
-        style.bgDisabled = style.bgDefault;
-
-        style.textDefault = 0xFFFFFFFF;
-        style.textDisabled = style.textDefault;
-
-        return style;
     }
 
     @NotNull

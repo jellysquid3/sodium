@@ -21,15 +21,15 @@ public class ConfigBuilderImpl implements ConfigBuilder {
     }
 
     @Override
-    public ModOptionsBuilder registerModConfig(String namespace, String name, String version) {
+    public ModOptionsBuilder registerModOptions(String namespace, String name, String version) {
         var builder = new ModOptionsBuilderImpl(namespace, name, version);
         this.pendingModConfigBuilders.add(builder);
         return builder;
     }
 
     @Override
-    public ModOptionsBuilder registerOwnModConfig() {
-        return this.registerModConfig(this.defaultNamespace, this.defaultName, this.defaultVersion);
+    public ModOptionsBuilder registerOwnModOptions() {
+        return this.registerModOptions(this.defaultNamespace, this.defaultName, this.defaultVersion);
     }
 
     @Override

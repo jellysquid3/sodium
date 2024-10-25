@@ -19,7 +19,7 @@ public class ControlValueFormatterImpls {
             Monitor monitor = Minecraft.getInstance().getWindow().findBestMonitor();
 
             if (OsUtils.getOs() != OsUtils.OperatingSystem.WIN || monitor == null) {
-                return Component.translatable("options.fullscreen.unavailable");
+                return Component.empty();
             } else if (0 == v) {
                 return Component.translatable("options.fullscreen.current");
             } else {

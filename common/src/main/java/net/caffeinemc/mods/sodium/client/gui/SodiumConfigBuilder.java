@@ -73,7 +73,7 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
     }
 
     private static ModOptionsBuilder createModOptionsBuilder(ConfigBuilder builder) {
-        return builder.registerOwnModConfig().setName("Sodium Renderer");
+        return builder.registerOwnModOptions().setName("Sodium Renderer");
     }
 
     private void buildEarlyConfig(ConfigBuilder builder) {
@@ -86,7 +86,7 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
     }
 
     private void buildFullConfig(ConfigBuilder builder) {
-        builder.registerOwnModConfig()
+        builder.registerOwnModOptions()
                 .setName("Sodium Renderer")
                 .addPage(this.buildGeneralPage(builder))
                 .addPage(this.buildQualityPage(builder))
@@ -115,21 +115,39 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                 return this.value;
             }
         }
-        ModOptionsBuilder options = builder.registerModConfig("foo", "Foo", "1.0")
+
+        // for testing cycle detection
+        // .setEnabledProvider((state) -> state.readIntOption(ResourceLocation.parse("foo:baz")) == 0, ResourceLocation.parse("foo:baz"))
+
+        // more colors: 0xFFAB94E4, 0xFFCDE494, 0xFFD394E4, 0xFFE4D394
+        ModOptionsBuilder options = builder.registerModOptions("foo", "Foo", "1.0")
+                .setColorThemeRGB(0xFFE494A5)
                 .addPage(builder.createOptionPage()
-                        .setName(Component.literal("Foo Page"))
-                        .addOptionGroup(builder.createOptionGroup().addOption(
-                                builder.createBooleanOption(ResourceLocation.parse("foo:bar"))
-                                        .setStorageHandler(() -> {
-                                        })
-                                        .setName(Component.literal("Bar"))
-                                        .setTooltip(Component.literal("Baz"))
-                                        .setDefaultValue(true)
-                                        .setBinding(new LocalBinding<>(true))
-                                        .setImpact(OptionImpact.LOW)
-                        ))
-                )
-        ;
+                        .setName(Component.literal("Foo Pagej fdjfjfl jfdskl fdjkllfffsdldfskjl j"))
+                        .addOptionGroup(builder.createOptionGroup()
+                                .addOption(
+                                        builder.createBooleanOption(ResourceLocation.parse("foo:bar"))
+                                                .setStorageHandler(() -> {
+                                                })
+                                                .setName(Component.literal("Bar"))
+                                                .setTooltip(Component.literal("Baz"))
+                                                .setDefaultValue(true)
+                                                .setBinding(new LocalBinding<>(true))
+                                                .setImpact(OptionImpact.LOW)
+                                )
+                                .addOption(
+                                        builder.createIntegerOption(ResourceLocation.parse("foo:baz"))
+                                                .setStorageHandler(() -> {
+                                                })
+                                                .setName(Component.literal("Hello"))
+                                                .setTooltip(Component.literal("Bla"))
+                                                .setValueFormatter(ControlValueFormatterImpls.number())
+                                                .setDefaultValue(5)
+                                                .setRange(0, 10, 1)
+                                                .setBinding(new LocalBinding<>(5))
+                                                .setEnabledProvider((state) -> state.readBooleanOption(ResourceLocation.parse("foo:bar")), ResourceLocation.parse("foo:bar"))
+                                ))
+                );
         for (int i = 0; i < 10; i++) {
             options.addPage(builder.createOptionPage()
                     .setName(Component.literal("Foo " + i))

@@ -3,6 +3,8 @@ package net.caffeinemc.mods.sodium.client.config.structure;
 import com.google.common.collect.ImmutableList;
 import net.caffeinemc.mods.sodium.api.config.structure.ModOptionsBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.OptionPageBuilder;
+import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
+import net.caffeinemc.mods.sodium.client.gui.Colors;
 import org.apache.commons.lang3.Validate;
 
 import java.util.ArrayList;
@@ -12,6 +14,7 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
     private final String namespace;
     private String name;
     private String version;
+    private ColorTheme theme;
     private final List<OptionPage> pages = new ArrayList<>();
 
     ModOptionsBuilderImpl(String namespace, String name, String version) {
@@ -25,7 +28,11 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
         Validate.notEmpty(this.version, "Version must not be empty");
         Validate.notEmpty(this.pages, "At least one page must be added");
 
-        return new ModOptions(this.namespace, this.name, this.version, ImmutableList.copyOf(this.pages));
+        if (this.theme == null) {
+            this.theme = ColorTheme.DEFAULT;
+        }
+
+        return new ModOptions(this.namespace, this.name, this.version, this.theme, ImmutableList.copyOf(this.pages));
     }
 
     @Override
@@ -38,6 +45,17 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
     public ModOptionsBuilder setVersion(String version) {
         this.version = version;
         return this;
+    }
+
+    @Override
+    public ModOptionsBuilder setColorThemeRGB(int theme, int themeLighter, int themeDarker) {
+        this.theme = new ColorTheme(theme, themeLighter, themeDarker);
+        return this;
+    }
+
+    @Override
+    public ModOptionsBuilder setColorThemeRGB(int theme) {
+        return this.setColorThemeRGB(theme, Colors.lighten(theme), Colors.darken(theme));
     }
 
     @Override

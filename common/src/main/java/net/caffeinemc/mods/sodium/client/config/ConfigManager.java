@@ -20,8 +20,6 @@ import java.util.Comparator;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-// TODO: is different handling of long version strings necessary?
-// TODO: move classes in impl and interface into reasonable packages and figure out correct visibilities
 public class ConfigManager {
     public static final String JSON_KEY_SODIUM_CONFIG_INTEGRATIONS = "sodium:config_api_user";
 
@@ -80,12 +78,12 @@ public class ConfigManager {
             }
 
             var builder = new ConfigBuilderImpl(configUser.modId, configUser.modName, configUser.modVersion);
-            registerMethod.accept(entryPoint, builder);
             Collection<ModOptions> builtConfigs;
             try {
+                registerMethod.accept(entryPoint, builder);
                 builtConfigs = builder.build();
             } catch (Exception e) {
-                Minecraft.getInstance().emergencySaveAndCrash(new CrashReport("Failed to build config for mod " + configUser.modId, e));
+                Minecraft.getInstance().emergencySaveAndCrash(new CrashReport("Failed to build options config for mod " + configUser.modId, e));
                 return;
             }
 
@@ -113,6 +111,10 @@ public class ConfigManager {
         }
         modConfigs.add(0, sodiumModOptions);
 
-        CONFIG = new Config(ImmutableList.copyOf(modConfigs));
+        try {
+            CONFIG = new Config(ImmutableList.copyOf(modConfigs));
+        } catch (Exception e) {
+            Minecraft.getInstance().emergencySaveAndCrash(new CrashReport("Failed to build options config", e));
+        }
     }
 }
