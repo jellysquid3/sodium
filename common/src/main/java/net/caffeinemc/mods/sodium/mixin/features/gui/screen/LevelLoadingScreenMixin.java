@@ -4,10 +4,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
-import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
-import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
+import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
+import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -35,16 +35,20 @@ public class LevelLoadingScreenMixin {
     private static final int NULL_STATUS_COLOR = ColorABGR.pack(0, 0, 0, 0xFF);
 
     @Unique
-    private static final int DEFAULT_STATUS_COLOR = ColorARGB.pack(0, 0x11, 0xFF, 0xFF);
+    private static final int DEFAULT_STATUS_COLOR = ColorABGR.pack(0, 0x11, 0xFF, 0xFF);
 
     /**
      * This implementation differs from vanilla's in the following key ways.
      * - All tiles are batched together in one draw call, reducing CPU overhead by an order of magnitudes.
      * - Reference hashing is used for faster ChunkStatus -> Color lookup.
      * - Colors are stored in ABGR format so conversion is not necessary every tile draw.
+     * New optimizations:
+     * - Render a rectangle of NULL_STATUS_COLOR as background and any 'null' statuses are ignored.
+     * - Iterate in a spiral inwards->outwards and terminate early if all non-null statuses have been drawn.
+     * - Tiles are combined into bigger rectangles to massively reduce the amount of quads rendered.
      *
      * @reason Significantly optimized implementation.
-     * @author JellySquid
+     * @author JellySquid, contaria
      */
     @Overwrite
     public static void renderChunks(GuiGraphics graphics, StoringChunkProgressListener tracker, int mapX, int mapY, int mapScale, int mapPadding) {
@@ -63,7 +67,7 @@ public class LevelLoadingScreenMixin {
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        
+
         BufferBuilder bufferBuilder = tessellator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
         var writer = VertexBufferWriter.of(bufferBuilder);
@@ -83,33 +87,114 @@ public class LevelLoadingScreenMixin {
             addRect(writer, matrix, mapX - radius, mapY + radius - 1, mapX + radius, mapY + radius, DEFAULT_STATUS_COLOR);
         }
 
-        int mapRenderSize = size * tileSize - mapPadding;
+        int mapRenderSize = size * mapScale;
         int mapStartX = mapX - mapRenderSize / 2;
         int mapStartY = mapY - mapRenderSize / 2;
 
-        ChunkStatus prevStatus = null;
-        int prevColor = NULL_STATUS_COLOR;
+        // Draw one rectangle covering the entire background
+        // This allows us to ignore 'null' statuses
+        addRect(writer, matrix, mapStartX, mapStartY, mapStartX + size * tileSize, mapStartY + size * tileSize, NULL_STATUS_COLOR);
 
-        for (int x = 0; x < size; ++x) {
-            int tileX = mapStartX + x * tileSize;
+        // Count drawn 'statuses' and terminate early if 'total' is reached
+        int total = ((StoringChunkProgressListenerAccessor) tracker).getStatuses().size();
+        int statuses = 0;
 
-            for (int z = 0; z < size; ++z) {
-                int tileY = mapStartY + z * tileSize;
+        int direction = -1;
+        int x = size / 2;
+        int z = size / 2;
+        int tileX = mapStartX + x * tileSize;
+        int tileY = mapStartY + z * tileSize;
+
+        // Try to combine inner tiles into one rectangle
+        boolean drawingInnerRect = false;
+        ChunkStatus prevStatus = tracker.getStatus(x, z);
+        if (prevStatus != null) {
+            drawingInnerRect = true;
+            statuses++;
+        }
+
+        // Tile combining breaks mapPadding, but it's always 0 in vanilla
+        // It's original use was probably for debugging by separating tiles visually
+        // We can create our own debug view by replacing '+ tileSize' with '+ mapScale'
+        // and subtracting 'mapPadding' from x2 and y2 when drawing the inner rectangle
+        // This also wouldn't change rendering when mapPadding is 0
+
+        // Iterate over statuses inwards->outwards in a spiral.
+        // Travel along the x-axis, then the y-axis, then reverse direction
+        for (int i = 1; i <= size && statuses < total; i++) {
+            int fromX = tileX;
+            for (int j = 0; j < i && statuses < total; j++) {
+                x += direction;
+                tileX = mapStartX + x * tileSize;
 
                 ChunkStatus status = tracker.getStatus(x, z);
-                int color;
-
-                if (prevStatus == status) {
-                    color = prevColor;
-                } else {
-                    color = STATUS_TO_COLOR_FAST.getInt(status);
-
-                    prevStatus = status;
-                    prevColor = color;
+                if (status != null) {
+                    statuses++;
                 }
-
-                addRect(writer, matrix, tileX, tileY, tileX + mapScale, tileY + mapScale, color);
+                if (prevStatus == status) {
+                    // Combine this tile with the previous one
+                    continue;
+                }
+                if (drawingInnerRect) {
+                    // Draw a rectangle covering all the iterated tiles except the ones from the current loop
+                    int rectStart = (size / 2 - i / 2) * tileSize;
+                    int x1 = mapStartX + rectStart;
+                    int y1 = mapStartY + rectStart - ((i - 1) % 2) * tileSize;
+                    addRect(writer, matrix, x1, y1, x1 + i * tileSize, y1 + (i - 1) * tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
+                    drawingInnerRect = false;
+                }
+                if (prevStatus != null) {
+                    int toX = tileX - tileSize * direction;
+                    addRect(writer, matrix, Math.min(fromX, toX), tileY, Math.max(fromX, toX) + tileSize, tileY + tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
+                }
+                prevStatus = status;
+                fromX = tileX;
             }
+            // Draw on direction change unless the inner rectangle is being combined
+            if (prevStatus != null && !drawingInnerRect) {
+                addRect(writer, matrix, Math.min(fromX, tileX), tileY, Math.max(fromX, tileX) + tileSize, tileY + tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
+                prevStatus = null;
+            }
+
+            int fromY = tileY;
+            for (int j = 0; j < i && statuses < total; j++) {
+                z += direction;
+                tileY = mapStartY + z * tileSize;
+
+                ChunkStatus status = tracker.getStatus(x, z);
+                if (status != null) {
+                    statuses++;
+                }
+                if (prevStatus == status) {
+                    // Combine this tile with the previous one
+                    continue;
+                }
+                if (drawingInnerRect) {
+                    // Draw a rectangle covering all the iterated tiles except the ones from the current loop
+                    int rectStart = (size / 2 - i / 2) * tileSize;
+                    int x1 = mapStartX + rectStart;
+                    int y1 = mapStartY + rectStart;
+                    addRect(writer, matrix, x1, y1, x1 + i * tileSize, y1 + i * tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
+                    drawingInnerRect = false;
+                }
+                if (prevStatus != null) {
+                    int toY = tileY - tileSize * direction;
+                    addRect(writer, matrix, tileX, Math.min(fromY, toY), tileX + tileSize, Math.max(fromY, toY) + tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
+                }
+                prevStatus = status;
+                fromY = tileY;
+            }
+            // Draw on direction change unless the inner rectangle is being combined
+            if (prevStatus != null && !drawingInnerRect) {
+                addRect(writer, matrix, tileX, Math.min(fromY, tileY), tileX + tileSize, Math.max(fromY, tileY) + tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
+                prevStatus = null;
+            }
+
+            direction = -direction;
+        }
+        // This code will only run if the entire chunk map is the same status
+        if (drawingInnerRect) {
+            addRect(writer, matrix, mapStartX, mapStartY, mapStartX + size * tileSize, mapStartY + size * tileSize, STATUS_TO_COLOR_FAST.getInt(prevStatus));
         }
 
         MeshData data = bufferBuilder.build();

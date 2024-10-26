@@ -40,6 +40,7 @@
     "features.gui.hooks.debug.DebugScreenOverlayMixin",
     "features.gui.hooks.settings.OptionsScreenMixin",
     "features.gui.screen.LevelLoadingScreenMixin",
+    "features.gui.screen.StoringChunkProgressListenerAccessor",
     "features.options.overlays.GuiMixin",
     "features.options.render_layers.LeavesBlockMixin",
     "features.options.render_layers.ItemBlockRenderTypesMixin",
