@@ -13,6 +13,16 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public interface EnumOptionBuilder<E extends Enum<E>> extends OptionBuilder<E> {
+    static <E extends Enum<E>> Function<E, Component> nameProviderFrom(Component... names) {
+        return e -> names[e.ordinal()];
+    }
+
+    EnumOptionBuilder<E> setAllowedValues(Set<E> allowedValues);
+
+    EnumOptionBuilder<E> setAllowedValuesProvider(Function<ConfigState, Set<E>> provider, ResourceLocation... dependencies);
+
+    EnumOptionBuilder<E> setElementNameProvider(Function<E, Component> provider);
+
     @Override
     EnumOptionBuilder<E> setName(Component name);
 
@@ -48,14 +58,4 @@ public interface EnumOptionBuilder<E extends Enum<E>> extends OptionBuilder<E> {
 
     @Override
     EnumOptionBuilder<E> setBinding(OptionBinding<E> binding);
-
-    EnumOptionBuilder<E> setAllowedValues(Set<E> allowedValues);
-
-    EnumOptionBuilder<E> setAllowedValuesProvider(Function<ConfigState, Set<E>> provider, ResourceLocation... dependencies);
-
-    EnumOptionBuilder<E> setElementNameProvider(Function<E, Component> provider);
-
-    static <E extends Enum<E>> Function<E, Component> nameProviderFrom(Component... names) {
-        return e -> names[e.ordinal()];
-    }
 }

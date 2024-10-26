@@ -10,6 +10,14 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public interface IntegerOptionBuilder extends OptionBuilder<Integer> {
+    IntegerOptionBuilder setRange(int min, int max, int step);
+
+    IntegerOptionBuilder setRange(Range range);
+
+    IntegerOptionBuilder setRangeProvider(Function<ConfigState, Range> provider, ResourceLocation... dependencies);
+
+    IntegerOptionBuilder setValueFormatter(ControlValueFormatter formatter);
+
     @Override
     IntegerOptionBuilder setName(Component name);
 
@@ -45,12 +53,4 @@ public interface IntegerOptionBuilder extends OptionBuilder<Integer> {
 
     @Override
     IntegerOptionBuilder setBinding(OptionBinding<Integer> binding);
-
-    IntegerOptionBuilder setRange(int min, int max, int step);
-
-    IntegerOptionBuilder setRange(Range range);
-
-    IntegerOptionBuilder setRangeProvider(Function<ConfigState, Range> provider, ResourceLocation... dependencies);
-
-    IntegerOptionBuilder setValueFormatter(ControlValueFormatter formatter);
 }

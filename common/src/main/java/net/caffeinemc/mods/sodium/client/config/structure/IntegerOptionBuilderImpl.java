@@ -58,6 +58,12 @@ class IntegerOptionBuilderImpl extends OptionBuilderImpl<Integer> implements Int
     }
 
     @Override
+    public IntegerOptionBuilder setValueFormatter(ControlValueFormatter formatter) {
+        this.valueFormatter = formatter;
+        return this;
+    }
+
+    @Override
     public IntegerOptionBuilder setName(Component name) {
         super.setName(name);
         return this;
@@ -126,12 +132,6 @@ class IntegerOptionBuilderImpl extends OptionBuilderImpl<Integer> implements Int
     @Override
     public IntegerOptionBuilder setBinding(OptionBinding<Integer> binding) {
         super.setBinding(binding);
-        return this;
-    }
-
-    @Override
-    public IntegerOptionBuilder setValueFormatter(ControlValueFormatter formatter) {
-        this.valueFormatter = formatter;
         return this;
     }
 }
