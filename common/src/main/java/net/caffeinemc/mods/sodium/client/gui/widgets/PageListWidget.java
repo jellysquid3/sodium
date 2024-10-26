@@ -14,30 +14,29 @@ import org.jetbrains.annotations.NotNull;
 
 public class PageListWidget extends AbstractParentWidget {
     private final VideoSettingsScreen parent;
-    private final Dim2i dim;
     private ScrollbarWidget scrollbar;
     private FlatButtonWidget search;
 
     public PageListWidget(VideoSettingsScreen parent, Dim2i dim) {
+        super(dim);
         this.parent = parent;
-        this.dim = dim;
         this.rebuild();
     }
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fillGradient(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height(), 0x40000000, 0x90000000);
-        graphics.enableScissor(this.dim.x(), this.dim.y(), this.dim.x() + this.dim.width(), this.dim.y() + this.dim.height() - 30);
+        graphics.fillGradient(this.getX(), this.getY(), this.getWidth(), this.getHeight(), 0x40000000, 0x90000000);
+        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), this.getLimitY() - 30);
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
         this.search.render(graphics, mouseX, mouseY, delta);
     }
 
     public void rebuild() {
-        int x = this.dim.x();
-        int y = this.dim.y();
-        int width = this.dim.width();
-        int height = this.dim.height();
+        int x = this.getX();
+        int y = this.getY();
+        int width = this.getWidth();
+        int height = this.getHeight();
 
         this.clearChildren();
         this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - 5, y, 5, height - 30)));
@@ -89,11 +88,6 @@ public class PageListWidget extends AbstractParentWidget {
         return true;
     }
 
-    @Override
-    public boolean isMouseOver(double mouseX, double mouseY) {
-        return this.dim.containsCursor(mouseX, mouseY);
-    }
-
     public class EntryWidget extends CenteredFlatWidget {
         public EntryWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable, ColorTheme theme) {
             super(dim, label, action, isSelectable, theme);
@@ -102,11 +96,6 @@ public class PageListWidget extends AbstractParentWidget {
         @Override
         public int getY() {
             return super.getY() - PageListWidget.this.scrollbar.getScrollAmount();
-        }
-
-        @Override
-        public int getLimitY() {
-            return super.getLimitY() - PageListWidget.this.scrollbar.getScrollAmount();
         }
     }
 }

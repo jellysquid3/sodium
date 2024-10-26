@@ -8,18 +8,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
-import net.minecraft.client.gui.navigation.ScreenRectangle;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ControlElement<T> extends AbstractWidget {
     protected final Option<T> option;
 
-    protected final Dim2i dim;
-
     public ControlElement(Option<T> option, Dim2i dim) {
+        super(dim);
         this.option = option;
-        this.dim = dim;
     }
 
     public int getContentWidth() {
@@ -48,26 +44,22 @@ public class ControlElement<T> extends AbstractWidget {
             label = String.valueOf(ChatFormatting.GRAY) + ChatFormatting.STRIKETHROUGH + name;
         }
 
-        this.hovered = this.dim.containsCursor(mouseX, mouseY);
+        this.hovered = this.isMouseOver(mouseX, mouseY);
 
-        this.drawRect(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), this.hovered ? 0xE0000000 : 0x90000000);
-        this.drawString(graphics, label, this.dim.x() + 6, this.dim.getCenterY() - 4, Colors.FOREGROUND);
+        this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), this.hovered ? 0xE0000000 : 0x90000000);
+        this.drawString(graphics, label, this.getX() + 6, this.getCenterY() - 4, Colors.FOREGROUND);
 
         if (this.isFocused()) {
-            this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), -1);
+            this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), -1);
         }
     }
 
     private String truncateLabelToFit(String name) {
-        return truncateTextToFit(name, this.dim.width() - this.getContentWidth() - 20);
+        return truncateTextToFit(name, this.getWidth() - this.getContentWidth() - 20);
     }
 
     public Option<T> getOption() {
         return this.option;
-    }
-
-    public Dim2i getDimensions() {
-        return this.dim;
     }
 
     @Override
@@ -76,15 +68,5 @@ public class ControlElement<T> extends AbstractWidget {
             return null;
         }
         return super.nextFocusPath(event);
-    }
-
-    @Override
-    public @NotNull ScreenRectangle getRectangle() {
-        return new ScreenRectangle(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height());
-    }
-
-    @Override
-    public boolean isMouseOver(double x, double y) {
-        return this.dim.containsCursor(x, y);
     }
 }

@@ -9,13 +9,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
-import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class CenteredFlatWidget extends AbstractWidget implements Renderable {
-    private final Dim2i dim;
     private final Runnable action;
     private final boolean isSelectable;
     private final ButtonTheme theme;
@@ -27,7 +25,7 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
     private final Component label;
 
     public CenteredFlatWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable, ColorTheme theme) {
-        this.dim = dim;
+        super(dim);
         this.label = label;
         this.action = action;
         this.isSelectable = isSelectable;
@@ -68,30 +66,6 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         }
     }
 
-    public int getX() {
-        return this.dim.x();
-    }
-
-    public int getY() {
-        return this.dim.y();
-    }
-
-    public int getWidth() {
-        return this.dim.width();
-    }
-
-    public int getHeight() {
-        return this.dim.height();
-    }
-
-    public int getLimitX() {
-        return this.dim.getLimitX();
-    }
-
-    public int getLimitY() {
-        return this.dim.getLimitY();
-    }
-
     public void setSelected(boolean selected) {
         this.selected = selected;
     }
@@ -109,11 +83,6 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         }
 
         return false;
-    }
-
-    @Override
-    public boolean isMouseOver(double mouseX, double mouseY) {
-        return mouseX >= this.getX() && mouseX < this.getLimitX() && mouseY >= this.getY() && mouseY < this.getLimitY();
     }
 
     @Override
@@ -147,10 +116,5 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         if (!this.enabled || !this.visible)
             return null;
         return super.nextFocusPath(event);
-    }
-
-    @Override
-    public @NotNull ScreenRectangle getRectangle() {
-        return new ScreenRectangle(this.getX(), this.getY(), this.getWidth(), this.getHeight());
     }
 }

@@ -294,15 +294,13 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void renderOptionTooltip(GuiGraphics graphics, ControlElement<?> element) {
-        Dim2i dim = element.getDimensions();
-
         int textPadding = 5;
         int boxPadding = 5;
 
         int boxWidth = this.width - 340;
 
-        int boxY = dim.y();
-        int boxX = dim.getLimitX() + boxPadding;
+        int boxY = element.getY();
+        int boxX = element.getLimitX() + boxPadding;
 
         Option<?> option = element.getOption();
         List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), boxWidth - (textPadding * 2)));

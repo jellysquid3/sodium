@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gui.widgets;
 
+import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
@@ -11,6 +12,7 @@ import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
@@ -20,8 +22,13 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractWidget implements Renderable, GuiEventListener, NarratableEntry {
     protected final Font font = Minecraft.getInstance().font;
+    private final Dim2i dim;
     protected boolean focused;
     protected boolean hovered;
+
+    protected AbstractWidget(Dim2i dim) {
+        this.dim = dim;
+    }
 
     protected void drawString(GuiGraphics graphics, String text, int x, int y, int color) {
         graphics.drawString(this.font, text, x, y, color);
@@ -46,6 +53,48 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, Na
     protected void playClickSound() {
         Minecraft.getInstance().getSoundManager()
                 .play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
+    }
+
+    public int getX() {
+        return this.dim.x();
+    }
+
+    public int getY() {
+        return this.dim.y();
+    }
+
+    public int getWidth() {
+        return this.dim.width();
+    }
+
+    public int getHeight() {
+        return this.dim.height();
+    }
+
+    public final int getLimitX() {
+        return this.getX() + this.getWidth();
+    }
+
+    public final int getLimitY() {
+        return this.getY() + this.getHeight();
+    }
+
+    public final int getCenterX() {
+        return this.getX() + this.getWidth() / 2;
+    }
+
+    public final int getCenterY() {
+        return this.getY() + this.getHeight() / 2;
+    }
+
+    @Override
+    public @NotNull ScreenRectangle getRectangle() {
+        return new ScreenRectangle(this.getX(), this.getY(), this.getWidth(), this.getHeight());
+    }
+
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        return mouseX >= this.getX() && mouseX < this.getLimitX() && mouseY >= this.getY() && mouseY < this.getLimitY();
     }
 
     protected int getStringWidth(FormattedText text) {

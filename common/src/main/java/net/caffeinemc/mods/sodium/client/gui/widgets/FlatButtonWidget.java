@@ -8,7 +8,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
-import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +16,6 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
             0xFFFFFFFF, 0xFFFFFFFF, 0x90FFFFFF,
             0xE0000000, 0x90000000, 0x60000000);
 
-    private final Dim2i dim;
     private final Runnable action;
     private final boolean drawBackground;
     private final boolean leftAlign;
@@ -30,7 +28,7 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
 
 
     public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean leftAlign, ButtonTheme theme) {
-        this.dim = dim;
+        super(dim);
         this.label = label;
         this.action = action;
         this.drawBackground = drawBackground;
@@ -48,7 +46,7 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
             return;
         }
 
-        this.hovered = this.dim.containsCursor(mouseX, mouseY);
+        this.hovered = this.isMouseOver(mouseX, mouseY);
 
         int backgroundColor = this.enabled ? (this.hovered ? this.theme.bgHighlight : this.theme.bgDefault) : this.theme.bgInactive;
         int textColor = this.enabled ? this.theme.themeLighter : this.theme.themeDarker;
@@ -56,17 +54,17 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
         int strWidth = this.font.width(this.label);
 
         if (this.drawBackground) {
-            this.drawRect(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), backgroundColor);
+            this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), backgroundColor);
         }
 
-        this.drawString(graphics, this.label, this.leftAlign ? this.dim.x() + 5 : (this.dim.getCenterX() - (strWidth / 2)), this.dim.getCenterY() - 4, textColor);
+        this.drawString(graphics, this.label, this.leftAlign ? this.getX() + 5 : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - 4, textColor);
 
         if (this.enabled && this.selected) {
-            this.drawRect(graphics, this.dim.x(), this.dim.getLimitY() - 1, this.dim.getLimitX(), this.dim.getLimitY(), Colors.THEME);
+            this.drawRect(graphics, this.getX(), this.getLimitY() - 1, this.getLimitX(), this.getLimitY(), Colors.THEME);
         }
 
         if (!this.drawBackground) {
-            this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), 0x8000FFEE);
+            this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), 0x8000FFEE);
 
         }
     }
@@ -81,7 +79,7 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
             return false;
         }
 
-        if (button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
+        if (button == 0 && this.isMouseOver(mouseX, mouseY)) {
             doAction();
 
             return true;
@@ -121,15 +119,5 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
         if (!this.enabled || !this.visible)
             return null;
         return super.nextFocusPath(event);
-    }
-
-    @Override
-    public boolean isMouseOver(double x, double y) {
-        return this.dim.containsCursor(x, y);
-    }
-
-    @Override
-    public ScreenRectangle getRectangle() {
-        return new ScreenRectangle(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height());
     }
 }

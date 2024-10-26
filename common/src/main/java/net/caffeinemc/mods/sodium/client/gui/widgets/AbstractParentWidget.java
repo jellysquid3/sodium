@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gui.widgets;
 
+import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Renderable;
@@ -18,6 +19,10 @@ public abstract class AbstractParentWidget extends AbstractWidget implements Con
 
     private GuiEventListener focusedElement;
     private boolean dragging;
+
+    protected AbstractParentWidget(Dim2i dim) {
+        super(dim);
+    }
 
     protected <T extends GuiEventListener> T addChild(T element) {
         this.children.add(element);
