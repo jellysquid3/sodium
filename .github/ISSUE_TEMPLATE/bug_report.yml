@@ -17,10 +17,10 @@ body:
         - **Have you ensured that all of your mods (including Sodium) are up-to-date?** The latest version of Sodium
         can always be found [on Modrinth](https://modrinth.com/mod/sodium).
         
-        - **Have you read the [list of known driver incompatibilities](https://github.com/CaffeineMC/sodium-fabric/wiki/Driver-Compatibility)?** Most problems
+        - **Have you read the [list of known driver incompatibilities](https://github.com/CaffeineMC/sodium/wiki/Driver-Compatibility)?** Most problems
         (including "poor performance") are caused by out-of-date or incompatible graphics drivers.
         
-        - **Have you used the [search tool](https://github.com/CaffeineMC/sodium-fabric/issues) to check whether your issue
+        - **Have you used the [search tool](https://github.com/CaffeineMC/sodium/issues) to check whether your issue
         has already been reported?** If it has been, then consider adding more information to the existing issue instead.
         
         - **Have you determined the minimum set of instructions to reproduce the issue?** If your problem only occurs

@@ -1,30 +1,11 @@
 plugins {
-    id("idea")
-    id("net.neoforged.moddev") version "2.0.28-beta"
-    id("java-library")
-}
+    id("multiloader-platform")
 
-val MINECRAFT_VERSION: String by rootProject.extra
-val PARCHMENT_VERSION: String? by rootProject.extra
-val NEOFORGE_VERSION: String by rootProject.extra
-val MOD_VERSION: String by rootProject.extra
+    id("net.neoforged.moddev") version("2.0.42-beta")
+}
 
 base {
     archivesName = "sodium-neoforge"
-}
-
-sourceSets {
-    val service = create("service")
-
-    service.apply {
-        compileClasspath += main.get().compileClasspath
-        compileClasspath += project(":common").sourceSets.getByName("workarounds").output
-    }
-
-    main.get().apply {
-        compileClasspath += project(":common").sourceSets.getByName("workarounds").output
-        runtimeClasspath += project(":common").sourceSets.getByName("workarounds").output
-    }
 }
 
 repositories {
@@ -35,122 +16,127 @@ repositories {
             password = "ghp_" + "DEuGv0Z56vnSOYKLCXdsS9svK4nb9K39C1Hn"
         }
     }
+
     maven("https://maven.su5ed.dev/releases")
     maven("https://maven.neoforged.net/releases/")
-
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = "Modrinth"
-                url = uri("https://api.modrinth.com/maven")
-            }
-        }
-        filter {
-            includeGroup("maven.modrinth")
-        }
-    }
 }
 
-val serviceJar: Jar by tasks.creating(Jar::class) {
-    from(sourceSets.getByName("service").output)
-    from(project(":common").sourceSets.getByName("workarounds").output)
-    from(rootDir.resolve("LICENSE.md"))
-    manifest.attributes["FMLModType"] = "LIBRARY"
-    archiveClassifier = "service"
+sourceSets {
+    create("service")
 }
 
-configurations {
-    create("serviceConfig") {
-        isCanBeConsumed = true
-        isCanBeResolved = false
-        outgoing {
-            artifact(serviceJar)
-        }
-    }
+val configurationCommonModJava: Configuration = configurations.create("commonModJava") {
+    isCanBeResolved = true
+}
+val configurationCommonModResources: Configuration = configurations.create("commonModResources") {
+    isCanBeResolved = true
+}
+
+val configurationCommonServiceJava: Configuration = configurations.create("commonServiceJava") {
+    isCanBeResolved = true
+}
+val configurationCommonServiceResources: Configuration = configurations.create("commonServiceResources") {
+    isCanBeResolved = true
 }
 
 dependencies {
-    jarJar(project(":neoforge", "serviceConfig"))
+    configurationCommonModJava(project(path = ":common", configuration = "commonMainJava"))
+    configurationCommonModJava(project(path = ":common", configuration = "commonApiJava"))
+    configurationCommonServiceJava(project(path = ":common", configuration = "commonEarlyLaunchJava"))
+
+    configurationCommonModResources(project(path = ":common", configuration = "commonMainResources"))
+    configurationCommonModResources(project(path = ":common", configuration = "commonApiResources"))
+    configurationCommonServiceResources(project(path = ":common", configuration = "commonEarlyLaunchResources"))
+
+    fun addEmbeddedFabricModule(dependency: String) {
+        dependencies.implementation(dependency)
+        dependencies.jarJar(dependency)
+    }
+
+    addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-api-base:0.4.42+d1308ded19")
+    addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-renderer-api-v1:3.4.0+acb05a3919")
+    addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-rendering-data-attachment-v1:0.3.48+73761d2e19")
+    addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-block-view-api-v2:1.0.10+9afaaf8c19")
+
+    jarJar(project(":neoforge", "service"))
 }
 
-tasks.jar {
-    val api = project.project(":common").sourceSets.getByName("api")
-    from(api.output.classesDirs)
-    from(api.output.resourcesDir)
+val serviceJar = tasks.create<Jar>("serviceJar") {
+    from(configurationCommonServiceJava)
+    from(configurationCommonServiceResources)
 
-    val main = project.project(":common").sourceSets.getByName("main")
-    from(main.output.classesDirs) {
-        exclude("/sodium.refmap.json")
-    }
-    from(main.output.resourcesDir)
-
-    val desktop = project.project(":common").sourceSets.getByName("desktop")
-    from(desktop.output.classesDirs)
-    from(desktop.output.resourcesDir)
+    from(sourceSets["service"].output)
 
     from(rootDir.resolve("LICENSE.md"))
 
-    filesMatching("neoforge.mods.toml") {
-        expand(mapOf("version" to MOD_VERSION))
-    }
+    manifest.attributes["FMLModType"] = "LIBRARY"
 
-    manifest.attributes["Main-Class"] = "net.caffeinemc.mods.sodium.desktop.LaunchWarn"
+    archiveClassifier = "service"
 }
 
-tasks.jar.get().destinationDirectory = rootDir.resolve("build").resolve("libs")
+val configurationService: Configuration = configurations.create("service") {
+    isCanBeConsumed = true
+    isCanBeResolved = true
+
+    outgoing {
+        artifact(serviceJar)
+    }
+}
+
+sourceSets {
+    named("service") {
+        compileClasspath = sourceSets["main"].compileClasspath
+        runtimeClasspath = sourceSets["main"].runtimeClasspath
+
+        compileClasspath += configurationCommonServiceJava
+        runtimeClasspath += configurationCommonServiceJava
+    }
+
+    main {
+        compileClasspath += configurationCommonModJava
+        runtimeClasspath += configurationCommonModJava
+    }
+}
 
 neoForge {
-    // Specify the version of NeoForge to use.
-    version = NEOFORGE_VERSION
+    version = BuildConfig.NEOFORGE_VERSION
 
-    if (PARCHMENT_VERSION != null) {
+    if (BuildConfig.PARCHMENT_VERSION != null) {
         parchment {
-            minecraftVersion = MINECRAFT_VERSION
-            mappingsVersion = PARCHMENT_VERSION
+            minecraftVersion = BuildConfig.MINECRAFT_VERSION
+            mappingsVersion = BuildConfig.PARCHMENT_VERSION
         }
     }
 
     runs {
-        create("client") {
+        create("Client") {
             client()
+            ideName = "NeoForge/Client"
         }
     }
 
     mods {
         create("sodium") {
-            sourceSet(sourceSets.main.get())
-            sourceSet(project.project(":common").sourceSets.main.get())
-            sourceSet(project.project(":common").sourceSets.getByName("api"))
+            sourceSet(sourceSets["main"])
+            sourceSet(project(":common").sourceSets["main"])
+            sourceSet(project(":common").sourceSets["api"])
         }
 
-        create("sodiumservice") {
+        create("sodium-service") {
             sourceSet(sourceSets["service"])
             sourceSet(project(":common").sourceSets["workarounds"])
         }
     }
 }
 
-fun includeDep(dependency: String, closure: Action<ExternalModuleDependency>) {
-    dependencies.implementation(dependency, closure)
-    dependencies.jarJar(dependency, closure)
+tasks {
+    jar {
+        from(configurationCommonModJava)
+        destinationDirectory.set(file(rootProject.layout.buildDirectory).resolve("mods"))
+    }
+
+    processResources {
+        from(configurationCommonModResources)
+    }
 }
 
-fun includeDep(dependency: String) {
-    dependencies.implementation(dependency)
-    dependencies.jarJar(dependency)
-}
-
-tasks.named("compileTestJava").configure {
-    enabled = false
-}
-
-dependencies {
-    compileOnly(project.project(":common").sourceSets.main.get().output)
-    compileOnly(project.project(":common").sourceSets.getByName("api").output)
-    includeDep("org.sinytra.forgified-fabric-api:fabric-api-base:0.4.42+d1308ded19")
-    includeDep("org.sinytra.forgified-fabric-api:fabric-renderer-api-v1:3.4.0+acb05a3919")
-    includeDep("org.sinytra.forgified-fabric-api:fabric-rendering-data-attachment-v1:0.3.48+73761d2e19")
-    includeDep("org.sinytra.forgified-fabric-api:fabric-block-view-api-v2:1.0.10+9afaaf8c19")
-}
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)

@@ -1,26 +1,23 @@
 package net.caffeinemc.mods.sodium.client.platform;
 
 import net.caffeinemc.mods.sodium.client.compatibility.environment.OsUtils;
-import net.caffeinemc.mods.sodium.client.platform.windows.api.msgbox.MsgBoxParamSw;
-import net.caffeinemc.mods.sodium.client.platform.windows.api.msgbox.MsgBoxCallback;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.User32;
+import net.caffeinemc.mods.sodium.client.platform.windows.api.msgbox.MsgBoxCallback;
+import net.caffeinemc.mods.sodium.client.platform.windows.api.msgbox.MsgBoxParamSw;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Locale;
 import java.util.Objects;
 
 public class MessageBox {
     private static final @Nullable MessageBoxImpl IMPL = MessageBoxImpl.chooseImpl();
 
-    public static void showMessageBox(long window,
+    public static void showMessageBox(NativeWindowHandle window,
                                       IconType icon, String title,
                                       String description,
                                       @Nullable String helpUrl)
@@ -41,33 +38,15 @@ public class MessageBox {
             }
         }
 
-        void showMessageBox(long window,
+        void showMessageBox(NativeWindowHandle window,
                             IconType icon, String title,
                             String description,
                             @Nullable String helpUrl);
     }
 
-    private static class TFDMessageBoxImpl implements MessageBoxImpl {
-        // This adds information about how to open the help box, since we cannot change the buttons.
-        private static final String NOTICE = "\n\nFor more information, click OK; otherwise, click Cancel.";
-
-        @Override
-        public void showMessageBox(long window, IconType icon, String title, String description, @Nullable String helpUrl) {
-            boolean clicked = TinyFileDialogs.tinyfd_messageBox(title, helpUrl == null ? description : description + NOTICE, helpUrl == null ? "ok" : "okcancel", icon.name().toLowerCase(Locale.ROOT), false);
-
-            if (clicked && helpUrl != null) {
-                try {
-                    Desktop.getDesktop().browse(URI.create(helpUrl));
-                } catch (IOException e) {
-                    System.out.println("Failed to open! Giving up.");
-                }
-            }
-        }
-    }
-
     private static class WindowsMessageBoxImpl implements MessageBoxImpl {
         @Override
-        public void showMessageBox(long window,
+        public void showMessageBox(NativeWindowHandle window,
                                    IconType icon, String title,
                                    String description,
                                    @Nullable String helpUrl) {
@@ -91,8 +70,8 @@ public class MessageBox {
 
             final long hWndOwner;
 
-            if (window != 0L) {
-                hWndOwner = GLFWNativeWin32.glfwGetWin32Window(window);
+            if (window != null) {
+                hWndOwner = window.getWin32Handle();
             } else {
                 hWndOwner = MemoryUtil.NULL;
             }

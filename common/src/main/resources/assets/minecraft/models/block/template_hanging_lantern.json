@@ -1,0 +1,51 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "particle": "#lantern"
+    },
+    "elements": [
+        {
+            "from": [ 5, 1, 5 ],
+            "to": [ 11, 8, 11 ],
+            "faces": {
+                "north": { "uv": [ 0, 2, 6, 9 ], "texture": "#lantern" },
+                "east": { "uv": [ 0, 2, 6, 9 ], "texture": "#lantern" },
+                "south": { "uv": [ 0, 2, 6, 9 ], "texture": "#lantern" },
+                "west": { "uv": [ 0, 2, 6, 9 ], "texture": "#lantern" },
+                "up": { "uv": [ 0, 9, 6, 15 ], "texture": "#lantern" },
+                "down": { "uv": [ 0, 9, 6, 15 ], "texture": "#lantern" }
+            }
+        },
+        {
+            "from": [ 6, 8, 6 ],
+            "to": [ 10, 10, 10 ],
+            "faces": {
+                "north": { "uv": [ 1, 0, 5, 2 ], "texture": "#lantern" },
+                "east": { "uv": [ 1, 0, 5, 2 ], "texture": "#lantern" },
+                "south": { "uv": [ 1, 0, 5, 2 ], "texture": "#lantern" },
+                "west": { "uv": [ 1, 0, 5, 2 ], "texture": "#lantern" },
+                "up": { "uv": [ 1, 10, 5, 14 ], "texture": "#lantern" }
+            }
+        },
+        {
+            "from": [ 6.5, 11, 8 ],
+            "to": [ 9.5, 15, 8 ],
+            "shade": false,
+            "rotation": { "angle": 45, "axis": "y", "origin": [ 8, 8, 8 ] },
+            "faces": {
+                "north": { "uv": [ 14, 1, 11, 5 ], "texture": "#lantern" },
+                "south": { "uv": [ 11, 1, 14, 5 ], "texture": "#lantern" }
+            }
+        },
+        {
+            "from": [ 8, 10, 6.5 ],
+            "to": [ 8, 16, 9.5 ],
+            "shade": false,
+            "rotation": { "angle": 45, "axis": "y", "origin": [ 8, 8, 8 ] },
+            "faces": {
+                "east": { "uv": [ 11, 6, 14, 12 ], "texture": "#lantern" },
+                "west": { "uv": [ 14, 6, 11, 12 ], "texture": "#lantern" }
+            }
+        }
+    ]
+}

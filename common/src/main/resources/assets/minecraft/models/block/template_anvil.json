@@ -1,0 +1,60 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "particle": "block/anvil",
+        "body": "block/anvil"
+    },
+    "elements": [
+        {
+            "from": [ 2, 0, 2 ],
+            "to": [ 14, 4, 14 ],
+            "faces": {
+                "north": { "uv": [ 2, 12, 14, 16 ], "texture": "#body" },
+                "east": { "uv": [ 4, 2, 0, 14 ], "rotation": 270, "texture": "#body" },
+                "south": { "uv": [ 2, 12, 14, 16 ], "texture": "#body" },
+                "west": { "uv": [ 0, 2, 4, 14 ], "rotation": 90, "texture": "#body" },
+                "up": { "uv": [ 2, 2, 14, 14 ], "rotation": 180, "texture": "#body" },
+                "down": { "uv": [ 2, 2, 14, 14 ], "rotation": 180, "texture": "#body", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 4, 4, 3 ],
+            "to": [ 12, 5, 13 ],
+            "faces": {
+                "north": { "uv": [ 4, 11, 12, 12 ], "texture": "#body" },
+                "east": { "uv": [ 5, 3, 4, 13 ], "rotation": 270, "texture": "#body" },
+                "south": { "uv": [ 4, 11, 12, 12 ], "texture": "#body" },
+                "west": { "uv": [ 4, 3, 5, 13 ], "rotation": 90, "texture": "#body" },
+                "up": { "uv": [ 4, 3, 12, 13 ], "rotation": 180, "texture": "#body" }
+            }
+        },
+        {
+            "from": [ 6, 5, 4 ],
+            "to": [ 10, 10, 12 ],
+            "faces": {
+                "north": { "uv": [ 6, 6, 10, 11 ], "texture": "#body" },
+                "east": { "uv": [ 10, 4, 5, 12 ], "rotation": 270, "texture": "#body" },
+                "south": { "uv": [ 6, 6, 10, 11 ], "texture": "#body" },
+                "west": { "uv": [ 5, 4, 10, 12 ], "rotation": 90, "texture": "#body" }
+            }
+        },
+        {
+            "from": [ 3, 10, 0 ],
+            "to": [ 13, 16, 16 ],
+            "faces": {
+                "north": { "uv": [ 3, 0, 13, 6 ], "texture": "#body", "cullface": "north" },
+                "east": { "uv": [ 16, 0, 10, 16 ], "rotation": 270, "texture": "#body" },
+                "south": { "uv": [ 3, 0, 13, 6 ], "texture": "#body", "cullface": "south" },
+                "west": { "uv": [ 10, 0, 16, 16 ], "rotation": 90, "texture": "#body" },
+                "up": { "uv": [ 3, 0, 13, 16 ], "rotation": 180, "texture": "#top", "cullface": "up" },
+                "down": { "uv": [ 3, 0, 13, 16 ], "rotation": 180, "texture": "#body" }
+            }
+        }
+    ],
+    "display": {
+        "fixed": {
+            "rotation": [ 0, 90, 0 ],
+            "scale": [ 0.5, 0.5, 0.5 ]
+        }
+    }
+}

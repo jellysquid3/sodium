@@ -12,21 +12,12 @@ import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-public class EntityRenderer {
+import static net.caffeinemc.mods.sodium.client.render.immediate.model.ModelCuboid.*;
 
+public class EntityRenderer {
     private static final int NUM_CUBE_VERTICES = 8;
     private static final int NUM_CUBE_FACES = 6;
     private static final int NUM_FACE_VERTICES = 4;
-
-    // The ordering needs to be the same as Minecraft, otherwise some core shader replacements
-    // will be unable to identify the facing.
-    private static final int
-            FACE_NEG_Y = 0, // DOWN
-            FACE_POS_Y = 1, // UP
-            FACE_NEG_X = 2, // WEST
-            FACE_NEG_Z = 3, // NORTH
-            FACE_POS_X = 4, // EAST
-            FACE_POS_Z = 5; // SOUTH
 
     private static final int
             VERTEX_X1_Y1_Z1 = 0,

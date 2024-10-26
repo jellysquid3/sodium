@@ -1,0 +1,57 @@
+{
+    "textures": {
+        "particle": "#back"
+    },
+    "elements": [
+        {
+            "from": [ 1, 1, 15 ],
+            "to": [ 15, 15, 16 ],
+            "faces": {
+                "north": { "uv": [ 1, 1, 15, 15 ], "texture": "#back" },
+                "south": { "uv": [ 1, 1, 15, 15 ], "texture": "#back", "cullface": "south" }
+            }
+        },
+        {
+            "from": [ 0, 0, 15 ],
+            "to": [ 16, 16, 16 ],
+            "faces": {
+                "east": { "uv": [ 0, 0, 1, 16 ], "texture": "#wood", "cullface": "east" },
+                "west": { "uv": [ 15, 0, 16, 16 ], "texture": "#wood", "cullface": "west" },
+                "up": { "uv": [ 0, 15, 16, 16 ], "texture": "#wood", "cullface": "up" },
+                "down": { "uv": [ 0, 0, 16, 1 ], "texture": "#wood", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 0, 15, 15 ],
+            "to": [ 15, 16, 16 ],
+            "faces": {
+                "north": { "uv": [ 1, 0, 16, 1 ], "texture": "#wood" },
+                "south": { "uv": [ 0, 0, 15, 1 ], "texture": "#wood", "cullface": "south" }
+            }
+        },
+        {
+            "from": [ 15, 1, 15 ],
+            "to": [ 16, 16, 16 ],
+            "faces": {
+                "north": { "uv": [ 0, 0, 1, 15 ], "texture": "#wood" },
+                "south": { "uv": [ 15, 0, 16, 15 ], "texture": "#wood", "cullface": "south" }
+            }
+        },
+        {
+            "from": [ 1, 0, 15 ],
+            "to": [ 16, 1, 16 ],
+            "faces": {
+                "north": { "uv": [ 0, 15, 15, 16 ], "texture": "#wood" },
+                "south": { "uv": [ 1, 15, 16, 16 ], "texture": "#wood", "cullface": "south" }
+            }
+        },
+        {
+            "from": [ 0, 0, 15 ],
+            "to": [ 1, 15, 16 ],
+            "faces": {
+                "north": { "uv": [ 15, 1, 16, 16 ], "texture": "#wood" },
+                "south": { "uv": [ 0, 1, 1, 16 ], "texture": "#wood", "cullface": "south" }
+            }
+        }
+    ]
+}

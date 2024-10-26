@@ -28,6 +28,5 @@ jobs:
       - name: Upload assets to GitHub
         uses: AButler/upload-release-assets@v2.0
         with:
-          # Filter built files to disregard -sources and -dev, and leave only the minecraft-compatible jars.
-          files: 'build/libs/*[0-9].jar;LICENSE'
+          files: 'build/mods/*.jar'
           repo-token: ${{ secrets.GITHUB_TOKEN }}

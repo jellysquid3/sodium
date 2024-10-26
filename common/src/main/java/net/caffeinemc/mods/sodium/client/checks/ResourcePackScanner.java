@@ -47,7 +47,7 @@ public class ResourcePackScanner {
     );
 
     /**
-     * <a href="https://github.com/CaffeineMC/sodium-fabric/issues/1569">#1569</a>
+     * <a href="https://github.com/CaffeineMC/sodium/issues/1569">#1569</a>
      * Iterate through all active resource packs, and detect resource packs which contain files matching the blacklist.
      * An error message is shown for resource packs which replace terrain core shaders.
      * A warning is shown for resource packs which replace the default light.glsl and fog.glsl shaders.
@@ -115,14 +115,14 @@ public class ResourcePackScanner {
             if (!entry.shaderPrograms.isEmpty()) {
                 emitProblem(builder,
                         "The resource pack replaces terrain shaders, which are not supported",
-                        "https://github.com/CaffeineMC/sodium-fabric/wiki/Resource-Packs",
+                        "https://github.com/CaffeineMC/sodium/wiki/Resource-Packs",
                         entry.shaderPrograms);
             }
 
             if (!entry.shaderIncludes.isEmpty()) {
                 emitProblem(builder,
                         "The resource pack modifies shader include files, which are not fully supported",
-                        "https://github.com/CaffeineMC/sodium-fabric/wiki/Resource-Packs",
+                        "https://github.com/CaffeineMC/sodium/wiki/Resource-Packs",
                         entry.shaderIncludes);
             }
         }

@@ -185,7 +185,7 @@ public class ClonedChunkSection {
         // Retrieve any render data after we have copied all block entities, as this will call into the code of
         // other mods. This could potentially result in the chunk being modified, which would cause problems if we
         // were iterating over any data in that chunk.
-        // See https://github.com/CaffeineMC/sodium-fabric/issues/942 for more info.
+        // See https://github.com/CaffeineMC/sodium/issues/942 for more info.
         for (var entry : Int2ReferenceMaps.fastIterable(blockEntities)) {
             Object data = PlatformLevelAccess.getInstance().getBlockEntityData(entry.getValue());
 

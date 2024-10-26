@@ -1,0 +1,46 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "particle": "block/glass",
+        "glass": "block/glass",
+        "beacon": "block/beacon",
+        "obsidian": "block/obsidian"
+    },
+    "elements": [
+        {
+            "from": [ 0, 0, 0 ],
+            "to": [ 16, 16, 16 ],
+            "faces": {
+                "north": { "uv": [ 0, 0, 16, 16 ], "texture": "#glass", "cullface": "north" },
+                "east": { "uv": [ 0, 0, 16, 16 ], "texture": "#glass", "cullface": "east" },
+                "south": { "uv": [ 0, 0, 16, 16 ], "texture": "#glass", "cullface": "south" },
+                "west": { "uv": [ 0, 0, 16, 16 ], "texture": "#glass", "cullface": "west" },
+                "up": { "uv": [ 0, 0, 16, 16 ], "texture": "#glass", "cullface": "up" },
+                "down": { "uv": [ 0, 0, 16, 16 ], "texture": "#glass", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 2, 0.1, 2 ],
+            "to": [ 14, 3, 14 ],
+            "faces": {
+                "north": { "uv": [ 2, 13, 14, 16 ], "texture": "#obsidian" },
+                "east": { "uv": [ 2, 13, 14, 16 ], "texture": "#obsidian" },
+                "south": { "uv": [ 2, 13, 14, 16 ], "texture": "#obsidian" },
+                "west": { "uv": [ 2, 13, 14, 16 ], "texture": "#obsidian" },
+                "up": { "uv": [ 2, 2, 14, 14 ], "texture": "#obsidian" },
+                "down": { "uv": [ 2, 2, 14, 14 ], "texture": "#obsidian", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 3, 3, 3 ],
+            "to": [ 13, 14, 13 ],
+            "faces": {
+                "north": { "uv": [ 3, 2, 13, 13 ], "texture": "#beacon" },
+                "east": { "uv": [ 3, 2, 13, 13 ], "texture": "#beacon" },
+                "south": { "uv": [ 3, 2, 13, 13 ], "texture": "#beacon" },
+                "west": { "uv": [ 3, 2, 13, 13 ], "texture": "#beacon" },
+                "up": { "uv": [ 3, 3, 13, 13 ], "texture": "#beacon" }
+            }
+        }
+    ]
+}

@@ -1,8 +1,5 @@
 package net.caffeinemc.mods.sodium.client.compatibility.environment.probe;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.file.PathUtils;
 import org.jetbrains.annotations.NotNull;
 
 public enum GraphicsAdapterVendor {

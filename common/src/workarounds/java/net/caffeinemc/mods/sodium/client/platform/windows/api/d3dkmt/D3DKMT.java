@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.platform.windows.api.d3dkmt;
 
-import com.sun.jna.platform.win32.VersionHelpers;
 import net.caffeinemc.mods.sodium.client.compatibility.environment.probe.GraphicsAdapterInfo;
 import net.caffeinemc.mods.sodium.client.compatibility.environment.probe.GraphicsAdapterVendor;
 import net.caffeinemc.mods.sodium.client.platform.windows.WindowsFileVersion;
@@ -14,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,12 +25,11 @@ import static org.lwjgl.system.MemoryUtil.memByteBuffer;
 public class D3DKMT {
     private static final Logger LOGGER = LoggerFactory.getLogger("Sodium-D3DKMT");
 
-    private static final boolean SUPPORTS_D3DKMT = VersionHelpers.IsWindowsVistaOrGreater() && Gdi32.isD3DKMTSupported();
-    private static final boolean SUPPORTS_QUERYING_ADAPTER_TYPE = VersionHelpers.IsWindows8OrGreater();
-
     public static List<WDDMAdapterInfo> findGraphicsAdapters() {
-        if (!SUPPORTS_D3DKMT) {
-            LOGGER.warn("Unable to query graphics adapters when the operating system is older than Windows Vista.");
+        if (!Gdi32.isD3DKMTSupported()) {
+            // D3DKMT was introduced with Windows Vista, but it was not possible to enumerate adapters and their
+            // rendering capabilities until Windows 8.0.
+            LOGGER.warn("Unable to query graphics adapters when the operating system is older than Windows 8.0.");
             return List.of();
         }
 
@@ -74,14 +73,10 @@ public class D3DKMT {
     }
 
     private static @Nullable D3DKMT.WDDMAdapterInfo getAdapterInfo(int adapter) {
-        int adapterType = -1;
+        int adapterType = queryAdapterType(adapter);
 
-        if (SUPPORTS_QUERYING_ADAPTER_TYPE) {
-            adapterType = queryAdapterType(adapter);
-
-            if (!isSupportedAdapterType(adapterType)) {
-                return null;
-            }
+        if (!isSupportedAdapterType(adapterType)) {
+            return null;
         }
 
         String adapterName = queryFriendlyName(adapter);

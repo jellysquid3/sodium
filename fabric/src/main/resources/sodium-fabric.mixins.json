@@ -1,8 +1,7 @@
 {
-  "package": "net.caffeinemc.mods.sodium.mixin.fabric",
+  "package": "net.caffeinemc.mods.sodium.mixin",
   "required": true,
   "compatibilityLevel": "JAVA_17",
-  "refmap": "sodium-fabric.refmap.json",
   "injectors": {
     "defaultRequire": 1
   },
@@ -10,10 +9,10 @@
     "conformVisibility": true
   },
   "client": [
-    "core.model.quad.BakedQuadMixin",
-    "features.model.MultiPartBakedModelMixin",
-    "features.model.WeightedBakedModelMixin",
-    "features.render.model.block.ModelBlockRendererMixin",
-    "features.world.biome.BiomeMixin"
+      "core.model.quad.BakedQuadMixin",
+      "features.model.MultiPartBakedModelMixin",
+      "features.model.WeightedBakedModelMixin",
+      "features.render.model.block.ModelBlockRendererMixin",
+      "features.world.biome.BiomeMixin"
   ]
 }

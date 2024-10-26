@@ -19,6 +19,8 @@ import java.util.function.IntConsumer;
  * significantly more robust topo sorting.
  */
 public class TopoGraphSorting {
+    private static final float HALF_SPACE_EPSILON = 0.001f;
+
     private TopoGraphSorting() {
     }
 
@@ -35,8 +37,36 @@ public class TopoGraphSorting {
         return planeNormal.dot(point) > planeDistance;
     }
 
-    private static boolean pointInsideHalfSpace(float planeDistance, Vector3fc planeNormal, Vector3fc point) {
-        return planeNormal.dot(point) < planeDistance;
+    /**
+     * Test if the given point is within the half space defined by the plane anchor and the plane normal. The normal points away from the space considered to be inside.
+     * <p>
+     * A small epsilon is added in the test to account for floating point errors, making it harder for a point on the edge to be considered inside.
+     *
+     * @param planeDistance dot product of the plane
+     * @param planeNormal   the normal of the plane
+     * @param x             x coordinate of the point
+     * @param y             y coordinate of the point
+     * @param z             z coordinate of the point
+     * @return true if the point is inside the half space
+     */
+    private static boolean pointInsideHalfSpaceEpsilon(float planeDistance, Vector3fc planeNormal, float x, float y, float z) {
+        return planeNormal.dot(x, y, z) + HALF_SPACE_EPSILON < planeDistance;
+    }
+
+    /**
+     * Test if the given point is outside the half space defined by the plane anchor and the plane normal. The normal points away from the space considered to be inside.
+     * <p>
+     * A small epsilon is subtracted in the test to account for floating point errors, making it harder for a point on the edge to be considered outside.
+     *
+     * @param planeDistance dot product of the plane
+     * @param planeNormal   the normal of the plane
+     * @param x             x coordinate of the point
+     * @param y             y coordinate of the point
+     * @param z             z coordinate of the point
+     * @return true if the point is inside the half space
+     */
+    private static boolean pointOutsideHalfSpaceEpsilon(float planeDistance, Vector3fc planeNormal, float x, float y, float z) {
+        return planeNormal.dot(x, y, z) - HALF_SPACE_EPSILON > planeDistance;
     }
 
     public static boolean orthogonalQuadVisibleThrough(TQuad quadA, TQuad quadB) {
@@ -127,12 +157,9 @@ public class TopoGraphSorting {
      * Checks if one quad is visible through the other quad. This accepts arbitrary
      * quads, even unaligned ones.
      *
-     * @param quad              the quad through which the other quad is being
-     *                          tested
+     * @param quad              the quad through which the other quad is being tested
      * @param other             the quad being tested
-     * @param distancesByNormal a map of normals to sorted arrays of face plane
-     *                          distances for disproving that the quads are visible
-     *                          through each other, null to disable
+     * @param distancesByNormal a map of normals to sorted arrays of face plane distances for disproving that the quads are visible through each other, null to disable
      * @return true if the other quad is visible through the first quad
      */
     private static boolean quadVisibleThrough(TQuad quad, TQuad other,
@@ -141,11 +168,12 @@ public class TopoGraphSorting {
             return false;
         }
 
-        // aligned quads
-        var quadFacing = quad.useQuantizedFacing();
-        var otherFacing = other.useQuantizedFacing();
-        boolean result;
+        var quadFacing = quad.getFacing();
+        var otherFacing = other.getFacing();
+        boolean result = false;
         if (quadFacing != ModelQuadFacing.UNASSIGNED && otherFacing != ModelQuadFacing.UNASSIGNED) {
+            // aligned quads
+
             // opposites never see each other
             if (quadFacing.getOpposite() == otherFacing) {
                 return false;
@@ -162,15 +190,45 @@ public class TopoGraphSorting {
             }
         } else {
             // at least one unaligned quad
-            // this is an approximation since our quads don't store all their vertices.
-            // check that other center is within the half space of quad and that quad isn't
-            // in the half space of other
-            result = pointInsideHalfSpace(quad.getDotProduct(), quad.getQuantizedNormal(), other.getCenter())
-                    && !pointInsideHalfSpace(other.getDotProduct(), other.getQuantizedNormal(), quad.getCenter());
+
+            var quadDot = quad.getAccurateDotProduct();
+            var quadNormal = quad.getAccurateNormal();
+            var otherVertexPositions = other.getVertexPositions();
+
+            // at least one of the other quad's vertexes must be inside the half space of the first quad
+            var otherInsideQuad = false;
+            for (int i = 0, itemIndex = 0; i < 4; i++) {
+                if (pointInsideHalfSpaceEpsilon(quadDot, quadNormal,
+                        otherVertexPositions[itemIndex++],
+                        otherVertexPositions[itemIndex++],
+                        otherVertexPositions[itemIndex++])) {
+                    otherInsideQuad = true;
+                    break;
+                }
+            }
+            if (otherInsideQuad) {
+                var otherDot = other.getAccurateDotProduct();
+                var otherNormal = other.getAccurateNormal();
+                var quadVertexPositions = quad.getVertexPositions();
+
+                // not all the quad's vertexes must be inside the half space of the other quad
+                // i.e. there must be at least one vertex outside the other quad
+                var quadNotFullyInsideOther = false;
+                for (int i = 0, itemIndex = 0; i < 4; i++) {
+                    if (pointOutsideHalfSpaceEpsilon(otherDot, otherNormal,
+                            quadVertexPositions[itemIndex++],
+                            quadVertexPositions[itemIndex++],
+                            quadVertexPositions[itemIndex++])) {
+                        quadNotFullyInsideOther = true;
+                        break;
+                    }
+                }
+
+                result = quadNotFullyInsideOther;
+            }
         }
 
-        // if enabled and necessary, try to disprove this see-through relationship with
-        // a separator plane
+        // if enabled and necessary, try to disprove this see-through relationship with a separator plane
         if (result && distancesByNormal != null) {
             return visibilityWithSeparator(quad, other, distancesByNormal, cameraPos);
         }
@@ -209,10 +267,7 @@ public class TopoGraphSorting {
 
             for (int i = 0; i < allQuads.length; i++) {
                 TQuad quad = allQuads[i];
-                // NOTE: This approximation may introduce wrong sorting if the real and the
-                // quantized normal aren't the same. A quad may be ignored with the quantized
-                // normal, but it's actually visible in camera.
-                if (pointOutsideHalfSpace(quad.getDotProduct(), quad.getQuantizedNormal(), cameraPos)) {
+                if (pointOutsideHalfSpace(quad.getAccurateDotProduct(), quad.getAccurateNormal(), cameraPos)) {
                     activeToRealIndex[quadCount] = i;
                     quads[quadCount] = quad;
                     quadCount++;

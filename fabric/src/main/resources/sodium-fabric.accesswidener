@@ -1,0 +1,22 @@
+accessWidener v1 named
+
+accessible class net/minecraft/client/model/geom/ModelPart$Vertex
+accessible class net/minecraft/client/model/geom/ModelPart$Polygon
+accessible class net/minecraft/client/renderer/texture/SpriteContents$InterpolationData
+accessible class net/minecraft/client/renderer/texture/SpriteContents$AnimatedTexture
+accessible class net/minecraft/client/renderer/texture/SpriteContents$FrameInfo
+accessible class net/minecraft/client/renderer/texture/SpriteContents$Ticker
+accessible class net/minecraft/world/level/chunk/PalettedContainer$Data
+accessible class net/minecraft/world/level/chunk/PalettedContainer$Configuration
+accessible class net/minecraft/client/renderer/FogRenderer$FogData
+accessible class net/minecraft/client/renderer/FogRenderer$MobEffectFogFunction
+accessible class net/minecraft/client/renderer/texture/Stitcher$Holder
+accessible class net/minecraft/world/level/biome/Biome$ClimateSettings
+accessible method net/minecraft/client/renderer/SectionBufferBuilderPool <init> (Ljava/util/List;)V
+
+accessible method com/mojang/blaze3d/vertex/PoseStack$Pose <init> (Lorg/joml/Matrix4f;Lorg/joml/Matrix3f;)V
+accessible field com/mojang/blaze3d/vertex/PoseStack$Pose trustedNormals Z
+
+accessible field net/minecraft/world/level/GrassColor pixels [I
+accessible field net/minecraft/world/level/FoliageColor pixels [I
+accessible method net/minecraft/client/renderer/FogRenderer getPriorityFogFunction (Lnet/minecraft/world/entity/Entity;F)Lnet/minecraft/client/renderer/FogRenderer$MobEffectFogFunction;

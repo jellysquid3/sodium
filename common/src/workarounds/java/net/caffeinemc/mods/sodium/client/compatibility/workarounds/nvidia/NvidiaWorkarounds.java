@@ -34,7 +34,7 @@ public class NvidiaWorkarounds {
 
             LOGGER.error("READ ME! The workarounds for the NVIDIA Graphics Driver did not apply correctly!");
             LOGGER.error("READ ME! You are very likely going to run into unexplained crashes and severe performance issues!");
-            LOGGER.error("READ ME! Please see this issue for more information: https://github.com/CaffeineMC/sodium-fabric/issues/1816");
+            LOGGER.error("READ ME! Please see this issue for more information: https://github.com/CaffeineMC/sodium/issues/1816");
         }
     }
 

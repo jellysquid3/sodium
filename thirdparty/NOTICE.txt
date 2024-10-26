@@ -6,6 +6,12 @@ projects.
 
 The complete text for each software license can be found in the directory "thirdparty/licenses".
 
+* Fabric API libraries
+  * Copyright (c) 2016 FabricMC
+  * License: Apache 2.0 (SPDX: Apache-2.0)
+  * Original Source:
+    * https://github.com/FabricMC/fabric
+
 * lodborg's interval tree library for Java
   * Copyright (c) 2016 lodborg
   * License: MIT
@@ -16,9 +22,8 @@ The complete text for each software license can be found in the directory "third
 
 * coderbot's mip-map generator patches for Minecraft
   * Copyright (c) 2021 Coderbot
-  * License: Mozilla Public License (MPL2)
+  * License: Mozilla Public License (SPDX: MPL2)
   * Original Source:
     * https://github.com/IrisShaders/Iris/tree/41095ac23ea0add664afd1b85c414d1f1ed94066/src/main/java/net/coderbot/iris/mixin/bettermipmaps
   * Files:
     * common/src/main/java/net/caffeinemc/mods/sodium/mixin/features/textures/mipmaps
-

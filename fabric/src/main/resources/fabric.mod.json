@@ -37,9 +37,9 @@
     "@haykam821"
   ],
   "contact" : {
-    "homepage" : "https://github.com/CaffeineMC/sodium-fabric",
-    "sources" : "https://github.com/CaffeineMC/sodium-fabric",
-    "issues" : "https://github.com/CaffeineMC/sodium-fabric/issues"
+    "homepage" : "https://github.com/CaffeineMC/sodium",
+    "sources" : "https://github.com/CaffeineMC/sodium",
+    "issues" : "https://github.com/CaffeineMC/sodium/issues"
   },
   "license" : "Polyform-Shield-1.0.0",
   "icon" : "sodium-icon.png",
@@ -58,15 +58,15 @@
       "links" : {
         "modmenu.donate" : "https://caffeinemc.net/donate",
         "modmenu.discord" : "https://caffeinemc.net/discord",
-        "modmenu.github_releases" : "https://github.com/CaffeineMC/sodium-fabric/releases",
+        "modmenu.github_releases" : "https://github.com/CaffeineMC/sodium/releases",
         "modmenu.kofi" : "https://caffeinemc.net/donate",
         "modmenu.modrinth" : "https://modrinth.com/mod/sodium"
       }
     }
   },
-  "accessWidener" : "sodium.accesswidener",
+  "accessWidener" : "sodium-fabric.accesswidener",
   "mixins" : [
-    "sodium.mixins.json",
+    "sodium-common.mixins.json",
     "sodium-fabric.mixins.json"
   ],
   "depends" : {

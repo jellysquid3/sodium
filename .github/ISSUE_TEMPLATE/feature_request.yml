@@ -17,7 +17,7 @@ body:
   - type: markdown
     attributes:
       value: >- 
-        Make sure you have used the [search tool](https://github.com/CaffeineMC/sodium-fabric/issues) to see if a similar
+        Make sure you have used the [search tool](https://github.com/CaffeineMC/sodium/issues) to see if a similar
         request already exists. If we have previously closed a feature request, then please do not create another request.
   - type: textarea
     id: description

@@ -540,7 +540,7 @@ abstract class InnerPartitionBSPNode extends BSPNode {
 
             for (int i = 0; i < indexes.size(); i++) {
                 var quadIndex = indexes.getInt(i);
-                keys[i] = MathUtil.floatToComparableInt(workspace.quads[quadIndex].getDotProduct());
+                keys[i] = MathUtil.floatToComparableInt(workspace.quads[quadIndex].getAccurateDotProduct());
             }
 
             quadIndexes = RadixSort.sort(keys);
@@ -553,7 +553,7 @@ abstract class InnerPartitionBSPNode extends BSPNode {
 
             for (int i = 0; i < indexes.size(); i++) {
                 var quadIndex = indexes.getInt(i);
-                int dotProductComponent = MathUtil.floatToComparableInt(workspace.quads[quadIndex].getDotProduct());
+                int dotProductComponent = MathUtil.floatToComparableInt(workspace.quads[quadIndex].getAccurateDotProduct());
                 sortData[i] = (long) dotProductComponent << 32 | quadIndex;
             }
 

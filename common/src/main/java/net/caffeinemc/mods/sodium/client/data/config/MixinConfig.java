@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * <a href="https://github.com/CaffeineMC/sodium-fabric/wiki/Configuration-File">Documentation of these options...</a>
+ * <a href="https://github.com/CaffeineMC/sodium/wiki/Configuration-File">Documentation of these options...</a>
  */
 @SuppressWarnings("CanBeFinal")
 public class MixinConfig {
@@ -230,7 +230,7 @@ public class MixinConfig {
             writer.write("# This is the configuration file for Sodium.\n");
             writer.write("#\n");
             writer.write("# You can find information on editing this file and all the available options here:\n");
-            writer.write("# https://github.com/CaffeineMC/sodium-fabric/wiki/Configuration-File\n");
+            writer.write("# https://github.com/CaffeineMC/sodium/wiki/Configuration-File\n");
             writer.write("#\n");
             writer.write("# By default, this file will be empty except for this notice.\n");
         }

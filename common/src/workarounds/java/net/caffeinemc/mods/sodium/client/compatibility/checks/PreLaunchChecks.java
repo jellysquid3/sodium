@@ -48,7 +48,7 @@ public class PreLaunchChecks {
                                 """ + message)
                                 .replace("###CURRENT_VERSION###", org.lwjgl.Version.getVersion())
                                 .replace("###REQUIRED_VERSION###", REQUIRED_LWJGL_VERSION),
-                        "https://github.com/CaffeineMC/sodium-fabric/wiki/LWJGL-Compatibility");
+                        "https://github.com/CaffeineMC/sodium/wiki/LWJGL-Compatibility");
 
             }
         }
@@ -69,7 +69,7 @@ public class PreLaunchChecks {
                                 
                                 You must update your graphics card driver in order to continue."""
                                 .replace("###CURRENT_DRIVER###", installedVersion.toString()),
-                        "https://github.com/CaffeineMC/sodium-fabric/wiki/Driver-Compatibility#windows-intel-gen7");
+                        "https://github.com/CaffeineMC/sodium/wiki/Driver-Compatibility#windows-intel-gen7");
             }
         }
 
@@ -87,7 +87,7 @@ public class PreLaunchChecks {
                                 
                                 You must update your graphics card driver in order to continue."""
                                 .replace("###CURRENT_DRIVER###", NvidiaDriverVersion.parse(installedVersion).toString()),
-                        "https://github.com/CaffeineMC/sodium-fabric/wiki/Driver-Compatibility#nvidia-gpus");
+                        "https://github.com/CaffeineMC/sodium/wiki/Driver-Compatibility#nvidia-gpus");
 
             }
         }
@@ -103,11 +103,11 @@ public class PreLaunchChecks {
                 .replace("###HELP_URL###", url == null ? "" : url));
 
         // Try to show a graphical message box (if the platform supports it) and shut down the game.
-        MessageBox.showMessageBox(0L, MessageBox.IconType.ERROR, title, message, url);
+        MessageBox.showMessageBox(null, MessageBox.IconType.ERROR, title, message, url);
         System.exit(1 /* failure code */);
     }
 
-    // https://github.com/CaffeineMC/sodium-fabric/issues/899
+    // https://github.com/CaffeineMC/sodium/issues/899
     private static @Nullable WindowsFileVersion findIntelDriverMatchingBug899() {
         if (OsUtils.getOs() != OsUtils.OperatingSystem.WIN) {
             return null;
@@ -139,7 +139,7 @@ public class PreLaunchChecks {
     }
 
 
-    // https://github.com/CaffeineMC/sodium-fabric/issues/1486
+    // https://github.com/CaffeineMC/sodium/issues/1486
     // The way which NVIDIA tries to detect the Minecraft process could not be circumvented until fairly recently
     // So we require that an up-to-date graphics driver is installed so that our workarounds can disable the Threaded
     // Optimizations driver hack.

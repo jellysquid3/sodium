@@ -116,7 +116,7 @@ public class TranslucentGeometryCollector {
         float lastX = vertices[3].x;
         float lastY = vertices[3].y;
         float lastZ = vertices[3].z;
-        int uniqueQuads = 0;
+        int uniqueVertexes = 0;
 
         float posXExtent = Float.NEGATIVE_INFINITY;
         float posYExtent = Float.NEGATIVE_INFINITY;
@@ -141,7 +141,7 @@ public class TranslucentGeometryCollector {
                 xSum += x;
                 ySum += y;
                 zSum += z;
-                uniqueQuads++;
+                uniqueVertexes++;
             }
             if (i != 3) {
                 lastX = x;
@@ -185,11 +185,36 @@ public class TranslucentGeometryCollector {
         }
 
         Vector3fc center = null;
-        if (!facing.isAligned() || uniqueQuads != 4) {
-            var centerX = xSum / uniqueQuads;
-            var centerY = ySum / uniqueQuads;
-            var centerZ = zSum / uniqueQuads;
+        if (!facing.isAligned() || uniqueVertexes != 4) {
+            var centerX = xSum / uniqueVertexes;
+            var centerY = ySum / uniqueVertexes;
+            var centerZ = zSum / uniqueVertexes;
             center = new Vector3f(centerX, centerY, centerZ);
+        }
+
+        // check if we need to store vertex positions for this quad, only necessary if it's unaligned or rotated (yet aligned)
+        var needsVertexPositions = uniqueVertexes != 4 || !facing.isAligned();
+        if (!needsVertexPositions) {
+            for (int i = 0; i < 4; i++) {
+                var vertex = vertices[i];
+                if (vertex.x != posYExtent && vertex.x != negYExtent ||
+                        vertex.y != posZExtent && vertex.y != negZExtent ||
+                        vertex.z != posXExtent && vertex.z != negXExtent) {
+                    needsVertexPositions = true;
+                    break;
+                }
+            }
+        }
+
+        float[] vertexPositions = null;
+        if (needsVertexPositions) {
+            vertexPositions = new float[12];
+            for (int i = 0, itemIndex = 0; i < 4; i++) {
+                var vertex = vertices[i];
+                vertexPositions[itemIndex++] = vertex.x;
+                vertexPositions[itemIndex++] = vertex.y;
+                vertexPositions[itemIndex++] = vertex.z;
+            }
         }
 
         if (facing.isAligned()) {
@@ -204,11 +229,11 @@ public class TranslucentGeometryCollector {
                 this.extents[5] = Math.min(this.extents[5], negZExtent);
             }
 
-            var quad = TQuad.fromAligned(facing, extents, center);
+            var quad = TQuad.fromAligned(facing, extents, vertexPositions, center);
             quadList.add(quad);
 
             var extreme = this.alignedExtremes[direction];
-            var distance = quad.getDotProduct();
+            var distance = quad.getAccurateDotProduct();
 
             // check if this is a new dot product for this distance
             var existingExtreme = this.alignedExtremes[direction];
@@ -225,11 +250,11 @@ public class TranslucentGeometryCollector {
         } else {
             this.hasUnaligned = true;
 
-            var quad = TQuad.fromUnaligned(facing, extents, center, packedNormal);
+            var quad = TQuad.fromUnaligned(facing, extents, vertexPositions, center, packedNormal);
             quadList.add(quad);
 
             // update the two unaligned normals that are tracked
-            var distance = quad.getDotProduct();
+            var distance = quad.getAccurateDotProduct();
             if (packedNormal == this.unalignedANormal) {
                 if (Float.isNaN(this.unalignedADistance1)) {
                     this.unalignedADistance1 = distance;

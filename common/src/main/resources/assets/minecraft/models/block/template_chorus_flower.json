@@ -1,0 +1,46 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "bottom": "block/chorus_plant",
+        "particle": "block/chorus_flower",
+        "texture": "block/chorus_flower"
+    },
+    "elements": [
+        {
+            "from": [ 0, 2, 2 ],
+            "to": [ 16, 14, 14 ],
+            "faces": {
+                "north": { "uv": [ 0, 2, 16, 14 ], "texture": "#bottom" },
+                "east": { "uv": [ 2, 2, 14, 14 ], "texture": "#texture", "cullface": "east" },
+                "south": { "uv": [ 0, 2, 16, 14 ], "texture": "#bottom" },
+                "west": { "uv": [ 2, 2, 14, 14 ], "texture": "#texture", "cullface": "west" },
+                "up": { "uv": [ 0, 2, 16, 14 ], "texture": "#bottom" },
+                "down": { "uv": [ 0, 2, 16, 14 ], "texture": "#bottom" }
+            }
+        },
+        {
+            "from": [ 2, 0, 2 ],
+            "to": [ 14, 16, 14 ],
+            "faces": {
+                "north": { "uv": [ 2, 0, 14, 16 ], "texture": "#bottom" },
+                "east": { "uv": [ 2, 0, 14, 16 ], "texture": "#bottom" },
+                "south": { "uv": [ 2, 0, 14, 16 ], "texture": "#bottom" },
+                "west": { "uv": [ 2, 0, 14, 16 ], "texture": "#bottom" },
+                "up": { "uv": [ 2, 2, 14, 14 ], "texture": "#texture", "cullface": "up" },
+                "down": { "uv": [ 2, 2, 14, 14 ], "texture": "#bottom", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 2, 2, 0 ],
+            "to": [ 14, 14, 16 ],
+            "faces": {
+                "north": { "uv": [ 2, 2, 14, 14 ], "texture": "#texture", "cullface": "north" },
+                "east": { "uv": [ 0, 2, 16, 14 ], "texture": "#bottom" },
+                "south": { "uv": [ 2, 2, 14, 14 ], "texture": "#texture", "cullface": "south" },
+                "west": { "uv": [ 0, 2, 16, 14 ], "texture": "#bottom" },
+                "up": { "uv": [ 2, 0, 14, 16 ], "texture": "#bottom" },
+                "down": { "uv": [ 2, 0, 14, 16 ], "texture": "#bottom" }
+            }
+        }
+    ]
+}

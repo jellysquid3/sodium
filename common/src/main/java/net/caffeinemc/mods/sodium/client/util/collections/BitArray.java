@@ -3,7 +3,7 @@ package net.caffeinemc.mods.sodium.client.util.collections;
 import java.util.Arrays;
 
 /**
- * Originally authored here: https://github.com/CaffeineMC/sodium-fabric/blob/ddfb9f21a54bfb30aa876678204371e94d8001db/src/main/java/net/caffeinemc/sodium/util/collections/BitArray.java
+ * Originally authored here: https://github.com/CaffeineMC/sodium/blob/ddfb9f21a54bfb30aa876678204371e94d8001db/src/main/java/net/caffeinemc/sodium/util/collections/BitArray.java
  * @author burgerindividual
  */
 public class BitArray {
@@ -18,7 +18,7 @@ public class BitArray {
     /**
      * Returns {@param num} aligned to the next multiple of {@param alignment}.
      * 
-     * Taken from https://github.com/CaffeineMC/sodium-fabric/blob/1.19.x/next/components/gfx-utils/src/main/java/net/caffeinemc/gfx/util/misc/MathUtil.java
+     * Taken from https://github.com/CaffeineMC/sodium/blob/1.19.x/next/components/gfx-utils/src/main/java/net/caffeinemc/gfx/util/misc/MathUtil.java
      * 
      * @param num       The number that will be rounded if needed
      * @param alignment The multiple that the output will be rounded to (must be a

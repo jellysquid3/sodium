@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data;
 
-import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionMeshParts;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.SortType;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TQuad;
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
@@ -50,7 +49,7 @@ public class StaticNormalRelativeData extends SplitDirectionData {
             final var keys = new int[quads.length];
 
             for (int q = 0; q < quads.length; q++) {
-                keys[q] = MathUtil.floatToComparableInt(quads[q].getDotProduct());
+                keys[q] = MathUtil.floatToComparableInt(quads[q].getAccurateDotProduct());
             }
 
             var indices = RadixSort.sort(keys);
@@ -62,7 +61,7 @@ public class StaticNormalRelativeData extends SplitDirectionData {
             final var sortData = new long[quads.length];
 
             for (int q = 0; q < quads.length; q++) {
-                int dotProductComponent = MathUtil.floatToComparableInt(quads[q].getDotProduct());
+                int dotProductComponent = MathUtil.floatToComparableInt(quads[q].getAccurateDotProduct());
                 sortData[q] = (long) dotProductComponent << 32 | q;
             }
 
@@ -116,7 +115,7 @@ public class StaticNormalRelativeData extends SplitDirectionData {
                 final var keys = new int[count];
 
                 for (int q = 0; q < count; q++) {
-                    keys[q] = MathUtil.floatToComparableInt(quads[quadIndex++].getDotProduct());
+                    keys[q] = MathUtil.floatToComparableInt(quads[quadIndex++].getAccurateDotProduct());
                 }
 
                 var indices = RadixSort.sort(keys);
@@ -127,7 +126,7 @@ public class StaticNormalRelativeData extends SplitDirectionData {
             } else {
                 for (int i = 0; i < count; i++) {
                     var quad = quads[quadIndex++];
-                    int dotProductComponent = MathUtil.floatToComparableInt(quad.getDotProduct());
+                    int dotProductComponent = MathUtil.floatToComparableInt(quad.getAccurateDotProduct());
                     sortData[i] = (long) dotProductComponent << 32 | i;
                 }
 

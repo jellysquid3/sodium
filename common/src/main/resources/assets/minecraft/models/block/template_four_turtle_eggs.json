@@ -1,0 +1,57 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "particle": "block/turtle_egg",
+        "all": "block/turtle_egg"
+    },
+    "elements": [
+        {
+            "from": [ 5, 0, 4 ],
+            "to": [ 9, 7, 8 ],
+            "faces": {
+                "north": { "uv": [ 1, 4, 5, 11 ], "texture": "#all" },
+                "east": { "uv": [ 1, 4, 5, 11 ], "texture": "#all" },
+                "south": { "uv": [ 1, 4, 5, 11 ], "texture": "#all" },
+                "west": { "uv": [ 1, 4, 5, 11 ], "texture": "#all" },
+                "up": { "uv": [ 0, 0, 4, 4 ], "texture": "#all" },
+                "down": { "uv": [ 0, 0, 4, 4 ], "texture": "#all", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 1, 0, 7 ],
+            "to": [ 5, 5, 11 ],
+            "faces": {
+                "north": { "uv": [ 10, 10, 14, 15 ], "texture": "#all" },
+                "east": { "uv": [ 10, 10, 14, 15 ], "texture": "#all" },
+                "south": { "uv": [ 10, 10, 14, 15 ], "texture": "#all" },
+                "west": { "uv": [ 10, 10, 14, 15 ], "texture": "#all" },
+                "up": { "uv": [ 6, 7, 10, 11 ], "texture": "#all" },
+                "down": { "uv": [ 6, 7, 10, 11 ], "texture": "#all", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 11, 0, 7 ],
+            "to": [ 14, 4, 10 ],
+            "faces": {
+                "north": { "uv": [ 8, 3, 11, 7 ], "texture": "#all" },
+                "east": { "uv": [ 8, 3, 11, 7 ], "texture": "#all" },
+                "south": { "uv": [ 8, 3, 11, 7 ], "texture": "#all" },
+                "west": { "uv": [ 8, 3, 11, 7 ], "texture": "#all" },
+                "up": { "uv": [ 5, 0, 8, 3 ], "texture": "#all" },
+                "down": { "uv": [ 5, 0, 8, 3 ], "texture": "#all", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 6, 0, 9 ],
+            "to": [ 10, 4, 13 ],
+            "faces": {
+                "north": { "uv": [ 4, 11, 8, 15 ], "texture": "#all" },
+                "east": { "uv": [ 4, 11, 8, 15 ], "texture": "#all" },
+                "south": { "uv": [ 4, 11, 8, 15 ], "texture": "#all" },
+                "west": { "uv": [ 4, 11, 8, 15 ], "texture": "#all" },
+                "up": { "uv": [ 0, 11, 4, 15 ], "texture": "#all" },
+                "down": { "uv": [ 0, 11, 4, 15 ], "texture": "#all", "cullface": "down" }
+            }
+        }
+    ]
+}

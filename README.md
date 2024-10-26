@@ -13,11 +13,11 @@ The latest version of Sodium can be downloaded from our official [Modrinth](http
 Since the release of Sodium 0.6.0, both the _Fabric_ and _NeoForge_ mod loaders are supported. We generally recommend
 that new users prefer to use the _Fabric_ mod loader, since it is more lightweight and stable (for the time being.)
 
-For more information about downloading and installing the mod, please refer to our [Installation Guide](https://github.com/CaffeineMC/sodium-fabric/wiki/Installation).
+For more information about downloading and installing the mod, please refer to our [Installation Guide](https://github.com/CaffeineMC/sodium/wiki/Installation).
 
 ### 🐛 Reporting Issues
 
-You can report bugs and crashes by opening an issue on our [issue tracker](https://github.com/CaffeineMC/sodium-fabric/issues).
+You can report bugs and crashes by opening an issue on our [issue tracker](https://github.com/CaffeineMC/sodium/issues).
 Before opening a new issue, use the search tool to make sure that your issue has not already been reported and ensure
 that you have completely filled out the issue template. Issues that are duplicates or do not contain the necessary
 information to triage and debug may be closed.
