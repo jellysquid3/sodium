@@ -38,6 +38,8 @@
   "sodium.options.use_fog_occlusion.tooltip": "If enabled, chunks which are determined to be fully hidden by fog effects will not be rendered, helping to improve performance. The improvement can be more dramatic when fog effects are heavier (such as while underwater), but it may cause undesirable visual artifacts between the sky and fog in some scenarios.",
   "sodium.options.use_entity_culling.name": "Use Entity Culling",
   "sodium.options.use_entity_culling.tooltip": "If enabled, entities which are within the camera viewport, but not inside of a visible chunk, will be skipped during rendering. This optimization uses the visibility data which already exists for chunk rendering and does not add overhead.",
+  "sodium.options.use_single_pass_compositing.name" : "Use Single-Pass Compositing",
+  "sodium.options.use_single_pass_compositing.tooltip" : "If enabled, compositing of the final output image will be done in a single render pass without additional memory copies. This can greatly improve performance on slower graphics cards, but may cause issues with mod compatibility.",
   "sodium.options.animate_only_visible_textures.name": "Animate Only Visible Textures",
   "sodium.options.animate_only_visible_textures.tooltip": "If enabled, only the animated textures which are determined to be visible in the current image will be updated. This can provide a significant performance improvement on some hardware, especially with heavier resource packs. If you experience issues with some textures not being animated, try disabling this option.",
   "sodium.options.cpu_render_ahead_limit.name": "CPU Render-Ahead Limit",

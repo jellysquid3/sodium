@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.gl.shader.uniform;
 
+import org.joml.Vector4fc;
 import org.lwjgl.opengl.GL30C;
 
 public class GlUniformFloat4v extends GlUniform<float[]> {
@@ -14,5 +15,13 @@ public class GlUniformFloat4v extends GlUniform<float[]> {
         }
 
         GL30C.glUniform4fv(this.index, value);
+    }
+
+    public void set(float x, float y, float z, float w) {
+        GL30C.glUniform4f(this.index, x, y, z, w);
+    }
+
+    public void set(Vector4fc vec) {
+        this.set(vec.x(), vec.y(), vec.z(), vec.w());
     }
 }

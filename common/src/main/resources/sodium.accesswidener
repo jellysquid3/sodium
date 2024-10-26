@@ -20,3 +20,5 @@ accessible field com/mojang/blaze3d/vertex/PoseStack$Pose trustedNormals Z
 accessible field net/minecraft/world/level/GrassColor pixels [I
 accessible field net/minecraft/world/level/FoliageColor pixels [I
 accessible method net/minecraft/client/renderer/FogRenderer getPriorityFogFunction (Lnet/minecraft/world/entity/Entity;F)Lnet/minecraft/client/renderer/FogRenderer$MobEffectFogFunction;
+
+accessible class com/mojang/blaze3d/pipeline/MainTarget$Dimension
