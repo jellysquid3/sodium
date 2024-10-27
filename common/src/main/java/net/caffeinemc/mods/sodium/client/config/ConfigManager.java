@@ -120,6 +120,6 @@ public class ConfigManager {
 
     private static void crashWithMessage(String message, Exception e) {
         var instance = Minecraft.getInstance();
-        Minecraft.crash(instance, instance.gameDirectory, new CrashReport(message, e));
+        Minecraft.crash(instance.isRunning() ? instance : null, instance.gameDirectory, new CrashReport(message, e));
     }
 }
