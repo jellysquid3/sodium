@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.gui.options.control;
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
+import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.CommonInputs;
@@ -16,8 +17,8 @@ public class TickBoxControl implements Control<Boolean> {
     }
 
     @Override
-    public ControlElement<Boolean> createElement(Dim2i dim, ColorTheme theme) {
-        return new TickBoxControlElement(this.option, dim, theme);
+    public ControlElement<Boolean> createElement(OptionListWidget list, Dim2i dim, ColorTheme theme) {
+        return new TickBoxControlElement(list, this.option, dim, theme);
     }
 
     @Override
@@ -34,8 +35,8 @@ public class TickBoxControl implements Control<Boolean> {
         private final Rect2i button;
         private final ColorTheme theme;
 
-        public TickBoxControlElement(Option<Boolean> option, Dim2i dim, ColorTheme theme) {
-            super(option, dim);
+        public TickBoxControlElement(OptionListWidget list, Option<Boolean> option, Dim2i dim, ColorTheme theme) {
+            super(list, option, dim);
 
             this.button = new Rect2i(dim.getLimitX() - 16, dim.getCenterY() - 5, 10, 10);
             this.theme = theme;
@@ -70,7 +71,7 @@ public class TickBoxControl implements Control<Boolean> {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (this.option.isEnabled() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
+            if (this.option.isEnabled() && button == 0 && this.isMouseOver(mouseX, mouseY)) {
                 toggleControl();
                 this.playClickSound();
 

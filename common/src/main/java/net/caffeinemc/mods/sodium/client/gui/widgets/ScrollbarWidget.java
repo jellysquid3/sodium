@@ -8,6 +8,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
+// TODO: make this extend sodium's AbstractWidget
 public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/AbstractWidget {
     private static final int COLOR = ColorABGR.pack(50, 50, 50, 150);
     private static final int HIGHLIGHT_COLOR = ColorABGR.pack(100, 100, 100, 150);

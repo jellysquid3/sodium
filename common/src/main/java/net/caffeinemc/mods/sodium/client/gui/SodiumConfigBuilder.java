@@ -178,6 +178,24 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                     ))
             );
         }
+        OptionPageBuilder page = builder.createOptionPage()
+                .setName(Component.literal("Big Foo"));
+        for (int i = 0; i < 4; i++) {
+            OptionGroupBuilder group = builder.createOptionGroup();
+            for (int j = 0; j < i * 4 + 2; j++) {
+                group.addOption(builder.createBooleanOption(ResourceLocation.parse("foo:big_" + i + "_" + j))
+                        .setStorageHandler(() -> {
+                        })
+                        .setName(Component.literal("Bar " + i + "," + j))
+                        .setTooltip(Component.literal("Baz " + i + "," + j))
+                        .setDefaultValue(true)
+                        .setBinding(new LocalBinding<>(true))
+                        .setImpact(OptionImpact.LOW)
+                );
+            }
+            page.addOptionGroup(group);
+        }
+        options.addPage(page);
     }
 
     private OptionPageBuilder buildGeneralPage(ConfigBuilder builder) {

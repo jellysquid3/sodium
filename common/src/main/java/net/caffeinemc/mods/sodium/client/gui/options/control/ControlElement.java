@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.gui.options.control;
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.AbstractWidget;
+import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ComponentPath;
@@ -11,10 +12,12 @@ import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class ControlElement<T> extends AbstractWidget {
+    protected final OptionListWidget list;
     protected final Option<T> option;
 
-    public ControlElement(Option<T> option, Dim2i dim) {
+    public ControlElement(OptionListWidget list, Option<T> option, Dim2i dim) {
         super(dim);
+        this.list = list;
         this.option = option;
     }
 
@@ -60,6 +63,11 @@ public class ControlElement<T> extends AbstractWidget {
 
     public Option<T> getOption() {
         return this.option;
+    }
+
+    @Override
+    public int getY() {
+        return super.getY() - this.list.getScrollAmount();
     }
 
     @Override

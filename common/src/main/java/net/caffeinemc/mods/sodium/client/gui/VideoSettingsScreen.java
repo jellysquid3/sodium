@@ -15,6 +15,7 @@ import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
 import net.caffeinemc.mods.sodium.client.gui.screen.ConfigCorruptedScreen;
 import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
+import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.PageListWidget;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -57,6 +58,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private OptionPage currentPage;
 
     private PageListWidget pageList;
+    private OptionListWidget optionList;
 
     private FlatButtonWidget applyButton, closeButton, undoButton;
     private FlatButtonWidget donateButton, hideDonateButton;
@@ -141,9 +143,10 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
     public void setPage(ModOptions modOptions, OptionPage page) {
         this.currentMod = modOptions;
-        this.currentPage = page;
-
-        this.rebuildGUI();
+        if (this.currentPage != page) {
+            this.currentPage = page;
+            this.rebuildGUIOptions();
+        }
     }
 
     @Override
@@ -187,7 +190,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             }
         }
 
-        int pageY = this.rebuildGUIOptions(this.currentMod.theme());
+        this.rebuildGUIOptions(this.currentMod.theme());
 
         this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
         this.undoButton = new FlatButtonWidget(new Dim2i(270, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
@@ -226,29 +229,9 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.setDonationButtonVisibility(false);
     }
 
-    private int rebuildGUIOptions(ColorTheme theme) {
-        int x = 130;
-        int y = 23;
-
-        for (OptionGroup group : this.currentPage.groups()) {
-            // Add each option's control element
-            for (Option<?> option : group.options()) {
-                Control<?> control = option.getControl();
-                ControlElement<?> element = control.createElement(new Dim2i(x, y, 200, 18), theme);
-
-                this.addRenderableWidget(element);
-
-                this.controls.add(element);
-
-                // Move down to the next option
-                y += 18;
-            }
-
-            // Add padding beneath each option group
-            y += 4;
-        }
-
-        return y;
+    private void rebuildGUIOptions() {
+        this.removeWidget(this.optionList);
+        this.optionList = this.addRenderableWidget(new OptionListWidget(new Dim2i(130, 0, 210, this.height), this.currentPage));
     }
 
     @Override
@@ -290,7 +273,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private Stream<ControlElement<?>> getActiveControls() {
-        return this.controls.stream();
+        return this.optionList.getControls().stream();
     }
 
     private void renderOptionTooltip(GuiGraphics graphics, ControlElement<?> element) {
