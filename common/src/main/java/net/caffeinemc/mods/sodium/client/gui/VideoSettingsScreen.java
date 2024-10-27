@@ -40,8 +40,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-// TODO: constrain the tooltip to its safe area if it's too big, then show a scroll bar if it's still too big
-// TODO: scrolling the tooltip?
+// TODO: show a scroll bar on the tooltip if it's too big to fit on the screen
 // TODO: make the search bar work
 // TODO: wrap options within groups in two columns
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
@@ -278,26 +277,30 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void renderOptionTooltip(GuiGraphics graphics, ControlElement<?> element) {
-        int textPadding = 5;
-        int boxPadding = 5;
-
-        int boxWidth = this.width - 340;
+        int textPadding = Layout.INNER_MARGIN;
+        int boxMargin = Layout.INNER_MARGIN;
+        int lineHeight = this.font.lineHeight + 3;
 
         int boxY = element.getY();
-        int boxX = element.getLimitX() + boxPadding;
+        int boxX = element.getLimitX() + boxMargin;
+
+        int boxWidth = Math.min(200, this.width - boxX - boxMargin);
 
         Option<?> option = element.getOption();
-        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), boxWidth - (textPadding * 2)));
+        var splitWidth = boxWidth - (textPadding * 2);
+        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(),splitWidth));
 
         OptionImpact impact = option.getImpact();
 
         if (impact != null) {
-            tooltip.add(Language.getInstance().getVisualOrder(Component.translatable("sodium.options.performance_impact_string", impact.getName()).withStyle(ChatFormatting.GRAY)));
+            var impactText = Component.translatable("sodium.options.performance_impact_string",
+                    impact.getName());
+            tooltip.addAll(this.font.split(impactText.withStyle(ChatFormatting.GRAY), splitWidth));
         }
 
-        int boxHeight = (tooltip.size() * 12) + boxPadding;
+        int boxHeight = (tooltip.size() * lineHeight) + boxMargin;
         int boxYLimit = boxY + boxHeight;
-        int boxYCutoff = this.height - 40;
+        int boxYCutoff = this.height - Layout.INNER_MARGIN;
 
         // If the box is going to be cut off on the Y-axis, move it back up the difference
         if (boxYLimit > boxYCutoff) {
@@ -307,7 +310,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x40000000);
 
         for (int i = 0; i < tooltip.size(); i++) {
-            graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * 12), Colors.FOREGROUND);
+            graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * lineHeight), Colors.FOREGROUND);
         }
     }
 
