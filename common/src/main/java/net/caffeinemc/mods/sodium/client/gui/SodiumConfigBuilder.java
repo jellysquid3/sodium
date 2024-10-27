@@ -75,7 +75,12 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
     }
 
     private static ModOptionsBuilder createModOptionsBuilder(ConfigBuilder builder) {
-        return builder.registerOwnModOptions().setName("Sodium Renderer");
+        return builder.registerOwnModOptions()
+                .setName("Sodium Renderer")
+                .formatVersion(version -> {
+                    var result = version.splitWithDelimiters("\\+", 2);
+                    return result[0];
+                });
     }
 
     private void buildEarlyConfig(ConfigBuilder builder) {
@@ -88,10 +93,9 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
     }
 
     private void buildFullConfig(ConfigBuilder builder) {
-        builder.registerOwnModOptions()
+        createModOptionsBuilder(builder)
                 .setColorTheme(builder.createColorTheme().setFullThemeRGB(
                         Colors.THEME, Colors.THEME_LIGHTER, Colors.THEME_DARKER))
-                .setName("Sodium Renderer")
                 .addPage(this.buildGeneralPage(builder))
                 .addPage(this.buildQualityPage(builder))
                 .addPage(this.buildPerformancePage(builder))

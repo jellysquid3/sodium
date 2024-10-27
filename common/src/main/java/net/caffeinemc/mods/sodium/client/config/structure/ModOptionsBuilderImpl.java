@@ -10,6 +10,7 @@ import org.apache.commons.lang3.Validate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 class ModOptionsBuilderImpl implements ModOptionsBuilder {
     private final String namespace;
@@ -45,6 +46,12 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
     @Override
     public ModOptionsBuilder setVersion(String version) {
         this.version = version;
+        return this;
+    }
+
+    @Override
+    public ModOptionsBuilder formatVersion(Function<String, String> versionFormatter) {
+        this.version = versionFormatter.apply(this.version);
         return this;
     }
 
