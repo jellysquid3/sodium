@@ -2,6 +2,7 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.client.gui.ButtonTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
+import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -57,7 +58,7 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
             this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), backgroundColor);
         }
 
-        this.drawString(graphics, this.label, this.leftAlign ? this.getX() + 5 : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - 4, textColor);
+        this.drawString(graphics, this.label, this.leftAlign ? this.getX() + Layout.TEXT_LEFT_PADDING : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - 4, textColor);
 
         if (this.enabled && this.selected) {
             this.drawRect(graphics, this.getX(), this.getLimitY() - 1, this.getLimitX(), this.getLimitY(), Colors.THEME);

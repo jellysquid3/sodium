@@ -9,7 +9,6 @@ import net.caffeinemc.mods.sodium.client.config.structure.*;
 import net.caffeinemc.mods.sodium.client.data.fingerprint.HashedFingerprint;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
-import net.caffeinemc.mods.sodium.client.gui.options.control.Control;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
@@ -41,14 +40,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-// TODO: scrolling in the page list, the options themselves, and the tooltip if necessary
-// TODO: make the search bar work
 // TODO: constrain the tooltip to its safe area if it's too big, then show a scroll bar if it's still too big
+// TODO: scrolling the tooltip?
+// TODO: make the search bar work
 // TODO: wrap options within groups in two columns
-// TODO: stop the options from overlapping the bottom or top buttons
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
-// TODO: the donation button is gone when the search button is clicked?
-// TODO: display each mod's version somewhere (truncate if too long?)
+// TODO: truncate mod names and version numbers if too long
+// TODO: change the scroll bar colors to make it look better against a lighter gray background
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final List<ControlElement<?>> controls = new ArrayList<>();
 
@@ -193,14 +191,17 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.rebuildGUIOptions();
 
         this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
-        this.undoButton = new FlatButtonWidget(new Dim2i(270, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
-        this.applyButton = new FlatButtonWidget(new Dim2i(130, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.apply"), this::applyChanges, true, false);
-        this.closeButton = new FlatButtonWidget(new Dim2i(200, this.height - 30, 65, 20), Component.translatable("gui.done"), this::onClose, true, false);
-        this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, 6, 100, 20), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage, true, false);
-        this.hideDonateButton = new FlatButtonWidget(new Dim2i(this.width - 26, 6, 20, 20), Component.literal("x"), this::hideDonationButton, true, false);
+
+        this.undoButton = new FlatButtonWidget(new Dim2i(270, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
+        this.applyButton = new FlatButtonWidget(new Dim2i(130, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), this::applyChanges, true, false);
+        this.closeButton = new FlatButtonWidget(new Dim2i(200, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
+
+        this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, Layout.INNER_MARGIN, 100, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage, true, false);
+        this.hideDonateButton = new FlatButtonWidget(new Dim2i(this.width - 26, Layout.INNER_MARGIN, Layout.BUTTON_SHORT, Layout.BUTTON_SHORT), Component.literal("x"), this::hideDonationButton, true, false);
 
         if (SodiumClientMod.options().notifications.hasClearedDonationButton) {
-            this.setDonationButtonVisibility(false);
+            // TODO: fix, this is for debugging
+            // this.setDonationButtonVisibility(false);
         }
 
         this.addRenderableWidget(this.pageList);
@@ -231,7 +232,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
     private void rebuildGUIOptions() {
         this.removeWidget(this.optionList);
-        this.optionList = this.addRenderableWidget(new OptionListWidget(new Dim2i(130, 0, 210, this.height), this.currentPage, this.currentMod.theme()));
+        this.optionList = this.addRenderableWidget(new OptionListWidget(new Dim2i(130, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT, 210, this.height - (Layout.INNER_MARGIN * 2 + Layout.OUTER_MARGIN + Layout.BUTTON_SHORT)), this.currentPage, this.currentMod.theme()));
     }
 
     @Override
@@ -376,11 +377,6 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         }
 
         return true;
-    }
-
-    @Override
-    public boolean mouseScrolled(double d, double e, double f, double g) {
-        return super.mouseScrolled(d, e, f, g);
     }
 
     @Override

@@ -2,6 +2,7 @@ package net.caffeinemc.mods.sodium.client.gui.prompt;
 
 import net.caffeinemc.mods.sodium.client.gui.ButtonTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
+import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.widgets.AbstractWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -44,9 +45,9 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
         int boxX = (parentDimensions.width() / 2) - (this.width / 2);
         int boxY = (parentDimensions.height() / 2) - (this.height / 2);
 
-        this.closeButton = new FlatButtonWidget(new Dim2i((boxX + this.width) - 84, (boxY + this.height) - 24, 80, 20), Component.literal("Close"), this::close, true, false, PROMPT_THEME);
+        this.closeButton = new FlatButtonWidget(new Dim2i((boxX + this.width) - 84, (boxY + this.height) - 24, 80, Layout.BUTTON_SHORT), Component.literal("Close"), this::close, true, false, PROMPT_THEME);
 
-        this.actionButton = new FlatButtonWidget(new Dim2i((boxX + this.width) - 198, (boxY + this.height) - 24, 110, 20), this.action.label, this::runAction, true, false, PROMPT_THEME);
+        this.actionButton = new FlatButtonWidget(new Dim2i((boxX + this.width) - 198, (boxY + this.height) - 24, 110, Layout.BUTTON_SHORT), this.action.label, this::runAction, true, false, PROMPT_THEME);
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -86,7 +87,7 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
                 textY += font.lineHeight + 2;
             }
 
-            textY += 8;
+            textY += Layout.TEXT_PARAGRAPH_SPACING;
         }
 
         for (var button : getWidgets()) {

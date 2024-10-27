@@ -4,6 +4,7 @@ import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
+import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.options.control.Control;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -24,10 +25,10 @@ public class OptionListWidget extends AbstractParentWidget {
         this.page = page;
         this.theme = theme;
         this.controls = new ArrayList<>();
-        this.init();
+        this.rebuild();
     }
 
-    private void init() {
+    private void rebuild() {
         int x = this.getX();
         int y = this.getY();
         int width = this.getWidth();
@@ -36,10 +37,10 @@ public class OptionListWidget extends AbstractParentWidget {
         int maxWidth = 0;
 
         this.clearChildren();
-        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - 5, y, 5, height)));
+        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - Layout.SCROLLBAR_WIDTH, y, Layout.SCROLLBAR_WIDTH, height)));
 
         int entryHeight = 18;
-        int listHeight = 23;
+        int listHeight = 0;
         for (OptionGroup group : this.page.groups()) {
             // Add each option's control element
             for (Option<?> option : group.options()) {
@@ -56,16 +57,19 @@ public class OptionListWidget extends AbstractParentWidget {
             }
 
             // Add padding beneath each option group
-            listHeight += 4;
+            listHeight += Layout.INNER_MARGIN;
         }
 
-        this.scrollbar.setScrollbarContext(height, listHeight + 5);
+        this.scrollbar.setScrollbarContext(listHeight - Layout.INNER_MARGIN);
     }
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
+
+//        this.verticalScrollScissorGradient(graphics, this.getLimitY());
+
         graphics.disableScissor();
     }
 

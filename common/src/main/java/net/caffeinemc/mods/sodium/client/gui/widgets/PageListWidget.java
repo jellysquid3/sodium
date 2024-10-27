@@ -2,9 +2,11 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.client.config.ConfigManager;
 import net.caffeinemc.mods.sodium.client.config.structure.ExternalPage;
+import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
 import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
+import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
@@ -14,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class PageListWidget extends AbstractParentWidget {
     private final VideoSettingsScreen parent;
+    private CenteredFlatWidget selected;
     private ScrollbarWidget scrollbar;
     private FlatButtonWidget search;
 
@@ -23,15 +26,6 @@ public class PageListWidget extends AbstractParentWidget {
         this.rebuild();
     }
 
-    @Override
-    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fillGradient(this.getX(), this.getY(), this.getWidth(), this.getHeight(), 0x40000000, 0x90000000);
-        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), this.getLimitY() - 30);
-        super.render(graphics, mouseX, mouseY, delta);
-        graphics.disableScissor();
-        this.search.render(graphics, mouseX, mouseY, delta);
-    }
-
     public void rebuild() {
         int x = this.getX();
         int y = this.getY();
@@ -39,32 +33,32 @@ public class PageListWidget extends AbstractParentWidget {
         int height = this.getHeight();
 
         this.clearChildren();
-        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - 5, y, 5, height - 30)));
-        this.search = this.addChild(new FlatButtonWidget(new Dim2i(x, y + height - 30, width, 20), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), () -> {
+        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - Layout.SCROLLBAR_WIDTH, y, Layout.SCROLLBAR_WIDTH, height - Layout.BUTTON_SHORT_BOTTOM_Y)));
+        this.search = this.addChild(new FlatButtonWidget(new Dim2i(x, y + height - Layout.BUTTON_SHORT_BOTTOM_Y, width, Layout.BUTTON_SHORT), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), () -> {
             // TODO: implement search
         }, true, true));
 
-        int listHeight = 5;
         int entryHeight = this.font.lineHeight * 2;
+        var headerHeight = this.font.lineHeight * 3;
+        int listHeight = Layout.BUTTON_SHORT + Layout.INNER_MARGIN * 2 - headerHeight;
         for (var modOptions : ConfigManager.CONFIG.getModOptions()) {
             var theme = modOptions.theme();
 
-            CenteredFlatWidget header = new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), Component.literal(modOptions.name()), () -> {
-            }, false, theme);
+            CenteredFlatWidget header = new HeaderEntryWidget(new Dim2i(x, y + listHeight, width, headerHeight), modOptions, theme);
 
-            listHeight += entryHeight;
+            listHeight += headerHeight;
 
             this.addRenderableChild(header);
 
             for (Page page : modOptions.pages()) {
                 CenteredFlatWidget button;
                 if (page instanceof OptionPage optionPage) {
-                    button = createEntryWidget(() -> this.parent.setPage(modOptions, optionPage),
-                            page, x, y, listHeight, width, entryHeight, theme);
-                    button.setSelected(this.parent.getPage() == page);
+                    button = new PageEntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), optionPage, modOptions, theme);
+                    if (this.parent.getPage() == page) {
+                        this.switchSelected(button);
+                    }
                 } else if (page instanceof ExternalPage externalPage) {
-                    button = createEntryWidget(() -> externalPage.currentScreenConsumer().accept(this.parent),
-                            page, x, y, listHeight, width, entryHeight, theme);
+                    button = new ExternalPageEntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), externalPage, theme);
                 } else {
                     throw new IllegalStateException("Unknown page type: " + page.getClass());
                 }
@@ -75,11 +69,20 @@ public class PageListWidget extends AbstractParentWidget {
             }
         }
 
-        this.scrollbar.setScrollbarContext(height - 30, listHeight + 5);
+        this.scrollbar.setScrollbarContext(listHeight + Layout.INNER_MARGIN);
     }
 
-    private @NotNull EntryWidget createEntryWidget(Runnable clickHandler, Page page, int x, int y, int listHeight, int width, int entryHeight, ColorTheme theme) {
-        return new EntryWidget(new Dim2i(x, y + listHeight, width, entryHeight), page.name(), clickHandler, true, theme);
+    @Override
+    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        graphics.fillGradient(this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), 0x40000000, 0x90000000);
+        var scissorEnd = this.getLimitY() - Layout.BUTTON_SHORT_BOTTOM_Y;
+        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), scissorEnd);
+        super.render(graphics, mouseX, mouseY, delta);
+        graphics.disableScissor();
+
+//        this.verticalScrollScissorGradient(graphics, scissorEnd);
+
+        this.search.render(graphics, mouseX, mouseY, delta);
     }
 
     @Override
@@ -88,14 +91,67 @@ public class PageListWidget extends AbstractParentWidget {
         return true;
     }
 
-    public class EntryWidget extends CenteredFlatWidget {
-        public EntryWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable, ColorTheme theme) {
-            super(dim, label, action, isSelectable, theme);
+    private void switchSelected(CenteredFlatWidget widget) {
+        if (this.selected != null) {
+            this.selected.setSelected(false);
+        }
+        this.selected = widget;
+        this.selected.setSelected(true);
+    }
+
+    private class EntryWidget extends CenteredFlatWidget {
+        EntryWidget(Dim2i dim, Component label, boolean isSelectable, ColorTheme theme) {
+            super(dim, label, isSelectable, theme);
+        }
+
+        EntryWidget(Dim2i dim, Component label, Component subtitle, boolean isSelectable, ColorTheme theme) {
+            super(dim, label, subtitle, isSelectable, theme);
+        }
+
+        @Override
+        void onAction() {
         }
 
         @Override
         public int getY() {
             return super.getY() - PageListWidget.this.scrollbar.getScrollAmount();
+        }
+    }
+
+    private class HeaderEntryWidget extends EntryWidget {
+        HeaderEntryWidget(Dim2i dim, ModOptions modOptions, ColorTheme theme) {
+            super(dim, Component.literal(modOptions.name()), Component.literal(modOptions.version()), false, theme);
+        }
+    }
+
+    private class PageEntryWidget extends EntryWidget {
+        private final OptionPage page;
+        private final ModOptions modOptions;
+
+        PageEntryWidget(Dim2i dim, OptionPage page, ModOptions modOptions, ColorTheme theme) {
+            super(dim, page.name(), true, theme);
+            this.page = page;
+            this.modOptions = modOptions;
+        }
+
+        @Override
+        void onAction() {
+            PageListWidget.this.switchSelected(this);
+            PageListWidget.this.parent.setPage(this.modOptions, this.page);
+        }
+    }
+
+    private class ExternalPageEntryWidget extends EntryWidget {
+        private final ExternalPage page;
+
+        ExternalPageEntryWidget(Dim2i dim, ExternalPage page, ColorTheme theme) {
+            super(dim, page.name(), true, theme);
+            this.page = page;
+        }
+
+        @Override
+        void onAction() {
+            this.page.currentScreenConsumer().accept(PageListWidget.this.parent);
         }
     }
 }

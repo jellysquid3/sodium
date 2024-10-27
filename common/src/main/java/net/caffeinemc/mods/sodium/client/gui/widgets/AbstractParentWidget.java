@@ -45,6 +45,11 @@ public abstract class AbstractParentWidget extends AbstractWidget implements Con
         this.renderableChildren.clear();
     }
 
+    protected void verticalScrollScissorGradient(GuiGraphics graphics, int y) {
+        var gradientHeight = 10;
+        graphics.fillGradient(this.getX(), y - gradientHeight, this.getLimitX(), y, 0xFFFF0000, 0xFF00FF00);
+    }
+
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         for (Renderable element : this.renderableChildren) {

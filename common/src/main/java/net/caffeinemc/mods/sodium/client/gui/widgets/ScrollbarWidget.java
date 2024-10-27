@@ -37,6 +37,10 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
         this.scrollAmount = Math.max(0, Math.min(total - visible, this.scrollAmount));
     }
 
+    public void setScrollbarContext(int total) {
+        this.setScrollbarContext(this.horizontal ? this.width : this.height, total);
+    }
+
     public boolean canScroll() {
         return this.total > this.visible;
     }

@@ -8,12 +8,13 @@ import java.awt.*;
 public class Colors {
     public static final int THEME = 0xFF94E4D3;
     public static final int THEME_LIGHTER = 0xFFCCFDEE;
-    public static final int THEME_DARKER = 0xF06f9090;
+    // public static final int THEME_DARKER = 0xF06f9090;
+    public static final int THEME_DARKER = 0xFF7A9E9E;
     public static final int FOREGROUND = 0xFFFFFFFF;
     public static final int FOREGROUND_DISABLED = 0xFFAAAAAA;
 
     private static final float LIGHTEN_FACTOR = 0.3f;
-    private static final float DARKEN_FACTOR = -0.3f;
+    private static final float DARKEN_FACTOR = -0.23f;
 
     public static int darken(int color) {
         return adjust(color, DARKEN_FACTOR);

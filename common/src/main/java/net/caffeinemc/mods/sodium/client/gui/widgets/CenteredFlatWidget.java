@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 import net.caffeinemc.mods.sodium.client.gui.ButtonTheme;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
+import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,8 +13,7 @@ import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
-public class CenteredFlatWidget extends AbstractWidget implements Renderable {
-    private final Runnable action;
+public abstract class CenteredFlatWidget extends AbstractWidget implements Renderable {
     private final boolean isSelectable;
     private final ButtonTheme theme;
 
@@ -22,13 +22,18 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
     private boolean visible = true;
 
     private final Component label;
+    private final Component subtitle;
 
-    public CenteredFlatWidget(Dim2i dim, Component label, Runnable action, boolean isSelectable, ColorTheme theme) {
+    public CenteredFlatWidget(Dim2i dim, Component label, Component subtitle, boolean isSelectable, ColorTheme theme) {
         super(dim);
         this.label = label;
-        this.action = action;
+        this.subtitle = subtitle;
         this.isSelectable = isSelectable;
         this.theme = new ButtonTheme(theme, 0x05FFFFFF, 0x90000000, 0x40000000);
+    }
+
+    public CenteredFlatWidget(Dim2i dim, Component label, boolean isSelectable, ColorTheme theme) {
+        this(dim, label, null, isSelectable, theme);
     }
 
     @Override
@@ -58,7 +63,13 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
             this.drawRect(graphics, x2 - 3, y1, x2, y2, this.theme.themeLighter);
         }
 
-        this.drawString(graphics, text, x1 + 8, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
+        if (this.subtitle == null) {
+            this.drawString(graphics, text, x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
+        } else {
+            var center = y1 + this.getHeight() * 0.5f;
+            this.drawString(graphics, text, x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center - (this.font.lineHeight + Layout.TEXT_LINE_SPACING * 0.5f)), textColor);
+            this.drawString(graphics, this.subtitle, x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center + Layout.TEXT_LINE_SPACING * 0.5f), textColor);
+        }
 
         if (this.enabled && this.isFocused()) {
             this.drawBorder(graphics, x1, y1, x2, y2, Colors.FOREGROUND);
@@ -97,8 +108,10 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         return false;
     }
 
+    abstract void onAction();
+
     private void doAction() {
-        this.action.run();
+        this.onAction();
         this.playClickSound();
     }
 
