@@ -295,18 +295,21 @@ public class SodiumOptionsGUI extends Screen implements ScreenPromptable {
         int textPadding = 3;
         int boxPadding = 3;
 
-        int boxWidth = 200;
-
         int boxY = dim.y();
         int boxX = dim.getLimitX() + boxPadding;
 
+        int boxWidth = Math.min(200, this.width - boxX - boxPadding);
+
         Option<?> option = element.getOption();
-        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), boxWidth - (textPadding * 2)));
+        var splitWidth = boxWidth - (textPadding * 2);
+        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(),splitWidth));
 
         OptionImpact impact = option.getImpact();
 
         if (impact != null) {
-            tooltip.add(Language.getInstance().getVisualOrder(Component.translatable("sodium.options.performance_impact_string", impact.getLocalizedName()).withStyle(ChatFormatting.GRAY)));
+            var impactText = Component.translatable("sodium.options.performance_impact_string",
+                    impact.getLocalizedName());
+            tooltip.addAll(this.font.split(impactText.withStyle(ChatFormatting.GRAY), splitWidth));
         }
 
         int boxHeight = (tooltip.size() * 12) + boxPadding;
