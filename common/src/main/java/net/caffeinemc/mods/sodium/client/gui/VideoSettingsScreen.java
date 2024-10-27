@@ -190,7 +190,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             }
         }
 
-        this.rebuildGUIOptions(this.currentMod.theme());
+        this.rebuildGUIOptions();
 
         this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
         this.undoButton = new FlatButtonWidget(new Dim2i(270, this.height - 30, 65, 20), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
@@ -231,7 +231,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
     private void rebuildGUIOptions() {
         this.removeWidget(this.optionList);
-        this.optionList = this.addRenderableWidget(new OptionListWidget(new Dim2i(130, 0, 210, this.height), this.currentPage));
+        this.optionList = this.addRenderableWidget(new OptionListWidget(new Dim2i(130, 0, 210, this.height), this.currentPage, this.currentMod.theme()));
     }
 
     @Override

@@ -7,7 +7,6 @@ import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.CommonInputs;
-import net.minecraft.client.renderer.Rect2i;
 
 public class TickBoxControl implements Control<Boolean> {
     private final Option<Boolean> option;
@@ -32,13 +31,11 @@ public class TickBoxControl implements Control<Boolean> {
     }
 
     private static class TickBoxControlElement extends ControlElement<Boolean> {
-        private final Rect2i button;
         private final ColorTheme theme;
 
         public TickBoxControlElement(OptionListWidget list, Option<Boolean> option, Dim2i dim, ColorTheme theme) {
             super(list, option, dim);
 
-            this.button = new Rect2i(dim.getLimitX() - 16, dim.getCenterY() - 5, 10, 10);
             this.theme = theme;
         }
 
@@ -46,10 +43,10 @@ public class TickBoxControl implements Control<Boolean> {
         public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
             super.render(graphics, mouseX, mouseY, delta);
 
-            final int x = this.button.getX();
-            final int y = this.button.getY();
-            final int w = x + this.button.getWidth();
-            final int h = y + this.button.getHeight();
+            final int x = this.getLimitX() - 16;
+            final int y = this.getCenterY() - 5;
+            final int w = x + 10;
+            final int h = y + 10;
 
             final boolean enabled = this.option.isEnabled();
             final boolean ticked = enabled && this.option.getValidatedValue();

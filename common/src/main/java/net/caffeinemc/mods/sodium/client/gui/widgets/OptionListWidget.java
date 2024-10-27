@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
+import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.options.control.Control;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -14,12 +15,14 @@ import java.util.List;
 
 public class OptionListWidget extends AbstractParentWidget {
     private final OptionPage page;
+    private final ColorTheme theme;
     private final List<ControlElement<?>> controls;
     private ScrollbarWidget scrollbar;
 
-    public OptionListWidget(Dim2i dim, OptionPage page) {
+    public OptionListWidget(Dim2i dim, OptionPage page, ColorTheme theme) {
         super(dim);
         this.page = page;
+        this.theme = theme;
         this.controls = new ArrayList<>();
         this.init();
     }
@@ -41,7 +44,7 @@ public class OptionListWidget extends AbstractParentWidget {
             // Add each option's control element
             for (Option<?> option : group.options()) {
                 Control<?> control = option.getControl();
-                ControlElement<?> element = control.createElement(this, new Dim2i(x, y + listHeight, width - 10, entryHeight));
+                ControlElement<?> element = control.createElement(this, new Dim2i(x, y + listHeight, width - 10, entryHeight), this.theme);
 
                 this.addRenderableChild(element);
                 this.controls.add(element);
@@ -61,7 +64,6 @@ public class OptionListWidget extends AbstractParentWidget {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fillGradient(this.getX(), this.getY(), this.getWidth(), this.getHeight(), 0x40000000, 0x90000000);
         graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();

@@ -10,7 +10,6 @@ import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class CenteredFlatWidget extends AbstractWidget implements Renderable {
@@ -44,7 +43,7 @@ public class CenteredFlatWidget extends AbstractWidget implements Renderable {
         int textColor = this.selected || !this.isSelectable ? this.theme.themeLighter : this.theme.themeDarker;
 
         var text = this.label.getString();
-        text = this.truncateTextToFit(text, this.dim.width() - 16);
+        text = this.truncateTextToFit(text, this.getWidth() - 16);
 
         int x1 = this.getX();
         int y1 = this.getY();
