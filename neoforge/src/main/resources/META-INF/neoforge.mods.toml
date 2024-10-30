@@ -10,9 +10,9 @@ displayName = "Sodium"
 
 logoFile = "sodium-icon.png" #optional
 
-authors = "JellySquid, IMS212"
+authors = "JellySquid (jellysquid3), IMS212"
 
-credits = "@bytzo, @PepperCode1, @FlashyReese, @altrisi, @Grayray75, @Madis0, @Johni0702, @comp500, @coderbot16, @Moulberry, @MCRcortex, @Altirix, @embeddedt, @pajicadvance, @Kroppeb, @douira, @burgerindividual, @TwistedZero, @Leo40Git, @haykam821"
+credits = "bytzo, PepperCode1, FlashyReese, altrisi, Grayray75, Madis0, Johni0702, comp500, coderbot16, Moulberry, MCRcortex, Altirix, embeddedt, pajicadvance, Kroppeb, douira, burgerindividual, TwistedZero, Leo40Git, haykam821, muzikbike"
 
 description = '''
 Sodium is a powerful rendering engine for Minecraft which improves frame rates and reduces lag spikes.

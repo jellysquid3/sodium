@@ -6,7 +6,7 @@
   "description" : "Sodium is a powerful rendering engine for Minecraft which greatly improves frame rates and micro-stutter, while fixing many graphical issues",
   "authors" : [
     {
-      "name" : "@jellysquid3",
+      "name" : "JellySquid (jellysquid3)",
       "contact" : {
         "email" : "jellysquid@pm.me",
         "homepage" : "https://jellysquid.me"
@@ -14,27 +14,28 @@
     }
   ],
   "contributors" : [
-    "@IMS212",
-    "@bytzo",
-    "@PepperCode1",
-    "@FlashyReese",
-    "@altrisi",
-    "@Grayray75",
-    "@Madis0",
-    "@Johni0702",
-    "@comp500",
-    "@coderbot16",
-    "@Moulberry",
-    "@MCRcortex",
-    "@Altirix",
-    "@embeddedt",
-    "@pajicadvance",
-    "@Kroppeb",
-    "@douira",
-    "@burgerindividual",
-    "@TwistedZero",
-    "@Leo40Git",
-    "@haykam821"
+    "IMS212",
+    "bytzo",
+    "PepperCode1",
+    "FlashyReese",
+    "altrisi",
+    "Grayray75",
+    "Madis0",
+    "Johni0702",
+    "comp500",
+    "coderbot16",
+    "Moulberry",
+    "MCRcortex",
+    "Altirix",
+    "embeddedt",
+    "pajicadvance",
+    "Kroppeb",
+    "douira",
+    "burgerindividual",
+    "TwistedZero",
+    "Leo40Git",
+    "haykam821",
+    "muzikbike"
   ],
   "contact" : {
     "homepage" : "https://github.com/CaffeineMC/sodium",
