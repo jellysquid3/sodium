@@ -45,6 +45,9 @@ import java.util.stream.Stream;
 // TODO: wrap options within groups in two columns
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
 // TODO: change the scroll bar colors to make it look better against a lighter gray background
+// TODO: show option group's names somewhere
+// TODO: add button or some other way for user to reset a specific option, all options on a page, and all options of a mod to their default values (not just "reset" changes, but reset to default value)
+// TODO: make RD option respect Vanilla's >16 RD only allowed if memory >1GB constraint
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final List<ControlElement<?>> controls = new ArrayList<>();
 
