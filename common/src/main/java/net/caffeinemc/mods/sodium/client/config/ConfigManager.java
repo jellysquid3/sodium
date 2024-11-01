@@ -83,7 +83,7 @@ public class ConfigManager {
                 registerMethod.accept(entryPoint, builder);
                 builtConfigs = builder.build();
             } catch (Exception e) {
-                crashWithMessage("Failed to build options config for mod " + configUser.modId, e);
+                crashWithMessage("Mod '" + configUser.modId + "' failed while registering config options.", e);
                 return;
             }
 
@@ -114,12 +114,11 @@ public class ConfigManager {
         try {
             CONFIG = new Config(ImmutableList.copyOf(modConfigs));
         } catch (Exception e) {
-            crashWithMessage("Failed to build options config", e);
+            crashWithMessage("Failed to build config options", e);
         }
     }
 
     private static void crashWithMessage(String message, Exception e) {
-        var instance = Minecraft.getInstance();
-        Minecraft.crash(instance.isRunning() ? instance : null, instance.gameDirectory, new CrashReport(message, e));
+        Minecraft.crash(null, Minecraft.getInstance().gameDirectory, new CrashReport(message, e));
     }
 }
