@@ -44,7 +44,6 @@ import java.util.stream.Stream;
 // TODO: make the search bar work
 // TODO: wrap options within groups in two columns
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
-// TODO: truncate mod names and version numbers if too long
 // TODO: change the scroll bar colors to make it look better against a lighter gray background
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final List<ControlElement<?>> controls = new ArrayList<>();

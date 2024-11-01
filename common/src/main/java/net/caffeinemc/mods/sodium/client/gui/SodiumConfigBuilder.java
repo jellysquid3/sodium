@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.util.Optional;
 
 // TODO: get initialValue from the vanilla options (it's private)
-// TODO: more elegantly split late and early config init of this class
 public class SodiumConfigBuilder implements ConfigEntryPoint {
     private static final SodiumOptions DEFAULTS = SodiumOptions.defaults();
 
@@ -128,7 +127,7 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
         // for testing cycle detection
         // .setEnabledProvider((state) -> state.readIntOption(ResourceLocation.parse("foo:baz")) == 0, ResourceLocation.parse("foo:baz"))
 
-        ModOptionsBuilder options = builder.registerModOptions("foo", "Foo", "1.0")
+        ModOptionsBuilder options = builder.registerModOptions("foo", "Foo fadsa fdsa fdsa fdas fdsafdsa", "1.0 fdas fdas fdasfdsaf dsa")
                 .addPage(
                         builder.createExternalPage()
                                 .setName(Component.literal("External Page"))

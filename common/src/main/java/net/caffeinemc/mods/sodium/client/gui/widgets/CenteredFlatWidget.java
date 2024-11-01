@@ -47,9 +47,6 @@ public abstract class CenteredFlatWidget extends AbstractWidget implements Rende
         int backgroundColor = this.hovered ? this.theme.bgHighlight : (this.selected ? this.theme.bgDefault : this.theme.bgInactive);
         int textColor = this.selected || !this.isSelectable ? this.theme.themeLighter : this.theme.themeDarker;
 
-        var text = this.label.getString();
-        text = this.truncateTextToFit(text, this.getWidth() - 16);
-
         int x1 = this.getX();
         int y1 = this.getY();
         int x2 = this.getLimitX();
@@ -64,16 +61,20 @@ public abstract class CenteredFlatWidget extends AbstractWidget implements Rende
         }
 
         if (this.subtitle == null) {
-            this.drawString(graphics, text, x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
+            this.drawString(graphics, this.truncateToFitWidth(this.label), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
         } else {
             var center = y1 + this.getHeight() * 0.5f;
-            this.drawString(graphics, text, x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center - (this.font.lineHeight + Layout.TEXT_LINE_SPACING * 0.5f)), textColor);
-            this.drawString(graphics, this.subtitle, x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center + Layout.TEXT_LINE_SPACING * 0.5f), textColor);
+            this.drawString(graphics, this.truncateToFitWidth(this.label), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center - (this.font.lineHeight + Layout.TEXT_LINE_SPACING * 0.5f)), textColor);
+            this.drawString(graphics, this.truncateToFitWidth(this.subtitle), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center + Layout.TEXT_LINE_SPACING * 0.5f), textColor);
         }
 
         if (this.enabled && this.isFocused()) {
             this.drawBorder(graphics, x1, y1, x2, y2, Colors.FOREGROUND);
         }
+    }
+
+    private String truncateToFitWidth(Component text) {
+        return this.truncateTextToFit(text.getString(), this.getWidth() - 14);
     }
 
     public void setSelected(boolean selected) {
