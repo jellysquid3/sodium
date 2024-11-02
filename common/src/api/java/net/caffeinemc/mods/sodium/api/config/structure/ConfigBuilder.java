@@ -20,4 +20,6 @@ public interface ConfigBuilder {
     IntegerOptionBuilder createIntegerOption(ResourceLocation id);
 
     <E extends Enum<E>> EnumOptionBuilder<E> createEnumOption(ResourceLocation id, Class<E> enumClass);
+
+    ExternalButtonOptionBuilder createExternalButtonOption(ResourceLocation id);
 }

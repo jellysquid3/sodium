@@ -10,26 +10,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 class OptionPageBuilderImpl extends PageBuilderImpl implements OptionPageBuilder {
-    private Component name;
     private final List<OptionGroup> groups = new ArrayList<>();
 
     @Override
-    OptionPage build() {
-        Validate.notNull(this.name, "Name must not be null");
-        Validate.notEmpty(this.groups, "At least one group must be added");
+    void prepareBuild() {
+        super.prepareBuild();
 
-        return new OptionPage(this.name, ImmutableList.copyOf(this.groups));
+        Validate.notEmpty(this.groups, "At least one group must be added");
     }
 
     @Override
-    public OptionPageBuilder setName(Component name) {
-        this.name = name;
-        return this;
+    OptionPage build() {
+        this.prepareBuild();
+        return new OptionPage(this.name, ImmutableList.copyOf(this.groups));
     }
 
     @Override
     public OptionPageBuilder addOptionGroup(OptionGroupBuilder group) {
         this.groups.add(((OptionGroupBuilderImpl) group).build());
+        return this;
+    }
+
+    @Override
+    public OptionPageBuilderImpl setName(Component name) {
+        super.setName(name);
         return this;
     }
 }

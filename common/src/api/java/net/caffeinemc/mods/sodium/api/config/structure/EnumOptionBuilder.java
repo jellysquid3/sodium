@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public interface EnumOptionBuilder<E extends Enum<E>> extends OptionBuilder<E> {
+public interface EnumOptionBuilder<E extends Enum<E>> extends StatefulOptionBuilder<E> {
     static <E extends Enum<E>> Function<E, Component> nameProviderFrom(Component... names) {
         return e -> names[e.ordinal()];
     }

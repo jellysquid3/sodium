@@ -9,36 +9,39 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import org.jetbrains.annotations.Nullable;
 
-public class ControlElement<T> extends AbstractWidget {
+public abstract class ControlElement extends AbstractWidget {
     protected final OptionListWidget list;
-    protected final Option<T> option;
 
-    public ControlElement(OptionListWidget list, Option<T> option, Dim2i dim) {
+    public ControlElement(OptionListWidget list, Dim2i dim) {
         super(dim);
         this.list = list;
-        this.option = option;
     }
 
+    public abstract Option getOption();
+
     public int getContentWidth() {
-        return this.option.getControl().getMaxWidth();
+        return this.getOption().getControl().getMaxWidth();
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        String name = this.option.getName().getString();
+        String name = this.getOption().getName().getString();
 
         // add the star suffix before truncation to prevent it from overlapping with the label text
-        if (this.option.isEnabled() && this.option.hasChanged()) {
+        if (this.getOption().isEnabled() && this.getOption().hasChanged()) {
             name = name + " *";
         }
 
         name = truncateLabelToFit(name);
 
         String label;
-        if (this.option.isEnabled()) {
-            if (this.option.hasChanged()) {
+        if (this.getOption().isEnabled()) {
+            if (this.getOption().hasChanged()) {
                 label = ChatFormatting.ITALIC + name;
             } else {
                 label = ChatFormatting.WHITE + name;
@@ -57,13 +60,16 @@ public class ControlElement<T> extends AbstractWidget {
         }
     }
 
+    protected MutableComponent formatDisabledControlValue(Component value) {
+        return value.copy().withStyle(Style.EMPTY
+                .withColor(ChatFormatting.GRAY)
+                .withItalic(true));
+    }
+
     private String truncateLabelToFit(String name) {
         return truncateTextToFit(name, this.getWidth() - this.getContentWidth() - 20);
     }
 
-    public Option<T> getOption() {
-        return this.option;
-    }
 
     @Override
     public int getY() {
@@ -72,7 +78,7 @@ public class ControlElement<T> extends AbstractWidget {
 
     @Override
     public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent event) {
-        if (!this.option.isEnabled()) {
+        if (!this.getOption().isEnabled()) {
             return null;
         }
         return super.nextFocusPath(event);

@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public interface BooleanOptionBuilder extends OptionBuilder<Boolean> {
+public interface BooleanOptionBuilder extends StatefulOptionBuilder<Boolean> {
     @Override
     BooleanOptionBuilder setName(Component name);
 

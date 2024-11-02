@@ -20,6 +20,14 @@ public class ConfigBuilderImpl implements ConfigBuilder {
         this.defaultVersion = defaultVersion;
     }
 
+    public Collection<ModOptions> build() {
+        var configs = new ArrayList<ModOptions>(this.pendingModConfigBuilders.size());
+        for (var builder : this.pendingModConfigBuilders) {
+            configs.add(builder.build());
+        }
+        return configs;
+    }
+
     @Override
     public ModOptionsBuilder registerModOptions(String namespace, String name, String version) {
         var builder = new ModOptionsBuilderImpl(namespace, name, version);
@@ -67,11 +75,8 @@ public class ConfigBuilderImpl implements ConfigBuilder {
         return new EnumOptionBuilderImpl<>(id, enumClass);
     }
 
-    public Collection<ModOptions> build() {
-        var configs = new ArrayList<ModOptions>(this.pendingModConfigBuilders.size());
-        for (var builder : this.pendingModConfigBuilders) {
-            configs.add(builder.build());
-        }
-        return configs;
+    @Override
+    public ExternalButtonOptionBuilder createExternalButtonOption(ResourceLocation id) {
+        return new ExternalButtonOptionBuilderImpl(id);
     }
 }

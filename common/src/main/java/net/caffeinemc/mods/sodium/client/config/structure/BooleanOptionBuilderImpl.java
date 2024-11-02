@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-class BooleanOptionBuilderImpl extends OptionBuilderImpl<Boolean> implements BooleanOptionBuilder {
+class BooleanOptionBuilderImpl extends StatefulOptionBuilderImpl<Boolean> implements BooleanOptionBuilder {
     BooleanOptionBuilderImpl(ResourceLocation id) {
         super(id);
     }
@@ -20,7 +20,7 @@ class BooleanOptionBuilderImpl extends OptionBuilderImpl<Boolean> implements Boo
     @Override
     BooleanOption build() {
         this.prepareBuild();
-        return new BooleanOption(this.id, this.getDependencies(), this.name, this.storage, this.tooltipProvider, this.impact, this.flags, this.defaultValue, this.enabled, this.binding);
+        return new BooleanOption(this.id, this.getDependencies(), this.name, this.enabled, this.storage, this.tooltipProvider, this.impact, this.flags, this.defaultValue, this.binding);
     }
 
     @Override

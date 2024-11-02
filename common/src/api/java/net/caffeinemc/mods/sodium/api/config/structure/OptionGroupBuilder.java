@@ -5,5 +5,5 @@ import net.minecraft.network.chat.Component;
 public interface OptionGroupBuilder {
     OptionGroupBuilder setName(Component name);
 
-    OptionGroupBuilder addOption(OptionBuilder<?> option);
+    OptionGroupBuilder addOption(OptionBuilder option);
 }

@@ -12,12 +12,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.Function;
 
-class IntegerOption extends Option<Integer> {
+class IntegerOption extends StatefulOption<Integer> {
     private final DependentValue<Range> range;
     private final ControlValueFormatter valueFormatter;
 
-    IntegerOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, StorageEventHandler storage, Function<Integer, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<Integer> defaultValue, DependentValue<Boolean> enabled, OptionBinding<Integer> binding, DependentValue<Range> range, ControlValueFormatter valueFormatter) {
-        super(id, dependencies, name, storage, tooltipProvider, impact, flags, defaultValue, enabled, binding);
+    IntegerOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, StorageEventHandler storage, Function<Integer, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<Integer> defaultValue, OptionBinding<Integer> binding, DependentValue<Range> range, ControlValueFormatter valueFormatter) {
+        super(id, dependencies, name, enabled, storage, tooltipProvider, impact, flags, defaultValue, binding);
         this.range = range;
         this.valueFormatter = valueFormatter;
     }
@@ -28,7 +28,7 @@ class IntegerOption extends Option<Integer> {
     }
 
     @Override
-    Control<Integer> createControl() {
+    Control createControl() {
         var range = this.range.get(this.state);
         return new SliderControl(this, range.min(), range.max(), range.step(), this.valueFormatter);
     }

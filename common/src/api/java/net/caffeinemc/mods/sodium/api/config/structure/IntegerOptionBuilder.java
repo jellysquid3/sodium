@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public interface IntegerOptionBuilder extends OptionBuilder<Integer> {
+public interface IntegerOptionBuilder extends StatefulOptionBuilder<Integer> {
     IntegerOptionBuilder setRange(int min, int max, int step);
 
     IntegerOptionBuilder setRange(Range range);

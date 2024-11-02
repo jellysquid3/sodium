@@ -2,28 +2,29 @@ package net.caffeinemc.mods.sodium.client.gui.options.control;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.caffeinemc.mods.sodium.api.config.option.ControlValueFormatter;
-import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.StatefulOption;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import org.apache.commons.lang3.Validate;
 
-public class SliderControl implements Control<Integer> {
-    private final Option<Integer> option;
+public class SliderControl implements Control {
+    private final StatefulOption<Integer> option;
 
     private final int min, max, interval;
 
     private final ControlValueFormatter mode;
 
-    public SliderControl(Option<Integer> option, int min, int max, int interval, ControlValueFormatter mode) {
+    public SliderControl(StatefulOption<Integer> option, int min, int max, int interval, ControlValueFormatter mode) {
         Validate.isTrue(max > min, "The maximum value must be greater than the minimum value");
         Validate.isTrue(interval > 0, "The slider interval must be greater than zero");
-        Validate.isTrue(((max - min) % interval) == 0, "The maximum value must be divisable by the interval");
+        Validate.isTrue(((max - min) % interval) == 0, "The maximum value must be divisible by the interval");
         Validate.notNull(mode, "The slider mode must not be null");
 
         this.option = option;
@@ -34,12 +35,12 @@ public class SliderControl implements Control<Integer> {
     }
 
     @Override
-    public ControlElement<Integer> createElement(OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
         return new Button(list, this.option, dim, this.min, this.max, this.interval, this.mode, theme);
     }
 
     @Override
-    public Option<Integer> getOption() {
+    public StatefulOption<Integer> getOption() {
         return this.option;
     }
 
@@ -48,7 +49,7 @@ public class SliderControl implements Control<Integer> {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    private static class Button extends ControlElement<Integer> {
+    private static class Button extends StatefulControlElement<Integer> {
         private static final int THUMB_WIDTH = 2, TRACK_HEIGHT = 1;
 
         private int contentWidth;
@@ -64,8 +65,8 @@ public class SliderControl implements Control<Integer> {
 
         private boolean sliderHeld;
 
-        public Button(OptionListWidget list, Option<Integer> option, Dim2i dim, int min, int max, int interval, ControlValueFormatter formatter, ColorTheme theme) {
-            super(list, option, dim);
+        public Button(OptionListWidget list, StatefulOption<Integer> option, Dim2i dim, int min, int max, int interval, ControlValueFormatter formatter, ColorTheme theme) {
+            super(list, dim, option);
 
             this.min = min;
             this.max = max;
@@ -88,12 +89,10 @@ public class SliderControl implements Control<Integer> {
             var value = this.option.getValidatedValue();
             var isEnabled = this.option.isEnabled();
 
-            var label = this.formatter.format(value).copy();
+            var label = this.formatter.format(value);
 
             if (!isEnabled) {
-                label.setStyle(Style.EMPTY
-                        .withColor(ChatFormatting.GRAY)
-                        .withItalic(true));
+                label = this.formatDisabledControlValue(label);
             }
 
             int labelWidth = this.font.width(label);

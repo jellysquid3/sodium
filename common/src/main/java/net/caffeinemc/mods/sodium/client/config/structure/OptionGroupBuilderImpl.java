@@ -11,7 +11,7 @@ import java.util.List;
 
 class OptionGroupBuilderImpl implements OptionGroupBuilder {
     private Component name;
-    private final List<Option<?>> options = new ArrayList<>();
+    private final List<Option> options = new ArrayList<>();
 
     OptionGroup build() {
         Validate.notEmpty(this.options, "At least one option must be added");
@@ -26,8 +26,8 @@ class OptionGroupBuilderImpl implements OptionGroupBuilder {
     }
 
     @Override
-    public OptionGroupBuilder addOption(OptionBuilder<?> option) {
-        this.options.add(((OptionBuilderImpl<?>) option).build());
+    public OptionGroupBuilder addOption(OptionBuilder option) {
+        this.options.add(((OptionBuilderImpl) option).build());
         return this;
     }
 }

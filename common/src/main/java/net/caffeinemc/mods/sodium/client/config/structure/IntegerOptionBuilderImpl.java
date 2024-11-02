@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-class IntegerOptionBuilderImpl extends OptionBuilderImpl<Integer> implements IntegerOptionBuilder {
+class IntegerOptionBuilderImpl extends StatefulOptionBuilderImpl<Integer> implements IntegerOptionBuilder {
     DependentValue<Range> rangeProvider;
     ControlValueFormatter valueFormatter;
 
@@ -30,7 +30,7 @@ class IntegerOptionBuilderImpl extends OptionBuilderImpl<Integer> implements Int
         Validate.notNull(this.rangeProvider, "Range provider must be set");
         Validate.notNull(this.valueFormatter, "Value formatter must be set");
 
-        return new IntegerOption(this.id, this.getDependencies(), this.name, this.storage, this.tooltipProvider, this.impact, this.flags, this.defaultValue, this.enabled, this.binding, this.rangeProvider, this.valueFormatter);
+        return new IntegerOption(this.id, this.getDependencies(), this.name, this.enabled, this.storage, this.tooltipProvider, this.impact, this.flags, this.defaultValue, this.binding, this.rangeProvider, this.valueFormatter);
     }
 
     @Override

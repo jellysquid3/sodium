@@ -15,14 +15,14 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Function;
 
-class EnumOption<E extends Enum<E>> extends Option<E> {
+public class EnumOption<E extends Enum<E>> extends StatefulOption<E> {
     final Class<E> enumClass;
 
     private final DependentValue<Set<E>> allowedValues;
     private final Function<E, Component> elementNameProvider;
 
-    EnumOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Class<E> enumClass, Component name, StorageEventHandler storage, Function<E, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<E> defaultValue, DependentValue<Boolean> enabled, OptionBinding<E> binding, DependentValue<Set<E>> allowedValues, Function<E, Component> elementNameProvider) {
-        super(id, dependencies, name, storage, tooltipProvider, impact, flags, defaultValue, enabled, binding);
+    EnumOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, StorageEventHandler storage, Function<E, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<E> defaultValue, OptionBinding<E> binding, Class<E> enumClass, DependentValue<Set<E>> allowedValues, Function<E, Component> elementNameProvider) {
+        super(id, dependencies, name, enabled, storage, tooltipProvider, impact, flags, defaultValue, binding);
         this.enumClass = enumClass;
         this.allowedValues = allowedValues;
         this.elementNameProvider = elementNameProvider;
@@ -34,7 +34,7 @@ class EnumOption<E extends Enum<E>> extends Option<E> {
     }
 
     @Override
-    Control<E> createControl() {
+    Control createControl() {
         // TODO: doesn't update allowed values when dependencies change
         return new CyclingControl<>(this, this.enumClass, this.elementNameProvider, this.allowedValues.get(this.state).toArray(this.enumClass.getEnumConstants()));
     }

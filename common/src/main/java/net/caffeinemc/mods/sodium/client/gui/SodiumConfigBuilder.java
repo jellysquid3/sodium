@@ -165,7 +165,23 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                                                 .setRange(0, 10, 1)
                                                 .setBinding(new LocalBinding<>(5))
                                                 .setEnabledProvider((state) -> state.readBooleanOption(ResourceLocation.parse("foo:bar")), ResourceLocation.parse("foo:bar"))
-                                ))
+                                )
+                                .addOption(
+                                        builder.createExternalButtonOption(ResourceLocation.parse("foo:button"))
+                                                .setName(Component.literal("Other things"))
+                                                .setTooltip(Component.literal("Hello"))
+                                                .setScreenProvider((prevScreen) -> {
+                                                    Minecraft.getInstance().setScreen(new Screen(Component.literal("External Button Page")) {
+                                                        @Override
+                                                        public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+                                                            super.render(graphics, mouseX, mouseY, delta);
+                                                            graphics.drawString(Minecraft.getInstance().font, Component.literal("Hello, world 2!"), 10, 10, 0xFFFFFF);
+                                                        }
+                                                    });
+                                                })
+                                                .setEnabledProvider((state) -> state.readBooleanOption(ResourceLocation.parse("foo:bar")), ResourceLocation.parse("foo:bar"))
+                                )
+                        )
                 );
         for (int i = 0; i < 10; i++) {
             options.addPage(builder.createOptionPage()
@@ -581,7 +597,7 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
         return performancePage;
     }
 
-    private OptionBuilder<?> buildNoErrorContextOption(ConfigBuilder builder) {
+    private OptionBuilder buildNoErrorContextOption(ConfigBuilder builder) {
         return builder.createBooleanOption(ResourceLocation.parse("sodium:performance.use_no_error_context"))
                 .setStorageHandler(this.sodiumStorage)
                 .setName(Component.translatable("sodium.options.use_no_error_context.name"))

@@ -1,22 +1,23 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
-import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.StatefulOption;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.CommonInputs;
+import net.minecraft.client.gui.screens.Screen;
 
-public class TickBoxControl implements Control<Boolean> {
-    private final Option<Boolean> option;
+public class TickBoxControl implements Control {
+    private final StatefulOption<Boolean> option;
 
-    public TickBoxControl(Option<Boolean> option) {
+    public TickBoxControl(StatefulOption<Boolean> option) {
         this.option = option;
     }
 
     @Override
-    public ControlElement<Boolean> createElement(OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
         return new TickBoxControlElement(list, this.option, dim, theme);
     }
 
@@ -26,15 +27,15 @@ public class TickBoxControl implements Control<Boolean> {
     }
 
     @Override
-    public Option<Boolean> getOption() {
+    public StatefulOption<Boolean> getOption() {
         return this.option;
     }
 
-    private static class TickBoxControlElement extends ControlElement<Boolean> {
+    private static class TickBoxControlElement extends StatefulControlElement<Boolean> {
         private final ColorTheme theme;
 
-        public TickBoxControlElement(OptionListWidget list, Option<Boolean> option, Dim2i dim, ColorTheme theme) {
-            super(list, option, dim);
+        public TickBoxControlElement(OptionListWidget list, StatefulOption<Boolean> option, Dim2i dim, ColorTheme theme) {
+            super(list, dim, option);
 
             this.theme = theme;
         }
@@ -45,8 +46,8 @@ public class TickBoxControl implements Control<Boolean> {
 
             final int x = this.getLimitX() - 16;
             final int y = this.getCenterY() - 5;
-            final int w = x + 10;
-            final int h = y + 10;
+            final int xEnd = x + 10;
+            final int yEnd = y + 10;
 
             final boolean enabled = this.option.isEnabled();
             final boolean ticked = enabled && this.option.getValidatedValue();
@@ -60,10 +61,10 @@ public class TickBoxControl implements Control<Boolean> {
             }
 
             if (ticked) {
-                this.drawRect(graphics, x + 2, y + 2, w - 2, h - 2, color);
+                this.drawRect(graphics, x + 2, y + 2, xEnd - 2, yEnd - 2, color);
             }
 
-            this.drawBorder(graphics, x, y, w, h, color);
+            this.drawBorder(graphics, x, y, xEnd, yEnd, color);
         }
 
         @Override

@@ -12,9 +12,8 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
 
-// TODO: notify storage handlers after update is completed
 public class Config implements ConfigState {
-    private final Map<ResourceLocation, Option<?>> options = new Object2ReferenceLinkedOpenHashMap<>();
+    private final Map<ResourceLocation, Option> options = new Object2ReferenceLinkedOpenHashMap<>();
     private final ObjectOpenHashSet<StorageEventHandler> pendingStorageHandlers = new ObjectOpenHashSet<>();
     private final ImmutableList<ModOptions> modOptions;
 
@@ -55,7 +54,7 @@ public class Config implements ConfigState {
         }
     }
 
-    private void checkDependencyCycles(Option<?> option, ObjectOpenHashSet<ResourceLocation> stack, ObjectOpenHashSet<ResourceLocation> finished) {
+    private void checkDependencyCycles(Option option, ObjectOpenHashSet<ResourceLocation> stack, ObjectOpenHashSet<ResourceLocation> finished) {
         if (!stack.add(option.id)) {
             throw new IllegalArgumentException("Cycle detected in dependency graph starting from option " + option.id);
         }

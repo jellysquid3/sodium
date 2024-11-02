@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.StatefulOption;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
@@ -13,12 +14,12 @@ import org.apache.commons.lang3.Validate;
 
 import java.util.function.Function;
 
-public class CyclingControl<T extends Enum<T>> implements Control<T> {
-    private final Option<T> option;
+public class CyclingControl<T extends Enum<T>> implements Control {
+    private final StatefulOption<T> option;
     private final T[] allowedValues;
     private final Function<T, Component> elementNameProvider;
 
-    public CyclingControl(Option<T> option, Class<T> enumType, Function<T, Component> elementNameProvider, T[] allowedValues) {
+    public CyclingControl(StatefulOption<T> option, Class<T> enumType, Function<T, Component> elementNameProvider, T[] allowedValues) {
         T[] universe = enumType.getEnumConstants();
 
         Validate.notEmpty(universe, "The enum universe must contain at least one item");
@@ -29,12 +30,12 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
     }
 
     @Override
-    public Option<T> getOption() {
+    public Option getOption() {
         return this.option;
     }
 
     @Override
-    public ControlElement<T> createElement(OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
         return new CyclingControlElement<>(list, this.option, dim, this.allowedValues, this.elementNameProvider);
     }
 
@@ -43,13 +44,13 @@ public class CyclingControl<T extends Enum<T>> implements Control<T> {
         return 70;
     }
 
-    private static class CyclingControlElement<T extends Enum<T>> extends ControlElement<T> {
+    private static class CyclingControlElement<T extends Enum<T>> extends StatefulControlElement<T> {
         private final T[] allowedValues;
         private final Function<T, Component> elementNameProvider;
         private int currentIndex;
 
-        public CyclingControlElement(OptionListWidget list, Option<T> option, Dim2i dim, T[] allowedValues, Function<T, Component> elementNameProvider) {
-            super(list, option, dim);
+        public CyclingControlElement(OptionListWidget list, StatefulOption<T> option, Dim2i dim, T[] allowedValues, Function<T, Component> elementNameProvider) {
+            super(list, dim, option);
 
             this.allowedValues = allowedValues;
             this.elementNameProvider = elementNameProvider;

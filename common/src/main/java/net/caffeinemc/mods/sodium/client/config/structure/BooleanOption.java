@@ -14,13 +14,13 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.Function;
 
-class BooleanOption extends Option<Boolean> {
-    BooleanOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, StorageEventHandler storage, Function<Boolean, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<Boolean> defaultValue, DependentValue<Boolean> enabled, OptionBinding<Boolean> binding) {
-        super(id, dependencies, name, storage, tooltipProvider, impact, flags, defaultValue, enabled, binding);
+class BooleanOption extends StatefulOption<Boolean> {
+    BooleanOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, StorageEventHandler storage, Function<Boolean, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<Boolean> defaultValue, OptionBinding<Boolean> binding) {
+        super(id, dependencies, name, enabled, storage, tooltipProvider, impact, flags, defaultValue, binding);
     }
 
     @Override
-    Control<Boolean> createControl() {
+    Control createControl() {
         return new TickBoxControl(this);
     }
 }

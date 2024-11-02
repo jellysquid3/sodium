@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-class EnumOptionBuilderImpl<E extends Enum<E>> extends OptionBuilderImpl<E> implements EnumOptionBuilder<E> {
+class EnumOptionBuilderImpl<E extends Enum<E>> extends StatefulOptionBuilderImpl<E> implements EnumOptionBuilder<E> {
     final Class<E> enumClass;
 
     DependentValue<Set<E>> allowedValues;
@@ -31,7 +31,7 @@ class EnumOptionBuilderImpl<E extends Enum<E>> extends OptionBuilderImpl<E> impl
     }
 
     @Override
-    Option<E> build() {
+    Option build() {
         this.prepareBuild();
 
         if (this.allowedValues == null) {
@@ -44,7 +44,7 @@ class EnumOptionBuilderImpl<E extends Enum<E>> extends OptionBuilderImpl<E> impl
 
         Validate.notNull(this.elementNameProvider, "Element name provider must be set or enum class must implement TextProvider");
 
-        return new EnumOption<>(this.id, this.getDependencies(), this.enumClass, this.name, this.storage, this.tooltipProvider, this.impact, this.flags, this.defaultValue, this.enabled, this.binding, this.allowedValues, this.elementNameProvider);
+        return new EnumOption<>(this.id, this.getDependencies(), this.name, this.enabled, this.storage, this.tooltipProvider, this.impact, this.flags, this.defaultValue, this.binding, this.enumClass, this.allowedValues, this.elementNameProvider);
     }
 
     @Override

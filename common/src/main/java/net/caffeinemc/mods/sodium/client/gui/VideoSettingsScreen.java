@@ -48,8 +48,10 @@ import java.util.stream.Stream;
 // TODO: show option group's names somewhere
 // TODO: add button or some other way for user to reset a specific option, all options on a page, and all options of a mod to their default values (not just "reset" changes, but reset to default value)
 // TODO: make RD option respect Vanilla's >16 RD only allowed if memory >1GB constraint
+// TODO: use update tag in stateful options to prevent multiple calls to dependencies
+// TODO: make sure value constraints are actually dynamic (the controls receive them statically)
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
-    private final List<ControlElement<?>> controls = new ArrayList<>();
+    private final List<ControlElement> controls = new ArrayList<>();
 
     private final Screen prevScreen;
 
@@ -63,7 +65,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private FlatButtonWidget donateButton, hideDonateButton;
 
     private boolean hasPendingChanges;
-    private ControlElement<?> hoveredElement;
+    private ControlElement hoveredElement;
 
     private @Nullable ScreenPrompt prompt;
 
@@ -233,7 +235,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
     private void rebuildGUIOptions() {
         this.removeWidget(this.optionList);
-        this.optionList = this.addRenderableWidget(new OptionListWidget(new Dim2i(130, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT, 210, this.height - (Layout.INNER_MARGIN * 2 + Layout.OUTER_MARGIN + Layout.BUTTON_SHORT)), this.currentPage, this.currentMod.theme()));
+        this.optionList = this.addRenderableWidget(new OptionListWidget(this, new Dim2i(130, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT, 210, this.height - (Layout.INNER_MARGIN * 2 + Layout.OUTER_MARGIN + Layout.BUTTON_SHORT)), this.currentPage, this.currentMod.theme()));
     }
 
     @Override
@@ -256,7 +258,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void updateControls() {
-        ControlElement<?> hovered = this.getActiveControls()
+        var hovered = this.getActiveControls()
                 .filter(ControlElement::isHovered)
                 .findFirst()
                 .orElse(this.getActiveControls() // If there is no hovered element, use the focused element.
@@ -274,11 +276,11 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.hoveredElement = hovered;
     }
 
-    private Stream<ControlElement<?>> getActiveControls() {
+    private Stream<ControlElement> getActiveControls() {
         return this.optionList.getControls().stream();
     }
 
-    private void renderOptionTooltip(GuiGraphics graphics, ControlElement<?> element) {
+    private void renderOptionTooltip(GuiGraphics graphics, ControlElement element) {
         int textPadding = Layout.INNER_MARGIN;
         int boxMargin = Layout.INNER_MARGIN;
         int lineHeight = this.font.lineHeight + 3;
@@ -288,7 +290,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         int boxWidth = Math.min(200, this.width - boxX - boxMargin);
 
-        Option<?> option = element.getOption();
+        var option = element.getOption();
         var splitWidth = boxWidth - (textPadding * 2);
         List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(),splitWidth));
 
