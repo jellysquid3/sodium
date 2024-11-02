@@ -29,7 +29,7 @@ public class EnumOption<E extends Enum<E>> extends StatefulOption<E> {
     }
 
     @Override
-    boolean isValueValid(E value) {
+    public boolean isValueValid(E value) {
         return this.allowedValues.get(this.state).contains(value);
     }
 

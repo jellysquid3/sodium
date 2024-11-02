@@ -67,7 +67,7 @@ public abstract class StatefulOption<V> extends Option {
     }
 
     @Override
-    public boolean applyChanges() {
+    boolean applyChanges() {
         if (this.hasChanged()) {
             this.value = this.modifiedValue;
             this.binding.save(this.value);
@@ -77,7 +77,7 @@ public abstract class StatefulOption<V> extends Option {
         return false;
     }
 
-    boolean isValueValid(V value) {
+    public boolean isValueValid(V value) {
         return true;
     }
 

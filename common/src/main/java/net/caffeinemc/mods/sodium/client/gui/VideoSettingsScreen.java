@@ -1,14 +1,13 @@
 package net.caffeinemc.mods.sodium.client.gui;
 
-import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
-import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
-import net.caffeinemc.mods.sodium.client.config.*;
-import net.caffeinemc.mods.sodium.client.config.structure.*;
+import net.caffeinemc.mods.sodium.client.config.ConfigManager;
+import net.caffeinemc.mods.sodium.client.config.structure.IntegerOption;
+import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
+import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
+import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.data.fingerprint.HashedFingerprint;
-import net.caffeinemc.mods.sodium.client.console.Console;
-import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
@@ -24,9 +23,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -196,7 +195,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
 
         this.undoButton = new FlatButtonWidget(new Dim2i(270, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
-        this.applyButton = new FlatButtonWidget(new Dim2i(130, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), this::applyChanges, true, false);
+        this.applyButton = new FlatButtonWidget(new Dim2i(130, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), ConfigManager.CONFIG::applyAllOptions, true, false);
         this.closeButton = new FlatButtonWidget(new Dim2i(200, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
 
         this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, Layout.INNER_MARGIN, 100, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage, true, false);
@@ -292,7 +291,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         var option = element.getOption();
         var splitWidth = boxWidth - (textPadding * 2);
-        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(),splitWidth));
+        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), splitWidth));
 
         OptionImpact impact = option.getImpact();
 
@@ -315,34 +314,6 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         for (int i = 0; i < tooltip.size(); i++) {
             graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * lineHeight), Colors.FOREGROUND);
-        }
-    }
-
-    private void applyChanges() {
-        var flags = ConfigManager.CONFIG.applyAllOptions();
-
-        Minecraft client = Minecraft.getInstance();
-
-        if (client.level != null) {
-            if (flags.contains(OptionFlag.REQUIRES_RENDERER_RELOAD)) {
-                client.levelRenderer.allChanged();
-            } else if (flags.contains(OptionFlag.REQUIRES_RENDERER_UPDATE)) {
-                client.levelRenderer.needsUpdate();
-            }
-        }
-
-        if (flags.contains(OptionFlag.REQUIRES_ASSET_RELOAD)) {
-            client.updateMaxMipLevel(client.options.mipmapLevels().get());
-            client.delayTextureReload();
-        }
-
-        if (flags.contains(OptionFlag.REQUIRES_VIDEOMODE_RELOAD)) {
-            client.getWindow().changeFullscreenVideoMode();
-        }
-
-        if (flags.contains(OptionFlag.REQUIRES_GAME_RESTART)) {
-            Console.instance().logMessage(MessageLevel.WARN,
-                    "sodium.console.game_restart", true, 10.0);
         }
     }
 
@@ -384,6 +355,41 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         }
 
         return true;
+    }
+
+    @Override
+    public boolean mouseScrolled(double d, double e, double f, double amount) {
+        if (Screen.hasControlDown()) {
+            var location = ResourceLocation.parse("sodium:general.gui_scale");
+            var option = ConfigManager.CONFIG.getOption(location);
+            if (option instanceof IntegerOption guiScaleOption) {
+                var value = guiScaleOption.getValidatedValue();
+                if (value instanceof Integer intValue) {
+                    var range = guiScaleOption.getRange();
+                    var top = range.max() + 1;
+                    var auto = range.min();
+
+                    // re-maps the auto value (presumably 0) to be at the top of the scroll range
+                    if (intValue == auto) {
+                        intValue = top;
+                    }
+                    var newValue = Math.clamp(intValue + (int) Math.signum(amount), auto + 1, top);
+                    if (newValue != intValue) {
+                        if (newValue == top) {
+                            newValue = auto;
+                        }
+                        if (range.isValueValid(newValue)) {
+                            guiScaleOption.modifyValue(newValue);
+                            ConfigManager.CONFIG.applyOption(location);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        } else {
+            return super.mouseScrolled(d, e, f, amount);
+        }
     }
 
     @Override

@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.Function;
 
-class IntegerOption extends StatefulOption<Integer> {
+public class IntegerOption extends StatefulOption<Integer> {
     private final DependentValue<Range> range;
     private final ControlValueFormatter valueFormatter;
 
@@ -23,7 +23,7 @@ class IntegerOption extends StatefulOption<Integer> {
     }
 
     @Override
-    boolean isValueValid(Integer value) {
+    public boolean isValueValid(Integer value) {
         return this.range.get(this.state).isValueValid(value);
     }
 
@@ -31,6 +31,10 @@ class IntegerOption extends StatefulOption<Integer> {
     Control createControl() {
         var range = this.range.get(this.state);
         return new SliderControl(this, range.min(), range.max(), range.step(), this.valueFormatter);
+    }
+
+    public Range getRange() {
+        return this.range.get(this.state);
     }
 }
 

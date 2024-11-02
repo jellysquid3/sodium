@@ -57,7 +57,7 @@ public abstract class Option {
         return false;
     }
 
-    public boolean applyChanges() {
+    boolean applyChanges() {
         return false;
     }
 

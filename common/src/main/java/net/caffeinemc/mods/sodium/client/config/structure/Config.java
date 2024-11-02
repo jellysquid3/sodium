@@ -6,6 +6,9 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.caffeinemc.mods.sodium.api.config.ConfigState;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
+import net.caffeinemc.mods.sodium.client.console.Console;
+import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
@@ -76,7 +79,7 @@ public class Config implements ConfigState {
         }
     }
 
-    public Collection<OptionFlag> applyAllOptions() {
+    public void applyAllOptions() {
         var flags = EnumSet.noneOf(OptionFlag.class);
 
         for (var option : this.options.values()) {
@@ -87,7 +90,20 @@ public class Config implements ConfigState {
 
         this.flushStorageHandlers();
 
-        return flags;
+        processFlags(flags);
+    }
+
+    public void applyOption(ResourceLocation id) {
+        var flags = EnumSet.noneOf(OptionFlag.class);
+
+        var option = this.options.get(id);
+        if (option != null && option.applyChanges()) {
+            flags.addAll(option.getFlags());
+        }
+
+        this.flushStorageHandlers();
+
+        processFlags(flags);
     }
 
     public boolean anyOptionChanged() {
@@ -109,6 +125,10 @@ public class Config implements ConfigState {
             handler.afterSave();
         }
         this.pendingStorageHandlers.clear();
+    }
+
+    public Option getOption(ResourceLocation id) {
+        return this.options.get(id);
     }
 
     public ImmutableList<ModOptions> getModOptions() {
@@ -147,5 +167,31 @@ public class Config implements ConfigState {
         }
 
         throw new IllegalArgumentException("Can't read enum value from option with id " + id);
+    }
+
+    private static void processFlags(Collection<OptionFlag> flags) {
+        Minecraft client = Minecraft.getInstance();
+
+        if (client.level != null) {
+            if (flags.contains(OptionFlag.REQUIRES_RENDERER_RELOAD)) {
+                client.levelRenderer.allChanged();
+            } else if (flags.contains(OptionFlag.REQUIRES_RENDERER_UPDATE)) {
+                client.levelRenderer.needsUpdate();
+            }
+        }
+
+        if (flags.contains(OptionFlag.REQUIRES_ASSET_RELOAD)) {
+            client.updateMaxMipLevel(client.options.mipmapLevels().get());
+            client.delayTextureReload();
+        }
+
+        if (flags.contains(OptionFlag.REQUIRES_VIDEOMODE_RELOAD)) {
+            client.getWindow().changeFullscreenVideoMode();
+        }
+
+        if (flags.contains(OptionFlag.REQUIRES_GAME_RESTART)) {
+            Console.instance().logMessage(MessageLevel.WARN,
+                    "sodium.console.game_restart", true, 10.0);
+        }
     }
 }
