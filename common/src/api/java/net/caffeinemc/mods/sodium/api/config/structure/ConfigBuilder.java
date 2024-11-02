@@ -7,6 +7,8 @@ public interface ConfigBuilder {
 
     ModOptionsBuilder registerOwnModOptions();
 
+    OptionOverrideBuilder createOptionOverride();
+
     ColorThemeBuilder createColorTheme();
 
     OptionPageBuilder createOptionPage();

@@ -42,6 +42,10 @@ public class PageListWidget extends AbstractParentWidget {
         var headerHeight = this.font.lineHeight * 3;
         int listHeight = Layout.BUTTON_SHORT + Layout.INNER_MARGIN * 2 - headerHeight;
         for (var modOptions : ConfigManager.CONFIG.getModOptions()) {
+            if (modOptions.pages().isEmpty()) {
+                continue;
+            }
+
             var theme = modOptions.theme();
 
             CenteredFlatWidget header = new HeaderEntryWidget(new Dim2i(x, y + listHeight, width, headerHeight), modOptions, theme);

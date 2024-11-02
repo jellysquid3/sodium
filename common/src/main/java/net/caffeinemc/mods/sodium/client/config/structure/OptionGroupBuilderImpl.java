@@ -16,7 +16,7 @@ class OptionGroupBuilderImpl implements OptionGroupBuilder {
     OptionGroup build() {
         Validate.notEmpty(this.options, "At least one option must be added");
 
-        return new OptionGroup(this.name, ImmutableList.copyOf(this.options));
+        return new OptionGroup(this.name, this.options);
     }
 
     @Override

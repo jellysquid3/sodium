@@ -23,8 +23,10 @@ import java.util.function.Supplier;
 public class ConfigManager {
     public static final String JSON_KEY_SODIUM_CONFIG_INTEGRATIONS = "sodium:config_api_user";
 
-    private record ConfigUser(Supplier<ConfigEntryPoint> configEntrypoint, String modId, String modName, String modVersion) {
+    private record ConfigUser(Supplier<ConfigEntryPoint> configEntrypoint, String modId, String modName,
+                              String modVersion) {
     }
+
     private static final Collection<ConfigUser> configUsers = new ArrayList<>();
 
     public static Config CONFIG;
@@ -82,25 +84,24 @@ public class ConfigManager {
             try {
                 registerMethod.accept(entryPoint, builder);
                 builtConfigs = builder.build();
+
+                for (var modConfig : builtConfigs) {
+                    var namespace = modConfig.namespace();
+                    if (namespaces.contains(namespace)) {
+                        throw new IllegalArgumentException("Mod '" + configUser.modId + "' provided a duplicate mod id: " + namespace);
+                    }
+
+                    namespaces.add(namespace);
+
+                    if (namespace.equals("sodium")) {
+                        sodiumModOptions = modConfig;
+                    } else {
+                        modConfigs.add(modConfig);
+                    }
+                }
             } catch (Exception e) {
                 crashWithMessage("Mod '" + configUser.modId + "' failed while registering config options.", e);
                 return;
-            }
-
-            for (var modConfig : builtConfigs) {
-                var namespace = modConfig.namespace();
-                if (namespaces.contains(namespace)) {
-                    SodiumClientMod.logger().warn("Mod '{}' provided a duplicate mod id: {}", configUser.modId, namespace);
-                    continue;
-                }
-
-                namespaces.add(namespace);
-
-                if (namespace.equals("sodium")) {
-                    sodiumModOptions = modConfig;
-                } else {
-                    modConfigs.add(modConfig);
-                }
             }
         }
 

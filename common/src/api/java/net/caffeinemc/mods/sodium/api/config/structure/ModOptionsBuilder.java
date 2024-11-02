@@ -12,4 +12,6 @@ public interface ModOptionsBuilder {
     ModOptionsBuilder setColorTheme(ColorThemeBuilder colorTheme);
 
     ModOptionsBuilder addPage(PageBuilder page);
+
+    ModOptionsBuilder registerOptionOverride(OptionOverrideBuilder override);
 }

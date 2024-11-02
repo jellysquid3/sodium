@@ -127,7 +127,7 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
         // for testing cycle detection
         // .setEnabledProvider((state) -> state.readIntOption(ResourceLocation.parse("foo:baz")) == 0, ResourceLocation.parse("foo:baz"))
 
-        ModOptionsBuilder options = builder.registerModOptions("foo", "Foo fadsa fdsa fdsa fdas fdsafdsa", "1.0 fdas fdas fdasfdsaf dsa")
+        var options = builder.registerModOptions("foo", "Foo fadsa fdsa fdsa fdas fdsafdsa", "1.0 fdas fdas fdasfdsaf dsa")
                 .addPage(
                         builder.createExternalPage()
                                 .setName(Component.literal("External Page"))
@@ -216,6 +216,22 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
             page.addOptionGroup(group);
         }
         options.addPage(page);
+
+        var other = builder.registerModOptions("bar", "Bar", "1.0 fdas fdas fdasfdsaf dsa");
+        other.registerOptionOverride(builder.createOptionOverride()
+                .setTarget(ResourceLocation.parse("foo:bar"))
+                .setReplacement(
+                        builder.createBooleanOption(ResourceLocation.parse("foo:bar"))
+                                .setStorageHandler(() -> {
+                                })
+                                .setName(Component.literal("Replaced Bar"))
+                                .setTooltip(Component.literal("Baz"))
+                                .setDefaultValue(true)
+                                .setBinding(new LocalBinding<>(true))
+                                .setImpact(OptionImpact.MEDIUM)
+
+                )
+        );
     }
 
     private OptionPageBuilder buildGeneralPage(ConfigBuilder builder) {

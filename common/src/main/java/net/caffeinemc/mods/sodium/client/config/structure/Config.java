@@ -2,10 +2,11 @@ package net.caffeinemc.mods.sodium.client.config.structure;
 
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2ReferenceLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.caffeinemc.mods.sodium.api.config.ConfigState;
-import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
+import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
 import net.minecraft.client.Minecraft;
@@ -23,24 +24,69 @@ public class Config implements ConfigState {
     public Config(ImmutableList<ModOptions> modOptions) {
         this.modOptions = modOptions;
 
-        this.validateDependencyGraph();
+        this.collectOptions();
+        this.applyOverrides();
+        this.validateDependencies();
 
         // load options initially from their bindings
         resetAllOptions();
     }
 
-    private void validateDependencyGraph() {
+    private void collectOptions() {
         for (var modConfig : this.modOptions) {
             for (var page : modConfig.pages()) {
                 for (var group : page.groups()) {
                     for (var option : group.options()) {
+                        if (!option.id.getNamespace().equals(modConfig.namespace())) {
+                            throw new IllegalArgumentException("Namespace of option id '" + option.id + "' does not match the namespace '" + modConfig.namespace() + "' of the enclosing mod config");
+                        }
+
                         this.options.put(option.id, option);
                         option.setParentConfig(this);
                     }
                 }
             }
         }
+    }
 
+    private void applyOverrides() {
+        // collect overrides and validate them
+        var overrides = new Object2ReferenceOpenHashMap<ResourceLocation, OptionOverride>();
+        for (var modConfig : this.modOptions) {
+            for (var override : modConfig.overrides()) {
+                if (override.target().getNamespace().equals(modConfig.namespace())) {
+                    throw new IllegalArgumentException("Override by mod '" + modConfig.namespace() + "' targets its own option '" + override.target() + "'");
+                }
+
+                if (overrides.put(override.target(), override) != null) {
+                    throw new IllegalArgumentException("Multiple overrides for option '" + override.target() + "'");
+                }
+            }
+        }
+
+        // apply overrides
+        for (var modConfig : this.modOptions) {
+            for (var page : modConfig.pages()) {
+                for (var group : page.groups()) {
+                    var options = group.options();
+                    for (int i = 0; i < options.size(); i++) {
+                        var option = options.get(i);
+                        var override = overrides.get(option.id);
+                        if (override != null) {
+                            var replacement = override.replacement();
+                            options.set(i, replacement);
+                            this.options.remove(option.id);
+                            this.options.put(replacement.id, replacement);
+                            replacement.setParentConfig(this);
+                            option.setParentConfig(null);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void validateDependencies() {
         for (var option : this.options.values()) {
             for (var dependency : option.dependencies) {
                 if (!this.options.containsKey(dependency)) {
@@ -56,6 +102,7 @@ public class Config implements ConfigState {
             this.checkDependencyCycles(option, stack, finished);
         }
     }
+
 
     private void checkDependencyCycles(Option option, ObjectOpenHashSet<ResourceLocation> stack, ObjectOpenHashSet<ResourceLocation> finished) {
         if (!stack.add(option.id)) {

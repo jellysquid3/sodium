@@ -41,6 +41,11 @@ public class ConfigBuilderImpl implements ConfigBuilder {
     }
 
     @Override
+    public OptionOverrideBuilder createOptionOverride() {
+        return new OptionOverrideBuilderImpl();
+    }
+
+    @Override
     public ColorThemeBuilder createColorTheme() {
         return new ColorThemeBuilderImpl();
     }
