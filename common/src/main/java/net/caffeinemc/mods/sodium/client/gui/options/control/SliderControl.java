@@ -1,7 +1,8 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.caffeinemc.mods.sodium.api.config.option.ControlValueFormatter;
+import net.caffeinemc.mods.sodium.client.config.structure.IntegerOption;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.config.structure.StatefulOption;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
@@ -13,28 +14,19 @@ import net.minecraft.util.Mth;
 import org.apache.commons.lang3.Validate;
 
 public class SliderControl implements Control {
-    private final StatefulOption<Integer> option;
+    private final IntegerOption option;
 
-    private final int min, max, interval;
-
-    private final ControlValueFormatter mode;
-
-    public SliderControl(StatefulOption<Integer> option, int min, int max, int interval, ControlValueFormatter mode) {
+    public SliderControl(IntegerOption option, int min, int max, int interval) {
         Validate.isTrue(max > min, "The maximum value must be greater than the minimum value");
         Validate.isTrue(interval > 0, "The slider interval must be greater than zero");
         Validate.isTrue(((max - min) % interval) == 0, "The maximum value must be divisible by the interval");
-        Validate.notNull(mode, "The slider mode must not be null");
 
         this.option = option;
-        this.min = min;
-        this.max = max;
-        this.interval = interval;
-        this.mode = mode;
     }
 
     @Override
     public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
-        return new Button(list, this.option, dim, this.min, this.max, this.interval, this.mode, theme);
+        return new SliderControlElement(list, this.option, dim, theme);
     }
 
     @Override
@@ -47,34 +39,29 @@ public class SliderControl implements Control {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    private static class Button extends StatefulControlElement<Integer> {
+    private static class SliderControlElement extends ControlElement {
         private static final int THUMB_WIDTH = 2, TRACK_HEIGHT = 1;
 
-        private int contentWidth;
-        private final ControlValueFormatter formatter;
+        private final IntegerOption option;
         private final ColorTheme theme;
 
-        private final int min;
-        private final int max;
-        private final int range;
-        private final int interval;
-
         private double thumbPosition;
-
         private boolean sliderHeld;
+        private int contentWidth;
 
-        public Button(OptionListWidget list, StatefulOption<Integer> option, Dim2i dim, int min, int max, int interval, ControlValueFormatter formatter, ColorTheme theme) {
-            super(list, dim, option);
+        public SliderControlElement(OptionListWidget list, IntegerOption option, Dim2i dim, ColorTheme theme) {
+            super(list, dim);
 
-            this.min = min;
-            this.max = max;
-            this.range = max - min;
-            this.interval = interval;
-            this.thumbPosition = this.getThumbPositionForValue(option.getValidatedValue());
-            this.formatter = formatter;
+            this.option = option;
             this.theme = theme;
 
+            this.thumbPosition = this.getThumbPositionForValue(option.getValidatedValue());
             this.sliderHeld = false;
+        }
+
+        @Override
+        public Option getOption() {
+            return this.option;
         }
 
         @Override
@@ -87,7 +74,7 @@ public class SliderControl implements Control {
             var value = this.option.getValidatedValue();
             var isEnabled = this.option.isEnabled();
 
-            var label = this.formatter.format(value);
+            var label = this.option.formatValue(value);
 
             if (!isEnabled) {
                 label = this.formatDisabledControlValue(label);
@@ -108,7 +95,8 @@ public class SliderControl implements Control {
             if (drawSlider) {
                 this.thumbPosition = this.getThumbPositionForValue(value);
 
-                double thumbOffset = Mth.clamp((double) (this.getIntValue() - this.min) / this.range * sliderWidth, 0, sliderWidth);
+                var range = this.option.getRange();
+                double thumbOffset = Mth.clamp((double) (this.getIntValue() - range.min()) / range.getSpread() * sliderWidth, 0, sliderWidth);
 
                 int thumbX = (int) (sliderX + thumbOffset - THUMB_WIDTH);
                 int trackY = (int) (sliderY + (sliderHeight / 2f) - ((double) TRACK_HEIGHT / 2));
@@ -148,15 +136,13 @@ public class SliderControl implements Control {
         }
 
         public int getIntValue() {
-            return this.min + (this.interval * (int) Math.round(this.getSnappedThumbPosition() / this.interval));
-        }
-
-        public double getSnappedThumbPosition() {
-            return this.thumbPosition / (1.0D / this.range);
+            var range = this.option.getRange();
+            return range.min() + (range.step() * (int) Math.round((this.thumbPosition / (1.0D / range.getSpread())) / range.step()));
         }
 
         public double getThumbPositionForValue(int value) {
-            return (value - this.min) * (1.0D / this.range);
+            var range = this.option.getRange();
+            return (value - range.min()) * (1.0D / range.getSpread());
         }
 
         @Override
@@ -193,11 +179,12 @@ public class SliderControl implements Control {
         public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
             if (!isFocused()) return false;
 
+            var range = this.option.getRange();
             if (keyCode == InputConstants.KEY_LEFT) {
-                this.option.modifyValue(Mth.clamp(this.option.getValidatedValue() - this.interval, this.min, this.max));
+                this.option.modifyValue(Mth.clamp(this.option.getValidatedValue() - range.step(), range.max(), range.max()));
                 return true;
             } else if (keyCode == InputConstants.KEY_RIGHT) {
-                this.option.modifyValue(Mth.clamp(this.option.getValidatedValue() + this.interval, this.min, this.max));
+                this.option.modifyValue(Mth.clamp(this.option.getValidatedValue() + range.step(), range.min(), range.max()));
                 return true;
             }
 

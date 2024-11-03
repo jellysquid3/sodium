@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.function.Consumer;
 
 public abstract class Option {
     final ResourceLocation id;
@@ -43,6 +44,14 @@ public abstract class Option {
 
     void setParentConfig(Config state) {
         this.state = state;
+    }
+
+    void visitDependentValues(Consumer<DependentValue<?>> visitor) {
+        visitor.accept(this.enabled);
+    }
+
+    void loadValueInitial() {
+        // no-op
     }
 
     void resetFromBinding() {

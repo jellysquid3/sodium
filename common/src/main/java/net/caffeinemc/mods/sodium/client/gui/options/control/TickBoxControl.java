@@ -1,5 +1,7 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
+import net.caffeinemc.mods.sodium.client.config.structure.BooleanOption;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.config.structure.StatefulOption;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
@@ -10,9 +12,9 @@ import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.client.gui.screens.Screen;
 
 public class TickBoxControl implements Control {
-    private final StatefulOption<Boolean> option;
+    private final BooleanOption option;
 
-    public TickBoxControl(StatefulOption<Boolean> option) {
+    public TickBoxControl(BooleanOption option) {
         this.option = option;
     }
 
@@ -31,13 +33,20 @@ public class TickBoxControl implements Control {
         return this.option;
     }
 
-    private static class TickBoxControlElement extends StatefulControlElement<Boolean> {
+    private static class TickBoxControlElement extends ControlElement {
+        private final BooleanOption option;
         private final ColorTheme theme;
 
-        public TickBoxControlElement(OptionListWidget list, StatefulOption<Boolean> option, Dim2i dim, ColorTheme theme) {
-            super(list, dim, option);
+        public TickBoxControlElement(OptionListWidget list, BooleanOption option, Dim2i dim, ColorTheme theme) {
+            super(list, dim);
 
+            this.option = option;
             this.theme = theme;
+        }
+
+        @Override
+        public Option getOption() {
+            return this.option;
         }
 
         @Override

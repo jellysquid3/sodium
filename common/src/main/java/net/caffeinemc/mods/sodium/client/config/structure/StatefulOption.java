@@ -1,15 +1,18 @@
 package net.caffeinemc.mods.sodium.client.config.structure;
 
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
 import net.caffeinemc.mods.sodium.api.config.option.OptionBinding;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
 import net.caffeinemc.mods.sodium.client.config.value.DependentValue;
+import net.caffeinemc.mods.sodium.client.config.value.DynamicValue;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public abstract class StatefulOption<V> extends Option {
@@ -19,6 +22,8 @@ public abstract class StatefulOption<V> extends Option {
     final EnumSet<OptionFlag> flags;
     final DependentValue<V> defaultValue;
     final OptionBinding<V> binding;
+
+    private final Collection<DynamicValue<?>> dependents = new ObjectOpenHashSet<>(0);
 
     private V value;
     private V modifiedValue;
@@ -33,12 +38,32 @@ public abstract class StatefulOption<V> extends Option {
         this.binding = binding;
     }
 
+    @Override
+    void visitDependentValues(Consumer<DependentValue<?>> visitor) {
+        super.visitDependentValues(visitor);
+        visitor.accept(this.defaultValue);
+    }
+
+    void registerDependent(DynamicValue<?> dependent) {
+        this.dependents.add(dependent);
+    }
+
     public void modifyValue(V value) {
-        this.modifiedValue = value;
+        if (this.modifiedValue != value) {
+            this.modifiedValue = value;
+            this.state.invalidateDependents(this.dependents);
+        }
+    }
+
+    @Override
+    void loadValueInitial() {
+        this.value = this.binding.load();
+        this.modifiedValue = this.value;
     }
 
     @Override
     void resetFromBinding() {
+        var previousValue = this.modifiedValue;
         this.value = this.binding.load();
 
         if (!isValueValid(this.value)) {
@@ -51,11 +76,18 @@ public abstract class StatefulOption<V> extends Option {
         }
 
         this.modifiedValue = this.value;
+        if (this.value != previousValue) {
+            this.state.invalidateDependents(this.dependents);
+        }
     }
 
     public V getValidatedValue() {
         if (!isValueValid(this.modifiedValue)) {
+            var previousValue = this.modifiedValue;
             this.modifiedValue = this.defaultValue.get(this.state);
+            if (this.modifiedValue != previousValue) {
+                this.state.invalidateDependents(this.dependents);
+            }
         }
 
         return this.modifiedValue;

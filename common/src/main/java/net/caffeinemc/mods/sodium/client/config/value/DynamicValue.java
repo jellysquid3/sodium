@@ -12,6 +12,7 @@ public class DynamicValue<V> implements DependentValue<V>, ConfigState {
     private final Set<ResourceLocation> dependencies;
     private final Function<ConfigState, V> provider;
     private Config state;
+    private V valueCache;
 
     public DynamicValue(Function<ConfigState, V> provider, ResourceLocation[] dependencies) {
         this.provider = provider;
@@ -20,15 +21,23 @@ public class DynamicValue<V> implements DependentValue<V>, ConfigState {
 
     @Override
     public V get(Config state) {
+        if (this.valueCache != null) {
+            return this.valueCache;
+        }
+
         this.state = state;
-        var result = this.provider.apply(this);
+        this.valueCache = this.provider.apply(this);
         this.state = null;
-        return result;
+        return this.valueCache;
     }
 
     @Override
     public Collection<ResourceLocation> getDependencies() {
         return this.dependencies;
+    }
+
+    public void invalidateCache() {
+        this.valueCache = null;
     }
 
     private void validateRead(ResourceLocation id) {

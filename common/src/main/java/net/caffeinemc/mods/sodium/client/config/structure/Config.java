@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.caffeinemc.mods.sodium.api.config.ConfigState;
 import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
+import net.caffeinemc.mods.sodium.client.config.value.DynamicValue;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
 import net.minecraft.client.Minecraft;
@@ -29,6 +30,9 @@ public class Config implements ConfigState {
         this.validateDependencies();
 
         // load options initially from their bindings
+        for (var option : this.options.values()) {
+            option.loadValueInitial();
+        }
         resetAllOptions();
     }
 
@@ -93,6 +97,18 @@ public class Config implements ConfigState {
                     throw new IllegalArgumentException("Option " + option.id + " depends on non-existent option " + dependency);
                 }
             }
+
+            // link dependents
+            option.visitDependentValues(dependent -> {
+                if (dependent instanceof DynamicValue<?> dynamicValue) {
+                    for (var dependency : dependent.getDependencies()) {
+                        var dependencyOption = this.options.get(dependency);
+                        if (dependencyOption instanceof StatefulOption<?> statefulOption) {
+                            statefulOption.registerDependent(dynamicValue);
+                        }
+                    }
+                }
+            });
         }
 
         // make sure there are no cycles
@@ -103,6 +119,11 @@ public class Config implements ConfigState {
         }
     }
 
+    void invalidateDependents(Collection<DynamicValue<?>> dependents) {
+        for (var dependent : dependents) {
+            dependent.invalidateCache();
+        }
+    }
 
     private void checkDependencyCycles(Option option, ObjectOpenHashSet<ResourceLocation> stack, ObjectOpenHashSet<ResourceLocation> finished) {
         if (!stack.add(option.id)) {

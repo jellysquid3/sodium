@@ -3,11 +3,13 @@ package net.caffeinemc.mods.sodium.client.gui;
 import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.blaze3d.platform.VideoMode;
 import com.mojang.blaze3d.platform.Window;
-import net.caffeinemc.mods.sodium.api.config.*;
-import net.caffeinemc.mods.sodium.api.config.structure.*;
+import net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint;
+import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
 import net.caffeinemc.mods.sodium.api.config.option.OptionBinding;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
+import net.caffeinemc.mods.sodium.api.config.option.Range;
+import net.caffeinemc.mods.sodium.api.config.structure.*;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.compatibility.environment.OsUtils;
 import net.caffeinemc.mods.sodium.client.compatibility.workarounds.Workarounds;
@@ -26,6 +28,8 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Optional;
 
 // TODO: get initialValue from the vanilla options (it's private)
@@ -158,13 +162,45 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                                         builder.createIntegerOption(ResourceLocation.parse("foo:baz"))
                                                 .setStorageHandler(() -> {
                                                 })
-                                                .setName(Component.literal("Hello"))
-                                                .setTooltip(Component.literal("Bla"))
+                                                .setName(Component.literal("Baz"))
+                                                .setTooltip(Component.literal("Baz"))
                                                 .setValueFormatter(ControlValueFormatterImpls.number())
                                                 .setDefaultValue(5)
                                                 .setRange(0, 10, 1)
                                                 .setBinding(new LocalBinding<>(5))
-                                                .setEnabledProvider((state) -> state.readBooleanOption(ResourceLocation.parse("foo:bar")), ResourceLocation.parse("foo:bar"))
+                                                .setEnabledProvider(state -> state.readBooleanOption(ResourceLocation.parse("foo:bar")), ResourceLocation.parse("foo:bar"))
+                                )
+                                .addOption(
+                                        builder.createIntegerOption(ResourceLocation.parse("foo:bla"))
+                                                .setStorageHandler(() -> {
+                                                })
+                                                .setName(Component.literal("Bla"))
+                                                .setTooltip(Component.literal("hello"))
+                                                .setValueFormatter(ControlValueFormatterImpls.number())
+                                                .setDefaultValue(5)
+                                                .setRangeProvider(
+                                                        state -> new Range(state.readBooleanOption(ResourceLocation.parse("foo:bar")) ? 0 : 1, 5, 1),
+                                                        ResourceLocation.parse("foo:bar"))
+                                                .setBinding(new LocalBinding<>(5))
+                                )
+                                .addOption(
+                                        builder.createEnumOption(ResourceLocation.parse("foo:zot"), OptionImpact.class)
+                                                .setStorageHandler(() -> {
+                                                })
+                                                .setName(Component.literal("Zot"))
+                                                .setTooltip(Component.literal("hello"))
+                                                .setDefaultValue(OptionImpact.LOW)
+                                                .setAllowedValuesProvider(
+                                                        state -> {
+                                                            var set = EnumSet.noneOf(OptionImpact.class);
+                                                            var value = state.readIntOption(ResourceLocation.parse("foo:bla"));
+                                                            var list = Arrays.asList(OptionImpact.values());
+                                                            set.addAll(list.subList(0, Math.min(value + 1, list.size())));
+                                                            return set;
+                                                        },
+                                                        ResourceLocation.parse("foo:bla"))
+                                                .setElementNameProvider(value -> Component.literal(value.name()))
+                                                .setBinding(new LocalBinding<>(OptionImpact.LOW))
                                 )
                                 .addOption(
                                         builder.createExternalButtonOption(ResourceLocation.parse("foo:button"))

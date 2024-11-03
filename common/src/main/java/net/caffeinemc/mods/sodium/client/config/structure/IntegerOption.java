@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class IntegerOption extends StatefulOption<Integer> {
@@ -23,6 +24,12 @@ public class IntegerOption extends StatefulOption<Integer> {
     }
 
     @Override
+    void visitDependentValues(Consumer<DependentValue<?>> visitor) {
+        super.visitDependentValues(visitor);
+        visitor.accept(this.range);
+    }
+
+    @Override
     public boolean isValueValid(Integer value) {
         return this.range.get(this.state).isValueValid(value);
     }
@@ -30,11 +37,15 @@ public class IntegerOption extends StatefulOption<Integer> {
     @Override
     Control createControl() {
         var range = this.range.get(this.state);
-        return new SliderControl(this, range.min(), range.max(), range.step(), this.valueFormatter);
+        return new SliderControl(this, range.min(), range.max(), range.step());
     }
 
     public Range getRange() {
         return this.range.get(this.state);
+    }
+
+    public Component formatValue(int value) {
+        return this.valueFormatter.format(value);
     }
 }
 
