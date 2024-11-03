@@ -46,7 +46,11 @@ dependencies {
 
 ### Creating an Entrypoint
 
-In order for Sodium to call your options registration code, you need to add a custom entrypoint to your mod's metadata file. It uses the key `sodium:config_api_user` and the value is the full reference to a class that implements the `net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint` interface.
+Entrypoint classes that Sodium calls to run your options registration code can be declared either in your mod's metadata file, or on NeoForge with a special annotation.
+
+#### With a Metadata Entry
+
+Metadata-based entrypoints use the key `sodium:config_api_user` and the value is the full reference to a class that implements the `net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint` interface.
 
 Fabric `fabric.mod.json`:
 
@@ -106,7 +110,7 @@ public class ExampleConfigUser implements ConfigEntryPoint {
                         .setName(Component.literal("Example Page"))
                         .addOptionGroup(builder.createOptionGroup()
                                 .setName(Component.literal("Example Group"))
-                                .addOption(builder.createBooleanOption(ResourceLocation.parse("example:example_option"))
+                                .addOption(builder.createBooleanOption(ResourceLocation.parse("examplemod:example_option"))
                                         .setName(Component.literal("Example Option")) // use translation keys here
                                         .setTooltip(Component.literal("Example tooltip"))
                                         .setStorageHandler(this.handler)
@@ -116,6 +120,20 @@ public class ExampleConfigUser implements ConfigEntryPoint {
                         )
                 );
     }
+}
+```
+
+#### NeoForge: With an Annotation
+
+Since NeoForge has the convention of using annotations for entrypoints, this option is provided as an alternative. Any classes annotated with `@ConfigEntryPointForge("examplemod")` will be loaded as config entrypoints too. Note that the annotation must be given the mod id that should be associated as the default mod for which a config is registered with `ConfigBuilder.registerOwnModOptions`. This is necessary as it's otherwise impossible to uniquely determine which mod a class is associated with on NeoForge.
+
+```java
+import net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint;
+import net.caffeinemc.mods.sodium.api.config.ConfigEntryPointForge;
+
+@ConfigEntryPointForge("examplemod")
+public class ExampleConfigUser implements ConfigEntryPoint {
+    // class body identical to the above
 }
 ```
 
@@ -133,7 +151,7 @@ The API is largely self-explanatory and an example is provided above. Also see S
 
 ### Using `ConfigBuilder` and `ModOptions`
 
-The `ConfigBuilder` instance passed to the registration method allows quick and easy registration of a mod's own options using `ConfigBuilder.registerOwnModOptions`. The mod's id, name, version or a formatter for the existing version, and the color theme can be configured on the returned `ModOptionsBuilder`. It's also possible to register options for additional mods using `ConfigBuilder.registerModOptions`.
+The `ConfigBuilder` instance passed to the registration method allows quick and easy registration of a mod's own options using `ConfigBuilder.registerOwnModOptions`. The mod's id, name, version or a formatter for the existing version, and the color theme can be configured on the returned `ModOptionsBuilder`. It's also possible to register options for additional mods using `ConfigBuilder.registerModOptions`. Which mod is the "own" mod for `registerOwnModOptions` is determined by the mod that owns the metadata-based entrypoint or the mod id passed to the `@ConfigEntryPointForge("examplemod")` annotation.
 
 Each registered mod gets its own header in the page list. The color of the header and the corresponding entries is randomly selected from a predefined list by default, but can be customized using `ModOptionsBuilder.setColorTheme`. A color theme is created either by specifying three RGB colors or a single base color with the lighter and darker colors getting derived automatically.
 

@@ -1,23 +1,23 @@
 package net.caffeinemc.mods.sodium.client.config.structure;
 
 import net.caffeinemc.mods.sodium.api.config.structure.*;
+import net.caffeinemc.mods.sodium.client.config.ConfigManager;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 
 public class ConfigBuilderImpl implements ConfigBuilder {
     private final List<ModOptionsBuilderImpl> pendingModConfigBuilders = new ArrayList<>(1);
 
+    private final Function<String, ConfigManager.ModMetadata> modInfoFunction;
     private final String defaultNamespace;
-    private final String defaultName;
-    private final String defaultVersion;
 
-    public ConfigBuilderImpl(String defaultNamespace, String defaultName, String defaultVersion) {
+    public ConfigBuilderImpl(Function<String, ConfigManager.ModMetadata> modInfoFunction, String defaultNamespace) {
+        this.modInfoFunction = modInfoFunction;
         this.defaultNamespace = defaultNamespace;
-        this.defaultName = defaultName;
-        this.defaultVersion = defaultVersion;
     }
 
     public Collection<ModOptions> build() {
@@ -36,8 +36,14 @@ public class ConfigBuilderImpl implements ConfigBuilder {
     }
 
     @Override
+    public ModOptionsBuilder registerModOptions(String namespace) {
+        var metadata = this.modInfoFunction.apply(namespace);
+        return this.registerModOptions(namespace, metadata.modName(), metadata.modVersion());
+    }
+
+    @Override
     public ModOptionsBuilder registerOwnModOptions() {
-        return this.registerModOptions(this.defaultNamespace, this.defaultName, this.defaultVersion);
+        return this.registerModOptions(this.defaultNamespace);
     }
 
     @Override

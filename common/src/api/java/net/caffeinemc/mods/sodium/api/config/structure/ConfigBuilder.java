@@ -5,6 +5,8 @@ import net.minecraft.resources.ResourceLocation;
 public interface ConfigBuilder {
     ModOptionsBuilder registerModOptions(String namespace, String name, String version);
 
+    ModOptionsBuilder registerModOptions(String namespace);
+
     ModOptionsBuilder registerOwnModOptions();
 
     OptionOverrideBuilder createOptionOverride();

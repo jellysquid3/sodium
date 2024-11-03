@@ -18,20 +18,29 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class ConfigManager {
-    public static final String JSON_KEY_SODIUM_CONFIG_INTEGRATIONS = "sodium:config_api_user";
+    public static final String CONFIG_ENTRY_POINT_KEY = "sodium:config_api_user";
 
-    private record ConfigUser(Supplier<ConfigEntryPoint> configEntrypoint, String modId, String modName,
-                              String modVersion) {
+    private record ConfigUser(
+            Supplier<ConfigEntryPoint> configEntrypoint,
+            String modId) {
+    }
+    public record ModMetadata(String modName, String modVersion) {
     }
 
     private static final Collection<ConfigUser> configUsers = new ArrayList<>();
 
     public static Config CONFIG;
+    private static Function<String, ModMetadata> modInfoFunction;
 
-    public static void registerConfigEntryPoint(String className, String modId, String modName, String modVersion) {
+    public static void setModInfoFunction(Function<String, ModMetadata> modInfoFunction) {
+        ConfigManager.modInfoFunction = modInfoFunction;
+    }
+
+    public static void registerConfigEntryPoint(String className, String modId) {
         Class<?> entryPointClass;
         try {
             entryPointClass = Class.forName(className);
@@ -53,11 +62,11 @@ public class ConfigManager {
                 SodiumClientMod.logger().warn("Mod '{}' provided a custom config integration but the class could not be constructed: {}", modId, entryPointClass);
             }
             return null;
-        }, modId, modName, modVersion);
+        }, modId);
     }
 
-    public static void registerConfigEntryPoint(Supplier<ConfigEntryPoint> entryPoint, String modId, String modName, String modVersion) {
-        configUsers.add(new ConfigUser(entryPoint, modId, modName, modVersion));
+    public static void registerConfigEntryPoint(Supplier<ConfigEntryPoint> entryPoint, String modId) {
+        configUsers.add(new ConfigUser(entryPoint, modId));
     }
 
     public static void registerConfigsEarly() {
@@ -79,7 +88,7 @@ public class ConfigManager {
                 continue;
             }
 
-            var builder = new ConfigBuilderImpl(configUser.modId, configUser.modName, configUser.modVersion);
+            var builder = new ConfigBuilderImpl(modInfoFunction, configUser.modId);
             Collection<ModOptions> builtConfigs;
             try {
                 registerMethod.accept(entryPoint, builder);

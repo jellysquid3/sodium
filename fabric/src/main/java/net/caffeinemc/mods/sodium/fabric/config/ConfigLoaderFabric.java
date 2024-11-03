@@ -6,21 +6,20 @@ import net.caffeinemc.mods.sodium.client.gui.SodiumConfigBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class ConfigLoaderFabric {
+    private static ConfigManager.ModMetadata getModMetadata(String modId) {
+        var mod = FabricLoader.getInstance().getModContainer(modId).orElseThrow(NullPointerException::new);
+        var metadata = mod.getMetadata();
+        return new ConfigManager.ModMetadata(metadata.getName(), metadata.getVersion().getFriendlyString());
+    }
+
     public static void collectConfigEntryPoints() {
-        var entryPointContainers = FabricLoader.getInstance().getEntrypointContainers(ConfigManager.JSON_KEY_SODIUM_CONFIG_INTEGRATIONS, ConfigEntryPoint.class);
+        ConfigManager.setModInfoFunction(ConfigLoaderFabric::getModMetadata);
+
+        var entryPointContainers = FabricLoader.getInstance().getEntrypointContainers(ConfigManager.CONFIG_ENTRY_POINT_KEY, ConfigEntryPoint.class);
         for (var container : entryPointContainers) {
-            var mod = container.getProvider();
-            var metadata = mod.getMetadata();
-
-            var modId = metadata.getId();
-            var modName = metadata.getName();
-            var modVersion = metadata.getVersion().getFriendlyString();
-
-            ConfigManager.registerConfigEntryPoint(container::getEntrypoint, modId, modName, modVersion);
+            ConfigManager.registerConfigEntryPoint(container::getEntrypoint, container.getProvider().getMetadata().getId());
         }
 
-        var sodiumMod = FabricLoader.getInstance().getModContainer("sodium").orElseThrow(NullPointerException::new);
-        var sodiumMetadata = sodiumMod.getMetadata();
-        ConfigManager.registerConfigEntryPoint(SodiumConfigBuilder::new, sodiumMetadata.getId(), sodiumMetadata.getName(), sodiumMetadata.getVersion().getFriendlyString());
+        ConfigManager.registerConfigEntryPoint(SodiumConfigBuilder::new, "sodium");
     }
 }
