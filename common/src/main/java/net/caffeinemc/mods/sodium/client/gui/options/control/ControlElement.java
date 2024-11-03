@@ -70,7 +70,6 @@ public abstract class ControlElement extends AbstractWidget {
         return truncateTextToFit(name, this.getWidth() - this.getContentWidth() - 20);
     }
 
-
     @Override
     public int getY() {
         return super.getY() - this.list.getScrollAmount();

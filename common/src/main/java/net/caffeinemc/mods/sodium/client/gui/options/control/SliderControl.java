@@ -7,10 +7,8 @@ import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import org.apache.commons.lang3.Validate;
 
