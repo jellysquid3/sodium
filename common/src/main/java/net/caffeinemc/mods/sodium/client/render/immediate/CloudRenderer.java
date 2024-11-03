@@ -78,7 +78,8 @@ public class CloudRenderer {
 
         // -1 if below clouds, +1 if above clouds
         var cloudType = Minecraft.getInstance().options.getCloudsType();
-        int orientation = cloudType == CloudStatus.FANCY ? (int) Math.signum(pos.y() - cloudHeight) : 0;
+        var relativeCloudY = cloudHeight - (float) pos.y() + 0.33F;
+        int orientation = cloudType == CloudStatus.FANCY ? (int) Math.signum(-relativeCloudY) : 0;
         var parameters = new CloudGeometryParameters(centerCellX, centerCellZ, cloudDistance, orientation, cloudType);
 
         CloudGeometry geometry = this.cachedGeometry;
@@ -95,9 +96,8 @@ public class CloudRenderer {
         final float translateX = (float) (cloudCenterX - (centerCellX * 12));
         final float translateZ = (float) (cloudCenterZ - (centerCellZ * 12));
 
-
         Matrix4f modelViewMatrix = new Matrix4f(modelView);
-        modelViewMatrix.translate(-translateX, cloudHeight - (float) pos.y() + 0.33F, -translateZ);
+        modelViewMatrix.translate(-translateX, relativeCloudY, -translateZ);
 
         final var prevShaderFog = copyFog(RenderSystem.getShaderFog());
 
