@@ -80,8 +80,6 @@ public class TickBoxControl implements Control {
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (this.option.isEnabled() && button == 0 && this.isMouseOver(mouseX, mouseY)) {
                 toggleControl();
-                this.playClickSound();
-
                 return true;
             }
 
@@ -94,15 +92,15 @@ public class TickBoxControl implements Control {
 
             if (CommonInputs.selected(keyCode)) {
                 toggleControl();
-                this.playClickSound();
-
                 return true;
             }
 
             return false;
         }
 
-        public void toggleControl() {
+        private void toggleControl() {
+            this.playClickSound();
+
             this.option.modifyValue(!this.option.getValidatedValue());
         }
     }

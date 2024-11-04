@@ -69,8 +69,6 @@ public class CyclingControl<T extends Enum<T>> implements Control {
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (this.option.isEnabled() && button == 0 && this.isMouseOver(mouseX, mouseY)) {
                 cycleControl(Screen.hasShiftDown());
-                this.playClickSound();
-
                 return true;
             }
 
@@ -89,7 +87,9 @@ public class CyclingControl<T extends Enum<T>> implements Control {
             return false;
         }
 
-        public void cycleControl(boolean reverse) {
+        private void cycleControl(boolean reverse) {
+            this.playClickSound();
+
             var currentValue = this.option.getValidatedValue();
             int startIndex = 0;
             for (; startIndex < this.baseValues.length; startIndex++) {
