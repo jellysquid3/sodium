@@ -362,9 +362,14 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                                     }
                                 })
                                 .setEnabledProvider(
-                                        (state) -> this.monitor != null &&
-                                                OsUtils.getOs() == OsUtils.OperatingSystem.WIN &&
-                                                state.readBooleanOption(ResourceLocation.parse("sodium:general.fullscreen")),
+                                        (state) -> {
+                                            if (this.monitor == null) {
+                                                return false;
+                                            }
+                                            var os = OsUtils.getOs();
+                                            return (os == OsUtils.OperatingSystem.WIN || os == OsUtils.OperatingSystem.MAC) &&
+                                                    state.readBooleanOption(ResourceLocation.parse("sodium:general.fullscreen"));
+                                        },
                                         ResourceLocation.parse("sodium:general.fullscreen"))
                 )
                 .addOption(
