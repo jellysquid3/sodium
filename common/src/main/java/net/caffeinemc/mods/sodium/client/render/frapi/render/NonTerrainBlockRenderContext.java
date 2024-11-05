@@ -18,10 +18,11 @@ package net.caffeinemc.mods.sodium.client.render.frapi.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.caffeinemc.mods.sodium.api.util.ColorARGB;
+import net.caffeinemc.mods.sodium.api.util.ColorMixer;
 import net.caffeinemc.mods.sodium.client.model.light.LightMode;
 import net.caffeinemc.mods.sodium.client.model.light.LightPipelineProvider;
 import net.caffeinemc.mods.sodium.client.model.light.data.SingleBlockLightDataCache;
-import net.caffeinemc.mods.sodium.client.render.frapi.helper.ColorHelper;
 import net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableQuadViewImpl;
 import net.caffeinemc.mods.sodium.client.render.texture.SpriteFinderCache;
 import net.caffeinemc.mods.sodium.client.render.texture.SpriteUtil;
@@ -109,7 +110,7 @@ public class NonTerrainBlockRenderContext extends AbstractBlockRenderContext {
             final int blockColor = 0xFF000000 | this.colorMap.getColor(this.state, this.level, this.pos, colorIndex);
 
             for (int i = 0; i < 4; i++) {
-                quad.color(i, ColorHelper.multiplyColor(blockColor, quad.color(i)));
+                quad.color(i, ColorMixer.mulComponentWise(blockColor, quad.color(i)));
             }
         }
     }
@@ -121,7 +122,7 @@ public class NonTerrainBlockRenderContext extends AbstractBlockRenderContext {
         float[] brightnesses = this.quadLightData.br;
 
         for (int i = 0; i < 4; i++) {
-            quad.color(i, ColorHelper.multiplyRGB(quad.color(i), brightnesses[i]));
+            quad.color(i, ColorARGB.mulRGB(quad.color(i), brightnesses[i]));
         }
     }
 

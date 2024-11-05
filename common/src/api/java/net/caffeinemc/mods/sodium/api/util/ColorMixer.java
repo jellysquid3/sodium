@@ -38,7 +38,27 @@ public class ColorMixer {
     }
 
     /**
-     * <p>Multiplies each 8-bit component of the packed 32-bit color.</p>
+     * <p>Multiplies the packed 8-bit values component-wise to produce 16-bit intermediaries, and then round to the
+     * nearest 8-bit representation (similar to floating-point.)</p>
+     *
+     * @param color0 The first color to multiply
+     * @param color1 The second color to multiply
+     * @return The product of the two colors
+     */
+    public static int mulComponentWise(int color0, int color1) {
+        int comp0 = ((((color0 >>>  0) & 0xFF) * ((color1 >>>  0) & 0xFF)) + 0xFF) >>> 8;
+        int comp1 = ((((color0 >>>  8) & 0xFF) * ((color1 >>>  8) & 0xFF)) + 0xFF) >>> 8;
+        int comp2 = ((((color0 >>> 16) & 0xFF) * ((color1 >>> 16) & 0xFF)) + 0xFF) >>> 8;
+        int comp3 = ((((color0 >>> 24) & 0xFF) * ((color1 >>> 24) & 0xFF)) + 0xFF) >>> 8;
+
+        return (comp0 << 0) | (comp1 << 8) | (comp2 << 16) | (comp3 << 24);
+    }
+
+    /**
+     * <p>Multiplies each 8-bit component against the factor to produce 16-bit intermediaries, and then round to the
+     * nearest 8-bit representation (similar to floating-point.)</p>
+     *
+     * <p>The results are undefined if {@param factor} is not within the interval [0, 255].</p>
      *
      * @param color The packed color values
      * @param factor The multiplication factor (in 0..255 range)
@@ -49,5 +69,15 @@ public class ColorMixer {
                             (((((color & 0xFF00FF00L) * factor) + 0xFF00FF00L) >>> 8) & 0xFF00FF00L);
 
         return (int) result;
+    }
+
+    /**
+     * See {@link #mul(int, int)}, which this function is identical to, except that it takes a floating point value in
+     * the interval of [0.0, 1.0] and maps it to [0, 255].
+     *
+     * <p>The results are undefined if {@param factor} is not within the interval [0.0, 1.0].</p>
+     */
+    public static int mul(int color, float factor) {
+        return mul(color, ColorU8.normalizedFloatToByte(factor));
     }
 }

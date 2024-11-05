@@ -350,7 +350,7 @@ public class CloudRenderer {
             long ptr = buffer;
             int count = 0;
 
-            int mixedColor = ColorABGR.darken(color, CloudFace.POS_Y.getShade());
+            int mixedColor = ColorABGR.mulRGB(color, CloudFace.POS_Y.getShade());
 
             ptr = writeVertex(ptr, x + 12.0f, 0.0f, z + 12.0f, mixedColor);
             ptr = writeVertex(ptr, x +  0.0f, 0.0f, z + 12.0f, mixedColor);
@@ -376,7 +376,7 @@ public class CloudRenderer {
                 }
 
                 final var vertices = VERTICES[face.ordinal()];
-                final int color = ColorABGR.darken(baseColor, face.getShade());
+                final int color = ColorABGR.mulRGB(baseColor, face.getShade());
 
                 for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
                     Vector3f vertex = vertices[interior ? 3 - vertexIndex : vertexIndex];
