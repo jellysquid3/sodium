@@ -1,5 +1,7 @@
 package net.caffeinemc.mods.sodium.api.util;
 
+import org.jetbrains.annotations.ApiStatus;
+
 /**
  * A collection of optimized color mixing functions which directly operate on packed color values. These functions are
  * agnostic to the ordering of color channels, and the output value will always use the same channel ordering as
@@ -35,6 +37,43 @@ public class ColorMixer {
      */
     public static int mix(int start, int end, float weight) {
         return mix(start, end, ColorU8.normalizedFloatToByte(weight));
+    }
+
+    /**
+     * <p>Performs bi-linear interpolation on a 2x2 matrix of color values to derive the point (x, y). This is more
+     * efficient than chaining {@link #mul(int, float)} calls.</p>
+     *
+     * <p>The results are undefined if {@param x} and {@param y} are not within the interval [0.0, 1.0].</p>
+     *
+     * @param m00 The packed color value for (0, 0)
+     * @param m01 The packed color value for (0, 1)
+     * @param m10 The packed color value for (1, 0)
+     * @param m11 The packed color value for (1, 1)
+     * @param x The amount to interpolate between x=0 and x=1
+     * @param y The amount to interpolate between y=0 and y=1
+     * @return The interpolated color value
+     */
+    @ApiStatus.Experimental
+    public static int mix2d(int m00, int m01, int m10, int m11, float x, float y) {
+        // The weights for each row and column in the matrix
+        int x1 = ColorU8.normalizedFloatToByte(x), x0 = 255 - x1;
+        int y1 = ColorU8.normalizedFloatToByte(y), y0 = 255 - y1;
+
+        // Blend across the X-axis
+        // (M00 * X0) + (M10 * X1)
+        long row0a = ((((m00 & 0x00FF00FFL) * x0) + (((m10 & 0x00FF00FFL) * x1)) + 0x00FF00FFL) >>> 8) & 0x00FF00FFL;
+        long row0b = ((((m00 & 0xFF00FF00L) * x0) + (((m10 & 0xFF00FF00L) * x1)) + 0xFF00FF00L) >>> 8) & 0xFF00FF00L;
+
+        // (M10 * X0) + (M11 * X1)
+        long row1a = ((((m01 & 0x00FF00FFL) * x0) + (((m11 & 0x00FF00FFL) * x1)) + 0x00FF00FFL) >>> 8) & 0x00FF00FFL;
+        long row1b = ((((m01 & 0xFF00FF00L) * x0) + (((m11 & 0xFF00FF00L) * x1)) + 0xFF00FF00L) >>> 8) & 0xFF00FF00L;
+
+        // Blend across the Y-axis
+        // (ROW0 * Y0) + (ROW1 * Y1)
+        long result = ((((row0a * y0) + ((row1a * y1)) + 0x00FF00FFL) >>> 8) & 0x00FF00FFL) |
+                      ((((row0b * y0) + ((row1b * y1)) + 0xFF00FF00L) >>> 8) & 0xFF00FF00L);
+
+        return (int) result;
     }
 
     /**
