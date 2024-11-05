@@ -4,11 +4,11 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import net.caffeinemc.mods.sodium.api.util.ColorU8;
 import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
 import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
-import net.caffeinemc.mods.sodium.api.util.ColorMixer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.Minecraft;
@@ -350,7 +350,7 @@ public class CloudRenderer {
             long ptr = buffer;
             int count = 0;
 
-            int mixedColor = ColorMixer.mul(color, CloudFace.POS_Y.getColor());
+            int mixedColor = ColorABGR.darken(color, CloudFace.POS_Y.getShade());
 
             ptr = writeVertex(ptr, x + 12.0f, 0.0f, z + 12.0f, mixedColor);
             ptr = writeVertex(ptr, x +  0.0f, 0.0f, z + 12.0f, mixedColor);
@@ -376,7 +376,7 @@ public class CloudRenderer {
                 }
 
                 final var vertices = VERTICES[face.ordinal()];
-                final int color = ColorMixer.mul(baseColor, face.getColor());
+                final int color = ColorABGR.darken(baseColor, face.getShade());
 
                 for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
                     Vector3f vertex = vertices[interior ? 3 - vertexIndex : vertexIndex];
@@ -459,24 +459,24 @@ public class CloudRenderer {
     }
 
     private enum CloudFace {
-        NEG_Y(ColorABGR.pack(0.7F, 0.7F, 0.7F, 1.0f)),
-        POS_Y(ColorABGR.pack(1.0f, 1.0f, 1.0f, 1.0f)),
-        NEG_X(ColorABGR.pack(0.9F, 0.9F, 0.9F, 1.0f)),
-        POS_X(ColorABGR.pack(0.9F, 0.9F, 0.9F, 1.0f)),
-        NEG_Z(ColorABGR.pack(0.8F, 0.8F, 0.8F, 1.0f)),
-        POS_Z(ColorABGR.pack(0.8F, 0.8F, 0.8F, 1.0f));
+        NEG_Y(0.7F),
+        POS_Y(1.0f),
+        NEG_X(0.9F),
+        POS_X(0.9F),
+        NEG_Z(0.8F),
+        POS_Z(0.8F);
 
         public static final CloudFace[] VALUES = CloudFace.values();
         public static final int COUNT = VALUES.length;
 
-        private final int color;
+        private final int shade;
 
-        CloudFace(int color) {
-            this.color = color;
+        CloudFace(float shade) {
+            this.shade = ColorU8.normalizedFloatToByte(shade);
         }
 
-        public int getColor() {
-            return this.color;
+        public int getShade() {
+            return this.shade;
         }
     }
 

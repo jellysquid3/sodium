@@ -9,10 +9,16 @@ package net.caffeinemc.mods.sodium.api.util;
  * | Alpha     | Blue      | Green     | Red        |
  */
 public class ColorABGR implements ColorU8 {
-    private static final int RED_COMPONENT_OFFSET = 0;
+    private static final int RED_COMPONENT_OFFSET   = 0;
     private static final int GREEN_COMPONENT_OFFSET = 8;
-    private static final int BLUE_COMPONENT_OFFSET = 16;
+    private static final int BLUE_COMPONENT_OFFSET  = 16;
     private static final int ALPHA_COMPONENT_OFFSET = 24;
+
+    private static final int RED_COMPONENT_MASK     = COMPONENT_MASK << RED_COMPONENT_OFFSET;
+    private static final int GREEN_COMPONENT_MASK   = COMPONENT_MASK << GREEN_COMPONENT_OFFSET;
+    private static final int BLUE_COMPONENT_MASK    = COMPONENT_MASK << BLUE_COMPONENT_OFFSET;
+    private static final int ALPHA_COMPONENT_MASK   = COMPONENT_MASK << ALPHA_COMPONENT_OFFSET;
+
 
     /**
      * Packs the specified color components into ABGR format. The alpha component is fully opaque.
@@ -97,5 +103,16 @@ public class ColorABGR implements ColorU8 {
      */
     public static int unpackAlpha(int color) {
         return (color >> ALPHA_COMPONENT_OFFSET) & COMPONENT_MASK;
+    }
+
+    /**
+     * Darkens the RGB components of the color by multiplying them with the provided factor. The alpha component is
+     * not modified.
+     * 
+     * @param color The packed 32-bit ABGR color to be multiplied
+     * @param factor The darkening factor (in the range of 0..255) to multiply with
+     */
+    public static int darken(int color, int factor) {
+        return (ColorMixer.mul(color, factor) & ~ALPHA_COMPONENT_MASK) | (color & ALPHA_COMPONENT_MASK);
     }
 }
