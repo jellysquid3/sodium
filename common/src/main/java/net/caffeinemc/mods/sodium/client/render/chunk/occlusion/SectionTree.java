@@ -37,7 +37,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         this.buildDistance = buildDistance;
         this.frame = frame;
 
-        this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
+        this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ, this.buildDistance);
     }
 
     protected Tree makeSecondaryTree() {
@@ -45,7 +45,8 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         return new Tree(
                 this.baseOffsetX + SECONDARY_TREE_OFFSET_XZ,
                 this.baseOffsetY,
-                this.baseOffsetZ + SECONDARY_TREE_OFFSET_XZ);
+                this.baseOffsetZ + SECONDARY_TREE_OFFSET_XZ,
+                this.buildDistance);
     }
 
     public int getFrame() {
@@ -150,7 +151,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         }
     }
 
-    public class Tree {
+    public static class Tree {
         private static final int INSIDE_FRUSTUM = 0b01;
         private static final int INSIDE_DISTANCE = 0b10;
         private static final int FULLY_INSIDE = 0b11;
@@ -159,6 +160,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         protected final long[] treeReduced = new long[64];
         public long treeDoubleReduced = 0L;
         protected final int offsetX, offsetY, offsetZ;
+        private final float buildDistance;
 
         // set temporarily during traversal
         private int cameraOffsetX, cameraOffsetY, cameraOffsetZ;
@@ -166,10 +168,11 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         protected Viewport viewport;
         private float distanceLimit;
 
-        public Tree(int offsetX, int offsetY, int offsetZ) {
+        public Tree(int offsetX, int offsetY, int offsetZ, float buildDistance) {
             this.offsetX = offsetX;
             this.offsetY = offsetY;
             this.offsetZ = offsetZ;
+            this.buildDistance = buildDistance;
         }
 
         public boolean add(int x, int y, int z) {
@@ -254,7 +257,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
             this.cameraOffsetZ = (transform.intZ >> 4) - this.offsetZ + 1;
 
             // everything is already inside the distance limit if the build distance is smaller
-            var initialInside = this.distanceLimit >= SectionTree.this.buildDistance ? INSIDE_DISTANCE : 0;
+            var initialInside = this.distanceLimit >= this.buildDistance ? INSIDE_DISTANCE : 0;
             this.traverse(getChildOrderModulator(0, 0, 0, 1 << 5), 0, 5, initialInside);
 
             this.visitor = null;

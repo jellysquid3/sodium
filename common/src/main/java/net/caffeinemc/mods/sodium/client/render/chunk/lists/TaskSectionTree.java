@@ -14,7 +14,7 @@ public class TaskSectionTree extends RayOcclusionSectionTree {
     public TaskSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
         super(viewport, buildDistance, frame, cullType, level);
 
-        this.mainTaskTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
+        this.mainTaskTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ, this.buildDistance);
     }
 
     @Override
