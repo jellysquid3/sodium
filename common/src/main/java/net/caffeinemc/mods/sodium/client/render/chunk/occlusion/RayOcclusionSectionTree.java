@@ -138,13 +138,13 @@ public class RayOcclusionSectionTree extends SectionTree {
         }
 
         @Override
-        protected FlatTree[] makeTrees(int length) {
-            return new FlatTree[length];
+        protected FlatTree makeTree(int offsetX, int offsetY, int offsetZ) {
+            return new FlatTree(offsetX, offsetY, offsetZ);
         }
 
         @Override
-        protected FlatTree makeTree(int offsetX, int offsetY, int offsetZ) {
-            return new FlatTree(offsetX, offsetY, offsetZ);
+        protected FlatTree[] makeTrees(int length) {
+            return new FlatTree[length];
         }
     }
 
