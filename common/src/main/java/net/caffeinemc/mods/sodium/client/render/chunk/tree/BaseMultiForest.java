@@ -9,7 +9,7 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
     public BaseMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
         super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
 
-        this.forestDim = (int) Math.ceil(buildDistance / 64.0);
+        this.forestDim = (int) Math.ceil((buildDistance / 8.0 + 1) / 64.0);
         this.trees = this.makeTrees(this.forestDim * this.forestDim * this.forestDim);
     }
 
@@ -62,6 +62,7 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
         var treeIndex = this.getTreeIndexAbsolute(x, y, z);
         var tree = this.trees[treeIndex];
         if (tree != null) {
+            this.lastTree = tree;
             return tree.getPresence(x, y, z);
         }
         return TraversableTree.OUT_OF_BOUNDS;

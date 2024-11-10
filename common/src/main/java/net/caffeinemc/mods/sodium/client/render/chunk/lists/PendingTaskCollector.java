@@ -22,9 +22,6 @@ TODO:
 - experiment with non-linear distance scaling (if < some radius, bonus priority for being close)
  */
 public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
-    // offset is shifted by 1 to encompass all sections towards the negative
-    // TODO: is this the correct way of calculating the minimum possible section index?
-    private static final int DISTANCE_OFFSET = 1;
     public static final int SECTION_Y_MIN = -128; // used instead of baseOffsetY to accommodate all permissible y values (-2048 to 2048 blocks)
 
     // tunable parameters for the priority calculation.
@@ -48,7 +45,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     public PendingTaskCollector(Viewport viewport, float buildDistance, boolean frustumTested) {
         this.creationTime = System.nanoTime();
         this.isFrustumTested = frustumTested;
-        var offsetDistance = Mth.ceil(buildDistance / 16.0f) + DISTANCE_OFFSET;
+        var offsetDistance = Mth.ceil(buildDistance / 16.0f) + 1;
 
         var transform = viewport.getTransform();
 
