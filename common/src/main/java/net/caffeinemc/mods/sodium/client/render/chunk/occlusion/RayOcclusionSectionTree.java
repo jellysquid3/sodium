@@ -2,6 +2,7 @@ package net.caffeinemc.mods.sodium.client.render.chunk.occlusion;
 
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
+import net.caffeinemc.mods.sodium.client.render.chunk.tree.*;
 import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.minecraft.world.level.Level;
@@ -12,21 +13,16 @@ public class RayOcclusionSectionTree extends SectionTree {
     private static final int RAY_TEST_MAX_STEPS = 12;
     private static final int MIN_RAY_TEST_DISTANCE_SQ = (int) Math.pow(16 * 3, 2);
 
-    private static final int IS_OBSTRUCTED = 0;
-    private static final int NOT_OBSTRUCTED = 1;
-    private static final int OUT_OF_BOUNDS = 2;
-
     private final CameraTransform transform;
     private final int minSection, maxSection;
 
-    private final PortalMap mainPortalTree;
-    private PortalMap secondaryPortalTree;
+    private final Forest portalTree;
 
     public RayOcclusionSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
-        super(viewport, buildDistance, frame, cullType);
+        super(viewport, buildDistance, frame, cullType, level);
 
         this.transform = viewport.getTransform();
-        this.mainPortalTree = new PortalMap(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
+        this.portalTree = createPortalTree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ, buildDistance, level);
 
         this.minSection = level.getMinSection();
         this.maxSection = level.getMaxSection();
@@ -52,7 +48,7 @@ public class RayOcclusionSectionTree extends SectionTree {
         this.lastSectionKnownEmpty = false;
 
         // mark all traversed sections as portals, even if they don't have terrain that needs rendering
-        this.markPortal(section.getChunkX(), section.getChunkY(), section.getChunkZ());
+        this.portalTree.add(section.getChunkX(), section.getChunkY(), section.getChunkZ());
     }
 
     private boolean isRayBlockedStepped(RenderSection section) {
@@ -83,37 +79,26 @@ public class RayOcclusionSectionTree extends SectionTree {
             y += dY;
             z += dZ;
 
+            // if the section is not present in the tree, the path to the camera is blocked
             var result = this.blockHasObstruction((int) x, (int) y, (int) z);
-            if (result == IS_OBSTRUCTED) {
+            if (result == Tree.NOT_PRESENT) {
                 // also test radius around to avoid false negatives
                 var radius = SECTION_HALF_DIAGONAL * (steps - i) * stepsInv;
 
                 // this pattern simulates a shape similar to the sweep of the section towards the camera
-                if (this.blockHasObstruction((int) (x - radius), (int) (y - radius), (int) (z - radius)) != IS_OBSTRUCTED ||
-                        this.blockHasObstruction((int) (x + radius), (int) (y + radius), (int) (z + radius)) != IS_OBSTRUCTED) {
+                if (this.blockHasObstruction((int) (x - radius), (int) (y - radius), (int) (z - radius)) != Tree.NOT_PRESENT ||
+                        this.blockHasObstruction((int) (x + radius), (int) (y + radius), (int) (z + radius)) != Tree.NOT_PRESENT) {
                     continue;
                 }
+
+                // the path is blocked because there's no visited section that gives a clear line of sight
                 return true;
-            } else if (result == OUT_OF_BOUNDS) {
+            } else if (result == Tree.OUT_OF_BOUNDS) {
                 break;
             }
         }
 
         return false;
-    }
-
-    protected void markPortal(int x, int y, int z) {
-        if (this.mainPortalTree.add(x, y, z)) {
-            if (this.secondaryPortalTree == null) {
-                this.secondaryPortalTree = new PortalMap(
-                        this.baseOffsetX + SECONDARY_TREE_OFFSET_XZ,
-                        this.baseOffsetY,
-                        this.baseOffsetZ + SECONDARY_TREE_OFFSET_XZ);
-            }
-            if (this.secondaryPortalTree.add(x, y, z)) {
-                throw new IllegalStateException("Failed to add section to portal trees");
-            }
-        }
     }
 
     private int blockHasObstruction(int x, int y, int z) {
@@ -122,52 +107,64 @@ public class RayOcclusionSectionTree extends SectionTree {
         z >>= 4;
 
         if (y < this.minSection || y >= this.maxSection) {
-            return OUT_OF_BOUNDS;
+            return Tree.OUT_OF_BOUNDS;
         }
 
-        var result = this.mainPortalTree.getObstruction(x, y, z);
-        if (result == OUT_OF_BOUNDS && this.secondaryPortalTree != null) {
-            return this.secondaryPortalTree.getObstruction(x, y, z);
-        }
-        return result;
+        return this.portalTree.getPresence(x, y, z);
     }
 
-    protected class PortalMap {
-        protected final long[] bitmap = new long[64 * 64];
-        protected final int offsetX, offsetY, offsetZ;
-
-        public PortalMap(int offsetX, int offsetY, int offsetZ) {
-            this.offsetX = offsetX;
-            this.offsetY = offsetY;
-            this.offsetZ = offsetZ;
+    private static Forest createPortalTree(int baseOffsetX,int baseOffsetY, int baseOffsetZ, float buildDistance, Level level) {
+        if (BaseBiForest.checkApplicable(buildDistance, level)) {
+            return new PortalBiForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
         }
 
-        public boolean add(int x, int y, int z) {
+        return new PortalManyForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
+    }
+
+    private static class PortalBiForest extends BaseBiForest<FlatTree> {
+        public PortalBiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
+            super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
+        }
+
+        @Override
+        protected FlatTree makeTree(int offsetX, int offsetY, int offsetZ) {
+            return new FlatTree(offsetX, offsetY, offsetZ);
+        }
+    }
+
+    private static class PortalManyForest extends BaseManyForest<FlatTree> {
+        public PortalManyForest(int baseOffsetX,int baseOffsetY, int baseOffsetZ, float buildDistance) {
+            super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
+        }
+
+        @Override
+        protected FlatTree[] makeTrees(int length) {
+            return new FlatTree[length];
+        }
+
+        @Override
+        protected FlatTree makeTree(int offsetX, int offsetY, int offsetZ) {
+            return new FlatTree(offsetX, offsetY, offsetZ);
+        }
+    }
+
+    protected static class FlatTree extends Tree {
+        public FlatTree(int offsetX, int offsetY, int offsetZ) {
+            super(offsetX, offsetY, offsetZ);
+        }
+
+        @Override
+        public int getPresence(int x, int y, int z) {
             x -= this.offsetX;
             y -= this.offsetY;
             z -= this.offsetZ;
-            if (Tree.isOutOfBounds(x, y, z)) {
-                return true;
+            if (isOutOfBounds(x, y, z)) {
+                return Tree.OUT_OF_BOUNDS;
             }
 
-            var bitIndex = Tree.interleave6x3(x, y, z);
-            this.bitmap[bitIndex >> 6] |= 1L << (bitIndex & 0b111111);
-
-            return false;
-        }
-
-
-        public int getObstruction(int x, int y, int z) {
-            x -= this.offsetX;
-            y -= this.offsetY;
-            z -= this.offsetZ;
-            if (Tree.isOutOfBounds(x, y, z)) {
-                return OUT_OF_BOUNDS;
-            }
-
-            var bitIndex = Tree.interleave6x3(x, y, z);
+            var bitIndex = interleave6x3(x, y, z);
             var mask = 1L << (bitIndex & 0b111111);
-            return (this.bitmap[bitIndex >> 6] & mask) == 0 ? IS_OBSTRUCTED : NOT_OBSTRUCTED;
+            return (this.tree[bitIndex >> 6] & mask) == 0 ? Tree.NOT_PRESENT : Tree.PRESENT;
         }
     }
 }

@@ -25,7 +25,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     // offset is shifted by 1 to encompass all sections towards the negative
     // TODO: is this the correct way of calculating the minimum possible section index?
     private static final int DISTANCE_OFFSET = 1;
-    private static final int SECTION_Y_MIN = -128; // used instead of baseOffsetY to accommodate all permissible y values (-2048 to 2048 blocks)
+    public static final int SECTION_Y_MIN = -128; // used instead of baseOffsetY to accommodate all permissible y values (-2048 to 2048 blocks)
 
     // tunable parameters for the priority calculation.
     // each "gained" point means a reduction in the final priority score (lowest score processed first)
@@ -57,7 +57,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         var cameraSectionY = transform.intY >> 4;
         var cameraSectionZ = transform.intZ >> 4;
         this.baseOffsetX = cameraSectionX - offsetDistance;
-        this.baseOffsetY = -4; // bottom of a normal world
+        this.baseOffsetY = cameraSectionY - offsetDistance;
         this.baseOffsetZ = cameraSectionZ - offsetDistance;
 
         this.invMaxDistance = PROXIMITY_FACTOR / buildDistance;
@@ -94,7 +94,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         var localX = section.getChunkX() - this.baseOffsetX;
         var localY = section.getChunkY() - SECTION_Y_MIN;
         var localZ = section.getChunkZ() - this.baseOffsetZ;
-        long taskCoordinate = (long) (localX & 0xFF) << 16 | (long) (localY & 0xFF) << 8 | (long) (localZ & 0xFF);
+        long taskCoordinate = (long) (localX & 0b1111111111) << 20 | (long) (localY & 0b1111111111) << 10 | (long) (localZ & 0b1111111111);
 
         var queue = this.pendingTasks[type.getDeferMode().ordinal()];
         if (queue == null) {
@@ -103,7 +103,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         }
 
         // encode the priority and the section position into a single long such that all parts can be later decoded
-         queue.add((long) MathUtil.floatToComparableInt(priority) << 32 | taskCoordinate);
+        queue.add((long) MathUtil.floatToComparableInt(priority) << 32 | taskCoordinate);
     }
 
     private float getSectionPriority(RenderSection section, ChunkUpdateType type) {
@@ -163,9 +163,9 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         }
 
         public RenderSection decodeAndFetchSection(Long2ReferenceMap<RenderSection> sectionByPosition, long encoded) {
-            var localX = (int) (encoded >>> 16) & 0xFF;
-            var localY = (int) (encoded >>> 8) & 0xFF;
-            var localZ = (int) (encoded & 0xFF);
+            var localX = (int) (encoded >>> 20) & 0b1111111111;
+            var localY = (int) (encoded >>> 10) & 0b1111111111;
+            var localZ = (int) (encoded & 0b1111111111);
 
             var globalX = localX + PendingTaskCollector.this.baseOffsetX;
             var globalY = localY + SECTION_Y_MIN;

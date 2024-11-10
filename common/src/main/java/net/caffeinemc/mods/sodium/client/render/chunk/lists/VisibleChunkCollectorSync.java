@@ -7,6 +7,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.CullType;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.minecraft.world.level.Level;
 
 /**
  * The sync visible chunk collector is passed into the graph search occlusion culler to collect visible chunks.
@@ -14,8 +15,8 @@ import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 public class VisibleChunkCollectorSync extends SectionTree {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
 
-    public VisibleChunkCollectorSync(Viewport viewport, float buildDistance, int frame, CullType cullType) {
-        super(viewport, buildDistance, frame, cullType);
+    public VisibleChunkCollectorSync(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
+        super(viewport, buildDistance, frame, cullType, level);
         this.sortedRenderLists = new ObjectArrayList<>();
     }
 
