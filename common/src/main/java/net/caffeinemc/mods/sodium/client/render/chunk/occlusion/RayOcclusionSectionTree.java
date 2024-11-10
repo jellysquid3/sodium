@@ -118,7 +118,7 @@ public class RayOcclusionSectionTree extends SectionTree {
             return new PortalBiForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
         }
 
-        return new PortalManyForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
+        return new PortalMultiForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
     }
 
     private static class PortalBiForest extends BaseBiForest<FlatTree> {
@@ -132,8 +132,8 @@ public class RayOcclusionSectionTree extends SectionTree {
         }
     }
 
-    private static class PortalManyForest extends BaseManyForest<FlatTree> {
-        public PortalManyForest(int baseOffsetX,int baseOffsetY, int baseOffsetZ, float buildDistance) {
+    private static class PortalMultiForest extends BaseMultiForest<FlatTree> {
+        public PortalMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
             super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
         }
 

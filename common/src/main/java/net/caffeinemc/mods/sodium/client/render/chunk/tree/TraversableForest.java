@@ -18,6 +18,6 @@ public interface TraversableForest extends Forest {
             return new TraversableBiForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
         }
 
-        return new TraversableManyForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
+        return new TraversableMultiForest(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
     }
 }

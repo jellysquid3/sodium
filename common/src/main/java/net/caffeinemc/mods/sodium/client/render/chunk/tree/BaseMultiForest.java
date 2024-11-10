@@ -1,12 +1,12 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.tree;
 
-public abstract class BaseManyForest<T extends Tree> extends BaseForest<T> {
+public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
     protected final T[] trees;
     protected final int forestDim;
 
     protected T lastTree;
 
-    public BaseManyForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
+    public BaseMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
         super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
 
         this.forestDim = (int) Math.ceil(buildDistance / 64.0);

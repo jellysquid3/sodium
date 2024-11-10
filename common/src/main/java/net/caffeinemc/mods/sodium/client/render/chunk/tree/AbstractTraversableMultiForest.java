@@ -4,8 +4,8 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
-public class TraversableManyForest extends BaseManyForest<TraversableTree> implements TraversableForest {
-    public TraversableManyForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
+public abstract class AbstractTraversableMultiForest<T extends TraversableTree> extends BaseMultiForest<T> implements TraversableForest {
+    public AbstractTraversableMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
         super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
     }
 
@@ -51,13 +51,4 @@ public class TraversableManyForest extends BaseManyForest<TraversableTree> imple
         }
     }
 
-    @Override
-    protected TraversableTree makeTree(int offsetX, int offsetY, int offsetZ) {
-        return new TraversableTree(offsetX, offsetY, offsetZ);
-    }
-
-    @Override
-    protected TraversableTree[] makeTrees(int length) {
-        return new TraversableTree[length];
-    }
 }
