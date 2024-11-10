@@ -24,8 +24,8 @@ public class RayOcclusionSectionTree extends SectionTree {
         this.transform = viewport.getTransform();
         this.portalTree = createPortalTree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ, buildDistance, level);
 
-        this.minSection = level.getMinSection();
-        this.maxSection = level.getMaxSection();
+        this.minSection = level.getMinSectionY();
+        this.maxSection = level.getMaxSectionY();
     }
 
     @Override
