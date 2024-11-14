@@ -6,11 +6,16 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
 
     protected T lastTree;
 
-    public BaseMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
+    public BaseMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ,float buildDistance) {
         super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
 
-        this.forestDim = (int) Math.ceil((buildDistance / 8.0 + 1) / 64.0);
+        this.forestDim = forestDimFromBuildDistance(buildDistance);
         this.trees = this.makeTrees(this.forestDim * this.forestDim * this.forestDim);
+    }
+
+    public static int forestDimFromBuildDistance(float buildDistance) {
+        // / 16 (block to chunk) * 2 (radius to diameter) + 1 (center chunk) / 64 (chunks per tree)
+        return (int) Math.ceil((buildDistance / 8.0 + 1) / 64.0);
     }
 
     protected int getTreeIndex(int localX, int localY, int localZ) {

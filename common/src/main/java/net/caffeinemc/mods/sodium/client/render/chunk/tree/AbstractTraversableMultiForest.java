@@ -19,7 +19,7 @@ public abstract class AbstractTraversableMultiForest<T extends TraversableTree> 
     }
 
     @Override
-    public void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit, float buildDistance) {
+    public void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
         var transform = viewport.getTransform();
         var cameraSectionX = transform.intX >> 4;
         var cameraSectionY = transform.intY >> 4;
@@ -50,5 +50,4 @@ public abstract class AbstractTraversableMultiForest<T extends TraversableTree> 
             }
         }
     }
-
 }

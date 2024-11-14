@@ -7,11 +7,7 @@ import net.minecraft.world.level.Level;
 public interface TraversableForest extends Forest {
     void calculateReduced();
 
-    default void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
-        this.traverse(visitor, viewport, distanceLimit, this.getBuildDistance());
-    }
-
-    void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit, float buildDistance);
+    void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit);
 
     static TraversableForest createTraversableForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance, Level level) {
         if (BaseBiForest.checkApplicable(buildDistance, level)) {

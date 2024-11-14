@@ -11,10 +11,5 @@ public abstract class BaseForest<T extends Tree> implements Forest {
         this.buildDistance = buildDistance;
     }
 
-    @Override
-    public float getBuildDistance() {
-        return this.buildDistance;
-    }
-
     protected abstract T makeTree(int offsetX, int offsetY, int offsetZ);
 }
