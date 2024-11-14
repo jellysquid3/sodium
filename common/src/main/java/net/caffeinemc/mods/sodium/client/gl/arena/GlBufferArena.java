@@ -26,8 +26,8 @@ public class GlBufferArena {
 
     private GlBufferSegment head;
 
-    private int capacity;
-    private int used;
+    private long capacity;
+    private long used;
 
     private final int stride;
 
@@ -46,14 +46,14 @@ public class GlBufferArena {
         this.stagingBuffer = stagingBuffer;
     }
 
-    private void resize(CommandList commandList, int newCapacity) {
+    private void resize(CommandList commandList, long newCapacity) {
         if (this.used > newCapacity) {
             throw new UnsupportedOperationException("New capacity must be larger than used size");
         }
 
         this.checkAssertions();
 
-        int tail = newCapacity - this.used;
+        long tail = newCapacity - this.used;
 
         List<GlBufferSegment> usedSegments = this.getUsedSegments();
         List<PendingBufferCopyCommand> pendingCopies = this.buildTransferList(usedSegments, tail);
@@ -66,7 +66,7 @@ public class GlBufferArena {
         if (usedSegments.isEmpty()) {
             this.head.setNext(null);
         } else {
-            this.head.setNext(usedSegments.get(0));
+            this.head.setNext(usedSegments.getFirst());
             this.head.getNext()
                     .setPrev(this.head);
         }
@@ -74,23 +74,23 @@ public class GlBufferArena {
         this.checkAssertions();
     }
 
-    private List<PendingBufferCopyCommand> buildTransferList(List<GlBufferSegment> usedSegments, int base) {
+    private List<PendingBufferCopyCommand> buildTransferList(List<GlBufferSegment> usedSegments, long base) {
         List<PendingBufferCopyCommand> pendingCopies = new ArrayList<>();
         PendingBufferCopyCommand currentCopyCommand = null;
 
-        int writeOffset = base;
+        long writeOffset = base;
 
         for (int i = 0; i < usedSegments.size(); i++) {
             GlBufferSegment s = usedSegments.get(i);
 
-            if (currentCopyCommand == null || currentCopyCommand.readOffset + currentCopyCommand.length != s.getOffset()) {
+            if (currentCopyCommand == null || currentCopyCommand.getReadOffset() + currentCopyCommand.getLength() != s.getOffset()) {
                 if (currentCopyCommand != null) {
                     pendingCopies.add(currentCopyCommand);
                 }
 
                 currentCopyCommand = new PendingBufferCopyCommand(s.getOffset(), writeOffset, s.getLength());
             } else {
-                currentCopyCommand.length += s.getLength();
+                currentCopyCommand.setLength(currentCopyCommand.getLength() + s.getLength());
             }
 
             s.setOffset(writeOffset);
@@ -117,7 +117,11 @@ public class GlBufferArena {
         return pendingCopies;
     }
 
-    private void transferSegments(CommandList commandList, Collection<PendingBufferCopyCommand> list, int capacity) {
+    private void transferSegments(CommandList commandList, Collection<PendingBufferCopyCommand> list, long capacity) {
+        if (capacity >= (1L << 32)) {
+            throw new IllegalArgumentException("Maximum arena buffer size is 4 GiB");
+        }
+
         GlMutableBuffer srcBufferObj = this.arenaBuffer;
         GlMutableBuffer dstBufferObj = commandList.createMutableBuffer();
 
@@ -125,9 +129,9 @@ public class GlBufferArena {
 
         for (PendingBufferCopyCommand cmd : list) {
             commandList.copyBufferSubData(srcBufferObj, dstBufferObj,
-                    cmd.readOffset * this.stride,
-                    cmd.writeOffset * this.stride,
-                    cmd.length * this.stride);
+                    cmd.getReadOffset() * this.stride,
+                    cmd.getWriteOffset() * this.stride,
+                    cmd.getLength() * this.stride);
         }
 
         commandList.deleteBuffer(srcBufferObj);
@@ -153,11 +157,11 @@ public class GlBufferArena {
         return used;
     }
 
-    public int getDeviceUsedMemory() {
+    public long getDeviceUsedMemory() {
         return this.used * this.stride;
     }
 
-    public int getDeviceAllocatedMemory() {
+    public long getDeviceAllocatedMemory() {
         return this.capacity * this.stride;
     }
 
@@ -313,11 +317,11 @@ public class GlBufferArena {
         return true;
     }
 
-    public void ensureCapacity(CommandList commandList, int elementCount) {
+    public void ensureCapacity(CommandList commandList, long elementCount) {
         // Re-sizing the arena results in a compaction, so any free space in the arena will be
         // made into one contiguous segment, joined with the new segment of free space we're asking for
         // We calculate the number of free elements in our arena and then subtract that from the total requested
-        int elementsNeeded = elementCount - (this.capacity - this.used);
+        long elementsNeeded = elementCount - (this.capacity - this.used);
 
         // Try to allocate some extra buffer space unless this is an unusually large allocation
         this.resize(commandList, Math.max(this.capacity + this.resizeIncrement, this.capacity + elementsNeeded));
@@ -331,7 +335,7 @@ public class GlBufferArena {
 
     private void checkAssertions0() {
         GlBufferSegment seg = this.head;
-        int used = 0;
+        long used = 0;
 
         while (seg != null) {
             if (seg.getOffset() < 0) {

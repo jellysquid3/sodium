@@ -17,6 +17,7 @@
 package net.caffeinemc.mods.sodium.client.render.frapi.material;
 
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
+import net.fabricmc.fabric.api.util.TriState;
 
 public class RenderMaterialImpl extends MaterialViewImpl implements RenderMaterial {
     public static final int VALUE_COUNT = 1 << TOTAL_BIT_LENGTH;
@@ -45,6 +46,14 @@ public class RenderMaterialImpl extends MaterialViewImpl implements RenderMateri
     public static RenderMaterialImpl setDisableDiffuse(RenderMaterialImpl material, boolean disable) {
         if (material.disableDiffuse() != disable) {
             return byIndex(disable ? (material.bits | DIFFUSE_FLAG) : (material.bits & ~DIFFUSE_FLAG));
+        }
+
+        return material;
+    }
+
+    public static RenderMaterialImpl setAmbientOcclusion(RenderMaterialImpl material, TriState mode) {
+        if (material.ambientOcclusion() != mode) {
+            return byIndex((material.bits & ~AO_MASK) | (mode.ordinal() << AO_BIT_OFFSET));
         }
 
         return material;

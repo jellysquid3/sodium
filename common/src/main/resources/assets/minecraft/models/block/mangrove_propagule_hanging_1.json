@@ -1,0 +1,85 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "particle": "block/mangrove_propagule_hanging",
+        "propagule": "block/mangrove_propagule_hanging"
+    },
+    "elements": [
+        {
+            "from": [ 7, 13.61104, 10.07193 ],
+            "to": [ 9, 13.61104, 12.07193 ],
+            "rotation": { "angle": 22.5, "axis": "x", "origin": [ 8, 16, 8 ] },
+            "faces": {
+                "up": { "uv": [ 8, 3, 10, 5 ], "rotation": 180, "texture": "#propagule" },
+                "down": { "uv": [ 6, 3, 8, 5 ], "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 10.07193, 13.61104, 7 ],
+            "to": [ 12.07193, 13.61104, 9 ],
+            "rotation": { "angle": -22.5, "axis": "z", "origin": [ 8, 16, 8 ] },
+            "faces": {
+                "up": { "uv": [ 8, 3, 10, 5 ], "rotation": 90, "texture": "#propagule" },
+                "down": { "uv": [ 6, 3, 8, 5 ], "rotation": 90, "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 7, 13.61104, 3.92807 ],
+            "to": [ 9, 13.61104, 5.92807 ],
+            "rotation": { "angle": -22.5, "axis": "x", "origin": [ 8, 16, 8 ] },
+            "faces": {
+                "up": { "uv": [ 8, 3, 10, 5 ], "texture": "#propagule" },
+                "down": { "uv": [ 6, 3, 8, 5 ], "rotation": 180, "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 3.92807, 13.61104, 7 ],
+            "to": [ 5.92807, 13.61104, 9 ],
+            "rotation": { "angle": 22.5, "axis": "z", "origin": [ 8, 16, 8 ] },
+            "faces": {
+                "up": { "uv": [ 8, 3, 10, 5 ], "rotation": 270, "texture": "#propagule" },
+                "down": { "uv": [ 6, 3, 8, 5 ], "rotation": 270, "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 7, 13, 7 ],
+            "to": [ 9, 14, 9 ],
+            "faces": {
+                "north": { "uv": [ 0, 2, 2, 3 ], "texture": "#propagule" },
+                "east": { "uv": [ 0, 2, 2, 3 ], "texture": "#propagule" },
+                "south": { "uv": [ 0, 2, 2, 3 ], "texture": "#propagule" },
+                "west": { "uv": [ 0, 2, 2, 3 ], "texture": "#propagule" },
+                "up": { "uv": [ 0, 0, 2, 2 ], "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 7, 14, 8 ],
+            "to": [ 9, 16, 8 ],
+            "rotation": { "angle": -45, "axis": "y", "origin": [ 8, 16, 8 ] },
+            "faces": {
+                "north": { "uv": [ 0, 0, 2, 2 ], "texture": "#propagule" },
+                "south": { "uv": [ 0, 0, 2, 2 ], "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 7, 14, 8 ],
+            "to": [ 9, 16, 8 ],
+            "rotation": { "angle": 45, "axis": "y", "origin": [ 8, 16, 8 ] },
+            "faces": {
+                "north": { "uv": [ 0, 0, 2, 2 ], "texture": "#propagule" },
+                "south": { "uv": [ 0, 0, 2, 2 ], "texture": "#propagule" }
+            }
+        },
+        {
+            "from": [ 7, 10, 7 ],
+            "to": [ 9, 13, 9 ],
+            "faces": {
+                "north": { "uv": [ 0, 7, 2, 10 ], "texture": "#propagule" },
+                "east": { "uv": [ 0, 7, 2, 10 ], "texture": "#propagule" },
+                "south": { "uv": [ 0, 7, 2, 10 ], "texture": "#propagule" },
+                "west": { "uv": [ 0, 7, 2, 10 ], "texture": "#propagule" },
+                "down": { "uv": [ 0, 5, 2, 7 ], "texture": "#propagule" }
+            }
+        }
+    ]
+}

@@ -26,6 +26,7 @@ import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadView;
 import net.fabricmc.fabric.api.renderer.v1.model.SpriteFinder;
+import net.fabricmc.fabric.api.util.TriState;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -240,6 +241,10 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
         // TODO: Is this the same as hasShade?
         if (!((BakedQuadView) quad).hasShade()) {
             material = RenderMaterialImpl.setDisableDiffuse((RenderMaterialImpl) material, true);
+        }
+
+        if (material.ambientOcclusion().orElse(true) && !((BakedQuadView) quad).hasAO()) {
+            material = RenderMaterialImpl.setAmbientOcclusion((RenderMaterialImpl) material, TriState.FALSE);
         }
 
         material(material);

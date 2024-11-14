@@ -1,48 +1,22 @@
 plugins {
-    id("java")
-    id("idea")
-    id("fabric-loom") version ("1.7.3")
+    id("multiloader-base")
+    id("java-library")
+
+    id("fabric-loom") version ("1.8.9")
 }
 
-repositories {
-    maven("https://maven.parchmentmc.org/")
+base {
+    archivesName = "sodium-common"
 }
 
-val MINECRAFT_VERSION: String by rootProject.extra
-val PARCHMENT_VERSION: String? by rootProject.extra
-val FABRIC_LOADER_VERSION: String by rootProject.extra
-val FABRIC_API_VERSION: String by rootProject.extra
-
-dependencies {
-    minecraft(group = "com.mojang", name = "minecraft", version = MINECRAFT_VERSION)
-    mappings(loom.layered() {
-        officialMojangMappings()
-        if (PARCHMENT_VERSION != null) {
-            parchment("org.parchmentmc.data:parchment-${MINECRAFT_VERSION}:${PARCHMENT_VERSION}@zip")
-        }
-    })
-    compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
-    annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
-    compileOnly("net.fabricmc:sponge-mixin:0.13.2+mixin.0.8.5")
-
-    fun addDependentFabricModule(name: String) {
-        val module = fabricApi.module(name, FABRIC_API_VERSION)
-        modCompileOnly(module)
-    }
-
-    addDependentFabricModule("fabric-api-base")
-    addDependentFabricModule("fabric-block-view-api-v2")
-    addDependentFabricModule("fabric-renderer-api-v1")
-    addDependentFabricModule("fabric-rendering-data-attachment-v1")
-
-    modCompileOnly("net.fabricmc.fabric-api:fabric-renderer-api-v1:3.2.9+1172e897d7")
+val configurationPreLaunch = configurations.create("preLaunchDeps") {
+    isCanBeResolved = true
 }
 
 sourceSets {
     val main = getByName("main")
     val api = create("api")
     val workarounds = create("workarounds")
-    val desktop = create("desktop")
 
     api.apply {
         java {
@@ -52,13 +26,7 @@ sourceSets {
 
     workarounds.apply {
         java {
-            compileClasspath += main.compileClasspath
-        }
-    }
-
-    desktop.apply {
-        java {
-            srcDir("src/desktop/java")
+            compileClasspath += configurationPreLaunch
         }
     }
 
@@ -66,53 +34,97 @@ sourceSets {
         java {
             compileClasspath += api.output
             compileClasspath += workarounds.output
-            runtimeClasspath += api.output
         }
     }
+
+    create("desktop")
+}
+
+dependencies {
+    minecraft(group = "com.mojang", name = "minecraft", version = BuildConfig.MINECRAFT_VERSION)
+    mappings(loom.layered {
+        officialMojangMappings()
+
+        if (BuildConfig.PARCHMENT_VERSION != null) {
+            parchment("org.parchmentmc.data:parchment-${BuildConfig.MINECRAFT_VERSION}:${BuildConfig.PARCHMENT_VERSION}@zip")
+        }
+    })
+
+    compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
+    annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
+
+    compileOnly("net.fabricmc:sponge-mixin:0.13.2+mixin.0.8.5")
+    compileOnly("net.fabricmc:fabric-loader:${BuildConfig.FABRIC_LOADER_VERSION}")
+
+    fun addDependentFabricModule(name: String) {
+        modCompileOnly(fabricApi.module(name, BuildConfig.FABRIC_API_VERSION))
+    }
+
+    addDependentFabricModule("fabric-api-base")
+    addDependentFabricModule("fabric-block-view-api-v2")
+    addDependentFabricModule("fabric-renderer-api-v1")
+    addDependentFabricModule("fabric-rendering-data-attachment-v1")
+
+    modCompileOnly("net.fabricmc.fabric-api:fabric-renderer-api-v1:3.2.9+1172e897d7")
+
+    // We need to be careful during pre-launch that we don't touch any Minecraft classes, since other mods
+    // will not yet have an opportunity to apply transformations.
+    configurationPreLaunch("org.apache.commons:commons-lang3:3.14.0")
+    configurationPreLaunch("commons-io:commons-io:2.15.1")
+    configurationPreLaunch("org.lwjgl:lwjgl:3.3.3")
+    configurationPreLaunch("net.java.dev.jna:jna:5.14.0")
+    configurationPreLaunch("net.java.dev.jna:jna-platform:5.14.0")
+    configurationPreLaunch("org.slf4j:slf4j-api:2.0.9")
+    configurationPreLaunch("org.jetbrains:annotations:25.0.0")
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/sodium-common.accesswidener")
+
     mixin {
-        defaultRefmapName = "sodium.refmap.json"
-    }
-
-    accessWidenerPath = file("src/main/resources/sodium.accesswidener")
-
-    mods {
-        val main by creating { // to match the default mod generated for Forge
-            sourceSet("api")
-            sourceSet("desktop")
-            sourceSet("main")
-        }
+        useLegacyMixinAp = false
     }
 }
 
-tasks {
-    getByName<JavaCompile>("compileDesktopJava") {
-        sourceCompatibility = JavaVersion.VERSION_1_8.toString()
-        targetCompatibility = JavaVersion.VERSION_1_8.toString()
+fun exportSourceSetJava(name: String, sourceSet: SourceSet) {
+    val configuration = configurations.create("${name}Java") {
+        isCanBeResolved = true
+        isCanBeConsumed = true
     }
 
-    jar {
-        from(rootDir.resolve("LICENSE.md"))
-
-        val api = sourceSets.getByName("api")
-        from(api.output.classesDirs)
-        from(api.output.resourcesDir)
-
-        val workarounds = sourceSets.getByName("workarounds")
-        from(workarounds.output.classesDirs)
-        from(workarounds.output.resourcesDir)
-
-        val desktop = sourceSets.getByName("desktop")
-        from(desktop.output.classesDirs)
-        from(desktop.output.resourcesDir)
-
-        manifest.attributes["Main-Class"] = "net.caffeinemc.mods.sodium.desktop.LaunchWarn"
+    val compileTask = tasks.getByName<JavaCompile>(sourceSet.compileJavaTaskName)
+    artifacts.add(configuration.name, compileTask.destinationDirectory) {
+        builtBy(compileTask)
     }
 }
 
-// This trick hides common tasks in the IDEA list.
-tasks.configureEach {
-    group = null
+fun exportSourceSetResources(name: String, sourceSet: SourceSet) {
+    val configuration = configurations.create("${name}Resources") {
+        isCanBeResolved = true
+        isCanBeConsumed = true
+    }
+
+    val compileTask = tasks.getByName<ProcessResources>(sourceSet.processResourcesTaskName)
+    compileTask.apply {
+        exclude("**/README.txt")
+        exclude("/*.accesswidener")
+    }
+
+    artifacts.add(configuration.name, compileTask.destinationDir) {
+        builtBy(compileTask)
+    }
 }
+
+// Exports the compiled output of the source set to the named configuration.
+fun exportSourceSet(name: String, sourceSet: SourceSet) {
+    exportSourceSetJava(name, sourceSet)
+    exportSourceSetResources(name, sourceSet)
+}
+
+exportSourceSet("commonMain", sourceSets["main"])
+exportSourceSet("commonApi", sourceSets["api"])
+exportSourceSet("commonEarlyLaunch", sourceSets["workarounds"])
+exportSourceSet("commonDesktop", sourceSets["desktop"])
+
+tasks.jar { enabled = false }
+tasks.remapJar { enabled = false }

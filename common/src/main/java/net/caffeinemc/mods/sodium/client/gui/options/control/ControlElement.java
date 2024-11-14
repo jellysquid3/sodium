@@ -8,6 +8,7 @@ import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ControlElement<T> extends AbstractWidget {
@@ -20,18 +21,28 @@ public class ControlElement<T> extends AbstractWidget {
         this.dim = dim;
     }
 
+    public int getContentWidth() {
+        return this.option.getControl().getMaxWidth();
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         String name = this.option.getName().getString();
-        String label;
 
-        if ((this.hovered || this.isFocused()) && this.font.width(name) > (this.dim.width() - this.option.getControl().getMaxWidth())) {
-            name = name.substring(0, Math.min(name.length(), 10)) + "...";
+        // add the star suffix before truncation to prevent it from overlapping with the label text
+        if (this.option.isAvailable() && this.option.hasChanged()) {
+            name = name + " *";
         }
 
+        // on focus or hover truncate the label to never overlap with the control's content
+        if (this.hovered || this.isFocused()) {
+            name = truncateLabelToFit(name);
+        }
+
+        String label;
         if (this.option.isAvailable()) {
             if (this.option.hasChanged()) {
-                label = ChatFormatting.ITALIC + name + " *";
+                label = ChatFormatting.ITALIC + name;
             } else {
                 label = ChatFormatting.WHITE + name;
             }
@@ -47,6 +58,33 @@ public class ControlElement<T> extends AbstractWidget {
         if (this.isFocused()) {
             this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), -1);
         }
+    }
+
+    private @NotNull String truncateLabelToFit(String name) {
+        var suffix = "...";
+        var suffixWidth = this.font.width(suffix);
+        var nameFontWidth = this.font.width(name);
+        var targetWidth = this.dim.width() - this.getContentWidth() - 20;
+        if (nameFontWidth > targetWidth) {
+            targetWidth -= suffixWidth;
+            int maxLabelChars = name.length() - 3;
+            int minLabelChars = 1;
+
+            // binary search on how many chars fit
+            while (maxLabelChars - minLabelChars > 1) {
+                var mid = (maxLabelChars + minLabelChars) / 2;
+                var midName = name.substring(0, mid);
+                var midWidth = this.font.width(midName);
+                if (midWidth > targetWidth) {
+                    maxLabelChars = mid;
+                } else {
+                    minLabelChars = mid;
+                }
+            }
+
+            name = name.substring(0, minLabelChars).trim() + suffix;
+        }
+        return name;
     }
 
     public Option<T> getOption() {

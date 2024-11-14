@@ -1,0 +1,33 @@
+{
+    "textures": {
+        "particle": "block/lightning_rod_on",
+        "texture": "block/lightning_rod_on"
+    },
+    "elements": [
+        {
+            "from": [ 6, 12, 6 ],
+            "to": [ 10, 16, 10 ],
+            "shade": false,
+            "faces": {
+                "north": { "uv": [ 0, 0, 4, 4 ], "texture": "#texture" },
+                "east": { "uv": [ 0, 0, 4, 4 ], "texture": "#texture" },
+                "south": { "uv": [ 0, 0, 4, 4 ], "texture": "#texture" },
+                "west": { "uv": [ 0, 0, 4, 4 ], "texture": "#texture" },
+                "up": { "uv": [ 4, 4, 0, 0 ], "texture": "#texture", "cullface": "up" },
+                "down": { "uv": [ 0, 0, 4, 4 ], "texture": "#texture" }
+            }
+        },
+        {
+            "from": [ 7, 0, 7 ],
+            "to": [ 9, 12, 9 ],
+            "shade": false,
+            "faces": {
+                "north": { "uv": [ 0, 4, 2, 16 ], "texture": "#texture" },
+                "east": { "uv": [ 0, 4, 2, 16 ], "texture": "#texture" },
+                "south": { "uv": [ 0, 4, 2, 16 ], "texture": "#texture" },
+                "west": { "uv": [ 0, 4, 2, 16 ], "texture": "#texture" },
+                "down": { "uv": [ 0, 4, 2, 16 ], "texture": "#texture", "cullface": "down" }
+            }
+        }
+    ]
+}

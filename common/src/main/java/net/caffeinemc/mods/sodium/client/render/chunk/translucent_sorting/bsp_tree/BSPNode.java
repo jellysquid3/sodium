@@ -65,7 +65,7 @@ public abstract class BSPNode {
             // opposite normal (distance irrelevant)
             if (NormI8.isOpposite(packedNormalA, packedNormalB)
                     // same normal and same distance
-                    || packedNormalA == packedNormalB && quadA.getDotProduct() == quadB.getDotProduct()) {
+                    || packedNormalA == packedNormalB && quadA.getAccurateDotProduct() == quadB.getAccurateDotProduct()) {
                 return true;
             }
         }

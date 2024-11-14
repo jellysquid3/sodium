@@ -23,6 +23,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.SortBe
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexType;
 import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.util.BitwiseMath;
+import net.caffeinemc.mods.sodium.client.util.UInt32;
 import org.lwjgl.system.MemoryUtil;
 
 import java.util.Iterator;
@@ -148,26 +149,11 @@ public class DefaultChunkRenderer extends ShaderChunkRenderer {
                 continue;
             }
 
-            addDrawCommands(batch, pMeshData, slices);
-        }
-    }
-
-    /**
-     * Add the draw command into the multi draw batch of the current region for one
-     * section. The section's mesh data is given as a pointer into the render data
-     * storage's allocated memory. It goes through each direction and writes the
-     * offsets and lengths of the already uploaded vertex and index data. The multi
-     * draw batch provides pointers to arrays where each of the section's data is
-     * stored. The batch's size counts how many commands it contains.
-     */
-    private static void addDrawCommands(MultiDrawBatch batch, long pMeshData, int mask) {
-        int elementOffset = SectionRenderDataUnsafe.getBaseElement(pMeshData);
-
-        // If high bit is set, the indices should be sourced from the arena's index buffer
-        if ((elementOffset & SectionRenderDataUnsafe.BASE_ELEMENT_MSB) != 0) {
-            addIndexedDrawCommands(batch, pMeshData, mask);
-        } else {
-            addNonIndexedDrawCommands(batch, pMeshData, mask);
+            if (pass.isTranslucent()) {
+                addIndexedDrawCommands(batch, pMeshData, slices);
+            } else {
+                addNonIndexedDrawCommands(batch, pMeshData, slices);
+            }
         }
     }
 
@@ -183,8 +169,9 @@ public class DefaultChunkRenderer extends ShaderChunkRenderer {
         int size = batch.size;
 
         for (int facing = 0; facing < ModelQuadFacing.COUNT; facing++) {
-            MemoryUtil.memPutInt(pBaseVertex + (size << 2), SectionRenderDataUnsafe.getVertexOffset(pMeshData, facing));
-            MemoryUtil.memPutInt(pElementCount + (size << 2), SectionRenderDataUnsafe.getElementCount(pMeshData, facing));
+            // Uint32 -> Int32 cast is always safe and should be optimized away
+            MemoryUtil.memPutInt(pBaseVertex + (size << 2), (int) SectionRenderDataUnsafe.getVertexOffset(pMeshData, facing));
+            MemoryUtil.memPutInt(pElementCount + (size << 2), (int) SectionRenderDataUnsafe.getElementCount(pMeshData, facing));
             MemoryUtil.memPutAddress(pElementPointer + (size << 3), 0 /* using a shared index buffer */);
 
             size += (mask >> facing) & 1;
@@ -205,16 +192,17 @@ public class DefaultChunkRenderer extends ShaderChunkRenderer {
 
         int size = batch.size;
 
-        int elementOffset = SectionRenderDataUnsafe.getBaseElement(pMeshData)
-                & ~SectionRenderDataUnsafe.BASE_ELEMENT_MSB;
+        long elementOffset = SectionRenderDataUnsafe.getBaseElement(pMeshData);
 
         for (int facing = 0; facing < ModelQuadFacing.COUNT; facing++) {
-            final var elementCount = SectionRenderDataUnsafe.getElementCount(pMeshData, facing);
+            final long vertexOffset = SectionRenderDataUnsafe.getVertexOffset(pMeshData, facing);
+            final long elementCount = SectionRenderDataUnsafe.getElementCount(pMeshData, facing);
 
-            MemoryUtil.memPutInt(pBaseVertex + (size << 2), SectionRenderDataUnsafe.getVertexOffset(pMeshData, facing));
-            MemoryUtil.memPutInt(pElementCount + (size << 2), elementCount);
+            // Uint32 -> Int32 cast is always safe and should be optimized away
+            MemoryUtil.memPutInt(pBaseVertex + (size << 2), UInt32.uncheckedDowncast(vertexOffset));
+            MemoryUtil.memPutInt(pElementCount + (size << 2), UInt32.uncheckedDowncast(elementCount));
 
-            // * 4 to convert to bytes (the buffer contains 32-bit integers)
+            // * 4 to convert to bytes (the index buffer contains integers)
             // the section render data storage for the indices stores the offset in indices (also called elements)
             MemoryUtil.memPutAddress(pElementPointer + (size << 3), elementOffset << 2);
 

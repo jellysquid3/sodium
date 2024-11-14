@@ -8,9 +8,10 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
 import net.caffeinemc.mods.sodium.client.compatibility.checks.PostLaunchChecks;
 import net.caffeinemc.mods.sodium.client.compatibility.checks.ModuleScanner;
-import net.caffeinemc.mods.sodium.client.compatibility.environment.GLContextInfo;
+import net.caffeinemc.mods.sodium.client.gl.GlContextInfo;
 import net.caffeinemc.mods.sodium.client.compatibility.workarounds.Workarounds;
 import net.caffeinemc.mods.sodium.client.compatibility.workarounds.nvidia.NvidiaWorkarounds;
+import net.caffeinemc.mods.sodium.client.platform.NativeWindowHandle;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.minecraft.Util;
 import org.lwjgl.glfw.GLFW;
@@ -81,7 +82,7 @@ public class WindowMixin {
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL;createCapabilities()Lorg/lwjgl/opengl/GLCapabilities;", shift = At.Shift.AFTER))
     private void postContextReady(WindowEventHandler eventHandler, ScreenManager monitorTracker, DisplayData settings, String videoMode, String title, CallbackInfo ci) {
-        GLContextInfo driver = GLContextInfo.create();
+        GlContextInfo driver = GlContextInfo.create();
 
         if (driver == null) {
             LOGGER.warn("Could not retrieve identifying strings for OpenGL implementation");
@@ -99,7 +100,7 @@ public class WindowMixin {
         }
 
         PostLaunchChecks.onContextInitialized();
-        ModuleScanner.checkModules(this.window);
+        ModuleScanner.checkModules((NativeWindowHandle) this);
     }
 
     @Inject(method = "updateDisplay", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;flipFrame(J)V", shift = At.Shift.AFTER))
@@ -121,7 +122,7 @@ public class WindowMixin {
 
         // Likely, this indicates a module was injected into the current process. We should check that
         // nothing problematic was just installed.
-        ModuleScanner.checkModules(this.window);
+        ModuleScanner.checkModules((NativeWindowHandle) this);
 
         // If we didn't find anything problematic (which would have thrown an exception), then let's just record
         // the new context pointer and carry on.

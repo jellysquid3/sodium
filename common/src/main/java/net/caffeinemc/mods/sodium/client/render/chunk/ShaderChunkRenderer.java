@@ -42,7 +42,7 @@ public abstract class ShaderChunkRenderer implements ChunkRenderer {
 
         GlShader vertShader = ShaderLoader.loadShader(ShaderType.VERTEX,
                 ResourceLocation.fromNamespaceAndPath("sodium", path + ".vsh"), constants);
-        
+
         GlShader fragShader = ShaderLoader.loadShader(ShaderType.FRAGMENT,
                 ResourceLocation.fromNamespaceAndPath("sodium", path + ".fsh"), constants);
 
@@ -50,8 +50,7 @@ public abstract class ShaderChunkRenderer implements ChunkRenderer {
             return GlProgram.builder(ResourceLocation.fromNamespaceAndPath("sodium", "chunk_shader"))
                     .attachShader(vertShader)
                     .attachShader(fragShader)
-                    .bindAttribute("a_PositionHi", ChunkShaderBindingPoints.ATTRIBUTE_POSITION_HI)
-                    .bindAttribute("a_PositionLo", ChunkShaderBindingPoints.ATTRIBUTE_POSITION_LO)
+                    .bindAttribute("a_Position", ChunkShaderBindingPoints.ATTRIBUTE_POSITION)
                     .bindAttribute("a_Color", ChunkShaderBindingPoints.ATTRIBUTE_COLOR)
                     .bindAttribute("a_TexCoord", ChunkShaderBindingPoints.ATTRIBUTE_TEXTURE)
                     .bindAttribute("a_LightAndData", ChunkShaderBindingPoints.ATTRIBUTE_LIGHT_MATERIAL_INDEX)

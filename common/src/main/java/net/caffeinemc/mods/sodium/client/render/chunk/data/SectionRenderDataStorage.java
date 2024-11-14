@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.render.chunk.data;
 import net.caffeinemc.mods.sodium.client.gl.arena.GlBufferSegment;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.caffeinemc.mods.sodium.client.util.UInt32;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,13 +59,16 @@ public class SectionRenderDataStorage {
         var pMeshData = this.getDataPointer(localSectionIndex);
 
         int sliceMask = 0;
-        int vertexOffset = allocation.getOffset();
+
+        long vertexOffset = allocation.getOffset();
 
         for (int facingIndex = 0; facingIndex < ModelQuadFacing.COUNT; facingIndex++) {
-            int vertexCount = vertexCounts[facingIndex];
+            long vertexCount = vertexCounts[facingIndex];
 
-            SectionRenderDataUnsafe.setVertexOffset(pMeshData, facingIndex, vertexOffset);
-            SectionRenderDataUnsafe.setElementCount(pMeshData, facingIndex, (vertexCount >> 2) * 6);
+            SectionRenderDataUnsafe.setVertexOffset(pMeshData, facingIndex,
+                    UInt32.downcast(vertexOffset));
+            SectionRenderDataUnsafe.setElementCount(pMeshData, facingIndex,
+                    UInt32.downcast((vertexCount >> 2) * 6));
 
             if (vertexCount > 0) {
                 sliceMask |= 1 << facingIndex;
@@ -91,8 +95,7 @@ public class SectionRenderDataStorage {
 
         var pMeshData = this.getDataPointer(localSectionIndex);
 
-        SectionRenderDataUnsafe.setBaseElement(pMeshData,
-                allocation.getOffset() | SectionRenderDataUnsafe.BASE_ELEMENT_MSB);
+        SectionRenderDataUnsafe.setBaseElement(pMeshData, allocation.getOffset());
     }
 
     public void removeData(int localSectionIndex) {
@@ -157,7 +160,7 @@ public class SectionRenderDataStorage {
             return;
         }
 
-        var offset = allocation.getOffset();
+        long offset = allocation.getOffset();
         var data = this.getDataPointer(sectionIndex);
 
         for (int facing = 0; facing < ModelQuadFacing.COUNT; facing++) {
@@ -177,8 +180,7 @@ public class SectionRenderDataStorage {
             var allocation = this.elementAllocations[sectionIndex];
 
             if (allocation != null) {
-                SectionRenderDataUnsafe.setBaseElement(this.getDataPointer(sectionIndex),
-                        allocation.getOffset() | SectionRenderDataUnsafe.BASE_ELEMENT_MSB);
+                SectionRenderDataUnsafe.setBaseElement(this.getDataPointer(sectionIndex), allocation.getOffset());
             }
         }
     }

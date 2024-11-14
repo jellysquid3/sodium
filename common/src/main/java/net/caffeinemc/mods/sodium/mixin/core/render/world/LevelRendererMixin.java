@@ -1,12 +1,13 @@
 package net.caffeinemc.mods.sodium.mixin.core.render.world;
 
+import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.ref.LocalBooleanRef;
 import com.mojang.blaze3d.vertex.PoseStack;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import net.caffeinemc.mods.sodium.client.gl.device.RenderDevice;
 import net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer;
 import net.caffeinemc.mods.sodium.client.render.chunk.ChunkRenderMatrices;
 import net.caffeinemc.mods.sodium.client.render.viewport.ViewportProvider;
-import net.caffeinemc.mods.sodium.client.services.PlatformLevelAccess;
 import net.caffeinemc.mods.sodium.client.services.PlatformLevelRenderHooks;
 import net.caffeinemc.mods.sodium.client.util.FlawlessFrames;
 import net.caffeinemc.mods.sodium.client.world.LevelRendererExtension;
@@ -207,8 +208,8 @@ public abstract class LevelRendererMixin implements LevelRendererExtension {
     }
 
     @Inject(method = "renderLevel", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/LevelRenderer;globalBlockEntities:Ljava/util/Set;", shift = At.Shift.BEFORE, ordinal = 0))
-    private void onRenderBlockEntities(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
-        this.renderer.renderBlockEntities(new PoseStack(), this.renderBuffers, this.destructionProgress, camera, deltaTracker.getGameTimeDeltaPartialTick(false));
+    private void onRenderBlockEntities(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci, @Local(ordinal = 3) LocalBooleanRef isGlowing) {
+        this.renderer.renderBlockEntities(new PoseStack(), this.renderBuffers, this.destructionProgress, camera, deltaTracker.getGameTimeDeltaPartialTick(false), isGlowing);
     }
 
     // Exclusive to NeoForge, allow to fail.

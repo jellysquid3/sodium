@@ -92,9 +92,9 @@ public class GeometryPlanes {
     public void addQuadPlane(SectionPos sectionPos, TQuad quad) {
         var facing = quad.useQuantizedFacing();
         if (facing.isAligned()) {
-            this.addAlignedPlane(sectionPos, facing.ordinal(), quad.getDotProduct());
+            this.addAlignedPlane(sectionPos, facing.ordinal(), quad.getQuantizedDotProduct());
         } else {
-            this.addUnalignedPlane(sectionPos, quad.getQuantizedNormal(), quad.getDotProduct());
+            this.addUnalignedPlane(sectionPos, quad.getQuantizedNormal(), quad.getQuantizedDotProduct());
         }
     }
 

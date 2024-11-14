@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.services;
 import net.caffeinemc.mods.sodium.client.model.quad.ModelQuadView;
 import net.caffeinemc.mods.sodium.client.render.frapi.render.AmbientOcclusionMode;
 import net.fabricmc.fabric.api.util.TriState;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
@@ -77,4 +78,11 @@ public interface PlatformBlockAccess {
      * @return If ambient occlusion is forced, or {@code DEFAULT}
      */
     AmbientOcclusionMode usesAmbientOcclusion(BakedModel model, BlockState state, SodiumModelData data, RenderType renderType, BlockAndTintGetter level, BlockPos pos);
+
+    /**
+     * @param blockEntity The block entity to check.
+     * @param player The current player rendering.
+     * @return Whether this block entity should activate the outline shader.
+     */
+    boolean shouldBlockEntityGlow(BlockEntity blockEntity, LocalPlayer player);
 }

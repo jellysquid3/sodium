@@ -2,15 +2,26 @@ package net.caffeinemc.mods.sodium.client.render.immediate.model;
 
 import java.util.Set;
 import net.minecraft.core.Direction;
+import org.jetbrains.annotations.NotNull;
 
 public class ModelCuboid {
+    // The ordering needs to be the same as Minecraft, otherwise some core shader replacements
+    // will be unable to identify the facing.
+    public static final int
+            FACE_NEG_Y = 0, // DOWN
+            FACE_POS_Y = 1, // UP
+            FACE_NEG_X = 2, // WEST
+            FACE_NEG_Z = 3, // NORTH
+            FACE_POS_X = 4, // EAST
+            FACE_POS_Z = 5; // SOUTH
+
     public final float x1, y1, z1;
     public final float x2, y2, z2;
 
     public final float u0, u1, u2, u3, u4, u5;
     public final float v0, v1, v2;
 
-    private final int faces;
+    private final int cullBitmask;
 
     public final boolean mirror;
 
@@ -63,16 +74,27 @@ public class ModelCuboid {
 
         this.mirror = mirror;
 
-        int faces = 0;
+        int cullBitmask = 0;
 
-        for (var dir : renderDirections) {
-            faces |= 1 << dir.ordinal();
+        for (var direction : renderDirections) {
+            cullBitmask |= 1 << getFaceIndex(direction);
         }
 
-        this.faces = faces;
+        this.cullBitmask = cullBitmask;
     }
 
-    public boolean shouldDrawFace(int quadIndex) {
-        return (this.faces & (1 << quadIndex)) != 0;
+    public boolean shouldDrawFace(int faceIndex) {
+        return (this.cullBitmask & (1 << faceIndex)) != 0;
+    }
+
+    public static int getFaceIndex(@NotNull Direction dir) {
+        return switch (dir) {
+            case DOWN -> FACE_NEG_Y;
+            case UP -> FACE_POS_Y;
+            case NORTH -> FACE_NEG_Z;
+            case SOUTH -> FACE_POS_Z;
+            case WEST -> FACE_NEG_X;
+            case EAST -> FACE_POS_X;
+        };
     }
 }

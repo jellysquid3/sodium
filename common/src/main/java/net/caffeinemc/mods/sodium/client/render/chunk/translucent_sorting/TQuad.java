@@ -25,37 +25,42 @@ public class TQuad {
 
     private ModelQuadFacing facing;
     private final float[] extents;
+    private float[] vertexPositions;
     private final int packedNormal;
-    private float dotProduct;
+    private final float accurateDotProduct;
+    private float quantizedDotProduct;
     private Vector3fc center; // null on aligned quads
     private Vector3fc quantizedNormal;
+    private Vector3fc accurateNormal;
 
-    private TQuad(ModelQuadFacing facing, float[] extents, Vector3fc center, int packedNormal) {
+    private TQuad(ModelQuadFacing facing, float[] extents, float[] vertexPositions, Vector3fc center, int packedNormal) {
         this.facing = facing;
         this.extents = extents;
+        this.vertexPositions = vertexPositions;
         this.center = center;
         this.packedNormal = packedNormal;
 
         if (this.facing.isAligned()) {
-            this.dotProduct = getAlignedDotProduct(this.facing, this.extents);
+            this.accurateDotProduct = getAlignedDotProduct(this.facing, this.extents);
         } else {
             float normX = NormI8.unpackX(this.packedNormal);
             float normY = NormI8.unpackY(this.packedNormal);
             float normZ = NormI8.unpackZ(this.packedNormal);
-            this.dotProduct = this.getCenter().dot(normX, normY, normZ);
+            this.accurateDotProduct = this.getCenter().dot(normX, normY, normZ);
         }
+        this.quantizedDotProduct = this.accurateDotProduct;
     }
 
     private static float getAlignedDotProduct(ModelQuadFacing facing, float[] extents) {
         return extents[facing.ordinal()] * facing.getSign();
     }
 
-    static TQuad fromAligned(ModelQuadFacing facing, float[] extents, Vector3fc center) {
-        return new TQuad(facing, extents, center, ModelQuadFacing.PACKED_ALIGNED_NORMALS[facing.ordinal()]);
+    static TQuad fromAligned(ModelQuadFacing facing, float[] extents, float[] vertexPositions, Vector3fc center) {
+        return new TQuad(facing, extents, vertexPositions, center, ModelQuadFacing.PACKED_ALIGNED_NORMALS[facing.ordinal()]);
     }
 
-    static TQuad fromUnaligned(ModelQuadFacing facing, float[] extents, Vector3fc center, int packedNormal) {
-        return new TQuad(facing, extents, center, packedNormal);
+    static TQuad fromUnaligned(ModelQuadFacing facing, float[] extents, float[] vertexPositions, Vector3fc center, int packedNormal) {
+        return new TQuad(facing, extents, vertexPositions, center, packedNormal);
     }
 
     public ModelQuadFacing getFacing() {
@@ -73,9 +78,9 @@ public class TQuad {
             this.getQuantizedNormal();
             this.facing = ModelQuadFacing.fromNormal(this.quantizedNormal.x(), this.quantizedNormal.y(), this.quantizedNormal.z());
             if (this.facing.isAligned()) {
-                this.dotProduct = getAlignedDotProduct(this.facing, this.extents);
+                this.quantizedDotProduct = getAlignedDotProduct(this.facing, this.extents);
             } else {
-                this.dotProduct = this.getCenter().dot(this.quantizedNormal);
+                this.quantizedDotProduct = this.getCenter().dot(this.quantizedNormal);
             }
         }
 
@@ -84,6 +89,31 @@ public class TQuad {
 
     public float[] getExtents() {
         return this.extents;
+    }
+
+    public float[] getVertexPositions() {
+        // calculate vertex positions from extents if there's no cached value
+        // (we don't want to be preemptively collecting vertex positions for all aligned quads)
+        if (this.vertexPositions == null) {
+            this.vertexPositions = new float[12];
+
+            var facingAxis = this.facing.getAxis();
+            var xRange = facingAxis == 0 ? 0 : 3;
+            var yRange = facingAxis == 1 ? 0 : 3;
+            var zRange = facingAxis == 2 ? 0 : 3;
+
+            var itemIndex = 0;
+            for (int x = 0; x <= xRange; x += 3) {
+                for (int y = 0; y <= yRange; y += 3) {
+                    for (int z = 0; z <= zRange; z += 3) {
+                        this.vertexPositions[itemIndex++] = this.extents[x];
+                        this.vertexPositions[itemIndex++] = this.extents[y + 1];
+                        this.vertexPositions[itemIndex++] = this.extents[z + 2];
+                    }
+                }
+            }
+        }
+        return this.vertexPositions;
     }
 
     public Vector3fc getCenter() {
@@ -97,8 +127,12 @@ public class TQuad {
         return this.center;
     }
 
-    public float getDotProduct() {
-        return this.dotProduct;
+    public float getAccurateDotProduct() {
+        return this.accurateDotProduct;
+    }
+
+    public float getQuantizedDotProduct() {
+        return this.quantizedDotProduct;
     }
 
     public int getPackedNormal() {
@@ -114,6 +148,20 @@ public class TQuad {
             }
         }
         return this.quantizedNormal;
+    }
+
+    public Vector3fc getAccurateNormal() {
+        if (this.facing.isAligned()) {
+            return this.facing.getAlignedNormal();
+        } else {
+            if (this.accurateNormal == null) {
+                this.accurateNormal = new Vector3f(
+                        NormI8.unpackX(this.packedNormal),
+                        NormI8.unpackY(this.packedNormal),
+                        NormI8.unpackZ(this.packedNormal));
+            }
+            return this.accurateNormal;
+        }
     }
 
     private void computeQuantizedNormal() {
@@ -150,7 +198,7 @@ public class TQuad {
         } else {
             result = 31 * result + this.packedNormal;
         }
-        result = 31 * result + Float.hashCode(this.dotProduct);
+        result = 31 * result + Float.hashCode(this.quantizedDotProduct);
         return result;
     }
 

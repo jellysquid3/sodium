@@ -45,7 +45,7 @@ public abstract class BufferBuilderMixin implements VertexConsumer {
         ModelQuadView quad = (ModelQuadView) bakedQuad;
 
         int color = ColorABGR.pack(r, g, b, a);
-        BakedModelEncoder.writeQuadVertices(writer, matrices, quad, color, light, overlay);
+        BakedModelEncoder.writeQuadVertices(writer, matrices, quad, color, light, overlay, false);
 
         TextureAtlasSprite sprite = quad.getSprite();
         if (sprite != null) {

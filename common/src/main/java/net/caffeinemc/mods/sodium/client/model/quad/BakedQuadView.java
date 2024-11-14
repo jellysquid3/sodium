@@ -8,4 +8,6 @@ public interface BakedQuadView extends ModelQuadView {
     int getFaceNormal();
 
     boolean hasShade();
+
+    boolean hasAO();
 }

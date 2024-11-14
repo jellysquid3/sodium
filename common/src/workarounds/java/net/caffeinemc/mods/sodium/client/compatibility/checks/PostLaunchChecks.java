@@ -1,13 +1,9 @@
 package net.caffeinemc.mods.sodium.client.compatibility.checks;
 
-import net.caffeinemc.mods.sodium.client.compatibility.workarounds.nvidia.NvidiaDriverVersion;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
-import net.caffeinemc.mods.sodium.client.compatibility.environment.GLContextInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import oshi.PlatformEnum;
-import oshi.SystemInfo;
 
 /**
  * Performs OpenGL driver validation after the game creates an OpenGL context. This runs immediately after OpenGL
@@ -26,7 +22,7 @@ public class PostLaunchChecks {
         }
     }
 
-    // https://github.com/CaffeineMC/sodium-fabric/issues/1916
+    // https://github.com/CaffeineMC/sodium/issues/1916
     private static boolean isUsingPojavLauncher() {
         if (System.getenv("POJAV_RENDERER") != null) {
             LOGGER.warn("Detected presence of environment variable POJAV_LAUNCHER, which seems to indicate we are running on Android");

@@ -39,7 +39,7 @@ ordering = "NONE"
 side = "CLIENT"
 
 [[mixins]]
-config = "sodium.mixins.json"
+config = "sodium-common.mixins.json"
 
 [[mixins]]
-config = "sodium-forge.mixins.json"
+config = "sodium-neoforge.mixins.json"

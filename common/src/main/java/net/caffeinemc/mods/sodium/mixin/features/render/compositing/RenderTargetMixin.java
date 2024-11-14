@@ -27,7 +27,7 @@ public class RenderTargetMixin {
      */
     @Inject(method = "blitToScreen(IIZ)V", at = @At("HEAD"), cancellable = true)
     public void blitToScreen(int width, int height, boolean disableBlend, CallbackInfo ci) {
-        if (Workarounds.isWorkaroundEnabled(Workarounds.Reference.INTEL_FRAMEBUFFER_BLIT_UNSUPPORTED)) {
+        if (Workarounds.isWorkaroundEnabled(Workarounds.Reference.INTEL_FRAMEBUFFER_BLIT_CRASH_WHEN_UNFOCUSED)) {
             return;
         }
 
