@@ -37,6 +37,8 @@ public class OcclusionCuller {
         while (queues.flip()) {
             processQueue(visitor, viewport, searchDistance, useOcclusionCulling, frame, queues.read(), queues.write());
         }
+
+        this.fixOriginNeighbors(visitor, viewport, searchDistance, frame);
     }
 
     private static void processQueue(Visitor visitor,
@@ -208,11 +210,75 @@ public class OcclusionCuller {
     // The bounding box of a chunk section must be large enough to contain all possible geometry within it. Block models
     // can extend outside a block volume by +/- 1.0 blocks on all axis. Additionally, we make use of a small epsilon
     // to deal with floating point imprecision during a frustum check (see GH#2132).
-    private static final float CHUNK_SECTION_SIZE = 8.0f /* chunk bounds */ + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
+    private static final float CHUNK_SECTION_BASE = 8.0f /* chunk bounds */;
+    private static final float CHUNK_SECTION_SIZE = CHUNK_SECTION_BASE + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
+    private static final float CHUNK_SECTION_SIZE_NEIGHBOR = CHUNK_SECTION_BASE + 2.0f /* bigger model extent */ + 0.125f /* epsilon */;
 
     public static boolean isWithinFrustum(Viewport viewport, RenderSection section) {
         return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
                 CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE);
+    }
+
+    private static boolean isNeighborSectionVisible(RenderSection section, Viewport viewport, float maxDistance) {
+        return isWithinRenderDistance(viewport.getTransform(), section, maxDistance) && isWithinNeighborFrustum(viewport, section);
+    }
+
+    public static boolean isWithinNeighborFrustum(Viewport viewport, RenderSection section) {
+        return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
+                CHUNK_SECTION_SIZE_NEIGHBOR, CHUNK_SECTION_SIZE_NEIGHBOR, CHUNK_SECTION_SIZE_NEIGHBOR);
+    }
+
+    private void fixOriginNeighbors(Visitor visitor, Viewport viewport, float searchDistance, int frame) {
+        var origin = viewport.getChunkCoord();
+        var originX = origin.getX();
+        var originY = origin.getY();
+        var originZ = origin.getZ();
+
+        // face-touching neighbors
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY - 1, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY + 1, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY, originZ + 1);
+
+        // edge-touching neighbors
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY - 1, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY - 1, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY + 1, originZ);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY + 1, originZ);
+
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY, originZ + 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY, originZ + 1);
+
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY - 1, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY + 1, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY - 1, originZ + 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY + 1, originZ + 1);
+
+        // corner-touching neighbors
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY - 1, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY - 1, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY + 1, originZ - 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY + 1, originZ - 1);
+
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY - 1, originZ + 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY - 1, originZ + 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY + 1, originZ + 1);
+        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY + 1, originZ + 1);
+    }
+
+    private void visitOriginNeighbor(Visitor visitor, Viewport viewport, float searchDistance, int frame, int x, int y, int z) {
+        var section = this.getRenderSection(x, y, z);
+
+        if (section != null && section.getLastVisibleFrame() != frame && isNeighborSectionVisible(section, viewport, searchDistance)) {
+            // reset state on first visit, but don't enqueue
+            section.setLastVisibleFrame(frame);
+
+            visitor.visit(section, true);
+        }
     }
 
     private void init(Visitor visitor,
