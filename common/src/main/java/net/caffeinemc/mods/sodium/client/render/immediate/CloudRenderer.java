@@ -4,11 +4,11 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import net.caffeinemc.mods.sodium.api.util.ColorU8;
-import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
-import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
+import net.caffeinemc.mods.sodium.api.util.ColorU8;
+import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
+import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.Minecraft;
@@ -16,32 +16,50 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.lwjgl.opengl.GL32C;
 import org.lwjgl.system.MemoryStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Objects;
 
 public class CloudRenderer {
-    private static final ResourceLocation CLOUDS_TEXTURE_ID = ResourceLocation.withDefaultNamespace("textures/environment/clouds.png");
+    private static final Logger LOGGER = LoggerFactory.getLogger("Sodium-CloudRenderer");
 
-    private CloudTextureData textureData;
-    private ShaderInstance shaderProgram;
+    private static final ResourceLocation CLOUDS_TEXTURE_ID =
+            ResourceLocation.withDefaultNamespace("textures/environment/clouds.png");
 
-    private @Nullable CloudRenderer.CloudGeometry cachedGeometry;
+    private static final float CLOUD_HEIGHT = 4.0f; // The height of the cloud cells
+    private static final float CLOUD_WIDTH = 12.0f; // The width/length of cloud cells
+
+    // Bitmasks for each cloud face
+    private static final int FACE_MASK_NEG_Y = 1 << 0;
+    private static final int FACE_MASK_POS_Y = 1 << 1;
+    private static final int FACE_MASK_NEG_X = 1 << 2;
+    private static final int FACE_MASK_POS_X = 1 << 3;
+    private static final int FACE_MASK_NEG_Z = 1 << 4;
+    private static final int FACE_MASK_POS_Z = 1 << 5;
+
+    // The brightness of each fac
+    // The final color of each vertex is: vec4((texel.rgb * brightness), texel.a * 0.8)
+    private static final int BRIGHTNESS_POS_Y = ColorU8.normalizedFloatToByte(1.0F); // used for +Y
+    private static final int BRIGHTNESS_NEG_Y = ColorU8.normalizedFloatToByte(0.7F); // used for -Y
+    private static final int BRIGHTNESS_X_AXIS = ColorU8.normalizedFloatToByte(0.9F); // used for -X and +X
+    private static final int BRIGHTNESS_Z_AXIS = ColorU8.normalizedFloatToByte(0.8F); // used for -Z and +Z
+
+    private @Nullable ShaderInstance shaderProgram;
+    private @Nullable CloudTextureData textureData;
+    private @Nullable CloudGeometry builtGeometry;
 
     public CloudRenderer(ResourceProvider resourceProvider) {
-        this.reloadTextures(resourceProvider);
+        this.reload(resourceProvider);
     }
 
     public void render(Camera camera,
@@ -51,61 +69,78 @@ public class CloudRenderer {
                        float ticks,
                        float tickDelta)
     {
-        float cloudHeight = level.effects().getCloudHeight();
+        float height = level.effects()
+                .getCloudHeight() + 0.33f; // arithmetic against NaN always produces NaN
 
         // Vanilla uses NaN height as a way to disable cloud rendering
-        if (Float.isNaN(cloudHeight)) {
+        if (Float.isNaN(height)) {
             return;
         }
 
-        // Skip rendering clouds if texture is completely blank
-        if (this.textureData.isBlank) {
+        // Skip rendering clouds if the texture data or shader program isn't available
+        // This can happen if the texture failed to load, or if the texture is completely empty
+        if (this.textureData == null || this.shaderProgram == null) {
             return;
         }
 
-        Vec3 pos = camera.getPosition();
+        Vec3 cameraPos = camera.getPosition();
+        int renderDistance = getCloudRenderDistance();
+        var renderMode = Minecraft.getInstance().options.getCloudsType();
 
         double cloudTime = (ticks + tickDelta) * 0.03F;
-        double cloudCenterX = (pos.x() + cloudTime);
-        double cloudCenterZ = (pos.z()) + 0.33D;
 
-        int cloudDistance = getCloudRenderDistance();
+        // Translation of the clouds texture in world-space
+        float worldX = (float) (cameraPos.x() + cloudTime);
+        float worldZ = (float) (cameraPos.z() + 0.33D);
 
-        int centerCellX = (int) (Math.floor(cloudCenterX / 12.0));
-        int centerCellZ = (int) (Math.floor(cloudCenterZ / 12.0));
+        // The coordinates of the cloud cell which the camera is within
+        int cellX = Mth.floor(worldX / CLOUD_WIDTH);
+        int cellZ = Mth.floor(worldZ / CLOUD_WIDTH);
 
-        // -1 if below clouds, +1 if above clouds
-        var cloudType = Minecraft.getInstance().options.getCloudsType();
-        var relativeCloudY = cloudHeight - (float) pos.y() + 0.33F;
-        int orientation = cloudType == CloudStatus.FANCY ? (int) Math.signum(-relativeCloudY) : 0;
-        var parameters = new CloudGeometryParameters(centerCellX, centerCellZ, cloudDistance, orientation, cloudType);
+        // The orientation of the camera relative to the clouds
+        // This is used to cull back-facing geometry
+        ViewOrientation orientation;
 
-        CloudGeometry geometry = this.cachedGeometry;
+        if (renderMode == CloudStatus.FANCY) {
+            orientation = ViewOrientation.getOrientation(cameraPos, height, height + CLOUD_HEIGHT);
+        } else {
+            // When fast clouds are used, there is no orientation of faces, since culling is disabled.
+            // To avoid unnecessary rebuilds, simply mark a null (undefined) orientation.
+            orientation = null;
+        }
 
+        var parameters = new CloudGeometryParameters(cellX, cellZ, renderDistance, orientation, renderMode);
+
+        CloudGeometry geometry = this.builtGeometry;
+
+        // Re-generate the cached cloud geometry if necessary
         if (geometry == null || !Objects.equals(geometry.params(), parameters)) {
-            this.cachedGeometry = (geometry = rebuildGeometry(geometry, parameters, this.textureData));
+            this.builtGeometry = (geometry = rebuildGeometry(geometry, parameters, this.textureData));
         }
 
         VertexBuffer vertexBuffer = geometry.vertexBuffer();
+
+        // The vertex buffer can be empty when there are no clouds to render
         if (vertexBuffer == null) {
             return;
         }
 
-        final float translateX = (float) (cloudCenterX - (centerCellX * 12));
-        final float translateZ = (float) (cloudCenterZ - (centerCellZ * 12));
+        // Apply world->view transform
+        final float viewPosX = (worldX - (cellX * CLOUD_WIDTH));
+        final float viewPosY = (float) cameraPos.y() - height;
+        final float viewPosZ = (worldZ - (cellZ * CLOUD_WIDTH));
 
         poseStack.pushPose();
-
         var poseEntry = poseStack.last();
 
         Matrix4f modelViewMatrix = poseEntry.pose();
-        modelViewMatrix.translate(-translateX, relativeCloudY, -translateZ);
+        modelViewMatrix.translate(-viewPosX, -viewPosY, -viewPosZ);
 
         final var prevShaderFogShape = RenderSystem.getShaderFogShape();
         final var prevShaderFogEnd = RenderSystem.getShaderFogEnd();
         final var prevShaderFogStart = RenderSystem.getShaderFogStart();
 
-        FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_TERRAIN, cloudDistance * 8, shouldUseWorldFog(level, pos), tickDelta);
+        FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_TERRAIN, renderDistance * 8, shouldUseWorldFog(level, cameraPos), tickDelta);
 
         boolean fastClouds = geometry.params().renderMode() == CloudStatus.FAST;
         boolean fabulous = Minecraft.useShaderTransparency();
@@ -161,25 +196,25 @@ public class CloudRenderer {
 
         var writer = VertexBufferWriter.of(bufferBuilder);
 
-        var originCellX = parameters.originX();
-        var originCellZ = parameters.originZ();
+        final var radius = parameters.radius();
+        final var orientation = parameters.orientation();
+        final var flat = parameters.renderMode() == CloudStatus.FAST;
 
-        var orientation = parameters.orientation();
+        final var slice = textureData.slice(parameters.originX(), parameters.originZ(), radius);
 
-        var radius = parameters.radius();
-        var useFastGraphics = parameters.renderMode() == CloudStatus.FAST;
-
-        addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, 0, 0, orientation, useFastGraphics);
+        // Iterate from the center coordinates (0, 0) outwards
+        // Since the geometry will be in sorted order, this avoids needing a depth pre-pass
+        addCellGeometryToBuffer(writer, slice, 0, 0, orientation, flat);
 
         for (int layer = 1; layer <= radius; layer++) {
             for (int z = -layer; z < layer; z++) {
                 int x = Math.abs(z) - layer;
-                addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, x, z, orientation, useFastGraphics);
+                addCellGeometryToBuffer(writer, slice, x, z, orientation, flat);
             }
 
             for (int z = layer; z > -layer; z--) {
                 int x = layer - Math.abs(z);
-                addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, x, z, orientation, useFastGraphics);
+                addCellGeometryToBuffer(writer, slice, x, z, orientation, flat);
             }
         }
 
@@ -188,22 +223,22 @@ public class CloudRenderer {
 
             for (int z = -radius; z <= -l; z++) {
                 int x = -z - layer;
-                addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, x, z, orientation, useFastGraphics);
+                addCellGeometryToBuffer(writer, slice, x, z, orientation, flat);
             }
 
             for (int z = l; z <= radius; z++) {
                 int x = z - layer;
-                addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, x, z, orientation, useFastGraphics);
+                addCellGeometryToBuffer(writer, slice, x, z, orientation, flat);
             }
 
             for (int z = radius; z >= l; z--) {
                 int x = layer - z;
-                addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, x, z, orientation, useFastGraphics);
+                addCellGeometryToBuffer(writer, slice, x, z, orientation, flat);
             }
 
             for (int z = -l; z >= -radius; z--) {
                 int x = layer + z;
-                addCellGeometryToBuffer(writer, textureData, originCellX, originCellZ, x, z, orientation, useFastGraphics);
+                addCellGeometryToBuffer(writer, slice, x, z, orientation, flat);
             }
         }
 
@@ -228,172 +263,235 @@ public class CloudRenderer {
     }
 
     private static void addCellGeometryToBuffer(VertexBufferWriter writer,
-                                                CloudTextureData textureData,
-                                                int originX,
-                                                int originZ,
-                                                int offsetX,
-                                                int offsetZ,
-                                                int orientation,
-                                                boolean useFastGraphics) {
-        int cellX = originX + offsetX;
-        int cellZ = originZ + offsetZ;
+                                                CloudTextureData.Slice textureData,
+                                                int x,
+                                                int z,
+                                                @Nullable CloudRenderer.ViewOrientation orientation,
+                                                boolean flat)
+    {
+        int index = textureData.getCellIndex(x, z);
+        int faces = textureData.getCellFaces(index) & getVisibleFaces(x, z, orientation);
 
-        int cellIndex = textureData.getCellIndexWrapping(cellX, cellZ);
-        int cellFaces = textureData.getCellFaces(cellIndex) & getVisibleFaces(offsetX, offsetZ, orientation);
-
-        if (cellFaces == 0) {
+        if (faces == 0) {
             return;
         }
 
-        int cellColor = textureData.getCellColor(cellIndex);
+        int color = textureData.getCellColor(index);
 
-        if (ColorABGR.unpackAlpha(cellColor) == 0) {
+        if (isTransparent(color)) {
             return;
         }
 
-        float x = offsetX * 12;
-        float z = offsetZ * 12;
-
-        if (useFastGraphics) {
-            emitCellGeometry2D(writer, cellFaces, cellColor, x, z);
+        if (flat) {
+            emitCellGeometryFlat(writer, color, x, z);
         } else {
-            emitCellGeometry3D(writer, cellFaces, cellColor, x, z, false);
+            emitCellGeometryExterior(writer, faces, color, x, z);
 
-            int distance = Math.abs(offsetX) + Math.abs(offsetZ);
-
-            if (distance <= 1) {
-                emitCellGeometry3D(writer, CloudFaceSet.all(), cellColor, x, z, true);
+            if (taxicabDistance(x, z) <= 1) {
+                emitCellGeometryInterior(writer, color, x, z);
             }
         }
     }
 
-    private static int getVisibleFaces(int x, int z, int orientation) {
-        int faces = CloudFaceSet.all();
+    private static int getVisibleFaces(int x, int z, ViewOrientation orientation) {
+        int faces = 0;
 
-        if (x > 0) {
-            faces = CloudFaceSet.remove(faces, CloudFace.POS_X);
+        if (x <= 0) {
+            faces |= FACE_MASK_POS_X;
         }
 
-        if (z > 0) {
-            faces = CloudFaceSet.remove(faces, CloudFace.POS_Z);
+        if (z <= 0) {
+            faces |= FACE_MASK_POS_Z;
         }
 
-        if (x < 0) {
-            faces = CloudFaceSet.remove(faces, CloudFace.NEG_X);
+        if (x >= 0) {
+            faces |= FACE_MASK_NEG_X;
         }
 
-        if (z < 0) {
-            faces = CloudFaceSet.remove(faces, CloudFace.NEG_Z);
+        if (z >= 0) {
+            faces |= FACE_MASK_NEG_Z;
         }
 
-        if (orientation < 0) {
-            faces = CloudFaceSet.remove(faces, CloudFace.POS_Y);
+        if (orientation != ViewOrientation.BELOW_CLOUDS) {
+            faces |= FACE_MASK_POS_Y;
         }
 
-        if (orientation > 0) {
-            faces = CloudFaceSet.remove(faces, CloudFace.NEG_Y);
+        if (orientation != ViewOrientation.ABOVE_CLOUDS) {
+            faces |= FACE_MASK_NEG_Y;
         }
 
         return faces;
     }
 
-    private static final Vector3f[][] VERTICES = new Vector3f[CloudFace.COUNT][];
-
-    static {
-        VERTICES[CloudFace.NEG_Y.ordinal()] = new Vector3f[] {
-                new Vector3f(12.0f, 0.0f, 12.0f),
-                new Vector3f( 0.0f, 0.0f, 12.0f),
-                new Vector3f( 0.0f, 0.0f,  0.0f),
-                new Vector3f(12.0f, 0.0f,  0.0f)
-        };
-
-        VERTICES[CloudFace.POS_Y.ordinal()] = new Vector3f[] {
-                new Vector3f( 0.0f, 4.0f, 12.0f),
-                new Vector3f(12.0f, 4.0f, 12.0f),
-                new Vector3f(12.0f, 4.0f,  0.0f),
-                new Vector3f( 0.0f, 4.0f,  0.0f)
-        };
-
-        VERTICES[CloudFace.NEG_X.ordinal()] = new Vector3f[] {
-                new Vector3f( 0.0f, 0.0f, 12.0f),
-                new Vector3f( 0.0f, 4.0f, 12.0f),
-                new Vector3f( 0.0f, 4.0f,  0.0f),
-                new Vector3f( 0.0f, 0.0f,  0.0f)
-        };
-
-        VERTICES[CloudFace.POS_X.ordinal()] = new Vector3f[] {
-                new Vector3f(12.0f, 4.0f, 12.0f),
-                new Vector3f(12.0f, 0.0f, 12.0f),
-                new Vector3f(12.0f, 0.0f,  0.0f),
-                new Vector3f(12.0f, 4.0f,  0.0f)
-        };
-
-        VERTICES[CloudFace.NEG_Z.ordinal()] = new Vector3f[] {
-                new Vector3f(12.0f, 4.0f,  0.0f),
-                new Vector3f(12.0f, 0.0f,  0.0f),
-                new Vector3f( 0.0f, 0.0f,  0.0f),
-                new Vector3f( 0.0f, 4.0f,  0.0f)
-        };
-
-        VERTICES[CloudFace.POS_Z.ordinal()] = new Vector3f[] {
-                new Vector3f(12.0f, 0.0f, 12.0f),
-                new Vector3f(12.0f, 4.0f, 12.0f),
-                new Vector3f( 0.0f, 4.0f, 12.0f),
-                new Vector3f( 0.0f, 0.0f, 12.0f)
-        };
-    }
-
-    private static void emitCellGeometry2D(VertexBufferWriter writer, int faces, int color, float x, float z) {
+    private static void emitCellGeometryFlat(VertexBufferWriter writer, int texel, int x, int z) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            final long buffer = stack.nmalloc(4 * ColorVertex.STRIDE);
+            final long vertexBuffer = stack.nmalloc(4 * ColorVertex.STRIDE);
+            long ptr = vertexBuffer;
 
-            long ptr = buffer;
-            int count = 0;
+            final float x0 = (x * CLOUD_WIDTH);
+            final float x1 = x0 + CLOUD_WIDTH;
+            final float z0 = (z * CLOUD_WIDTH);
+            final float z1 = z0 + CLOUD_WIDTH;
 
-            int mixedColor = ColorABGR.mulRGB(color, CloudFace.POS_Y.getShade());
+            {
+                final int color = ColorABGR.mulRGB(texel, BRIGHTNESS_POS_Y);
+                ptr = writeVertex(ptr, x1, 0.0f, z1, color);
+                ptr = writeVertex(ptr, x0, 0.0f, z1, color);
+                ptr = writeVertex(ptr, x0, 0.0f, z0, color);
+                ptr = writeVertex(ptr, x1, 0.0f, z0, color);
+            }
 
-            ptr = writeVertex(ptr, x + 12.0f, 0.0f, z + 12.0f, mixedColor);
-            ptr = writeVertex(ptr, x +  0.0f, 0.0f, z + 12.0f, mixedColor);
-            ptr = writeVertex(ptr, x +  0.0f, 0.0f, z +  0.0f, mixedColor);
-            ptr = writeVertex(ptr, x + 12.0f, 0.0f, z +  0.0f, mixedColor);
-
-            count += 4;
-
-            writer.push(stack, buffer, count, ColorVertex.FORMAT);
+            writer.push(stack, vertexBuffer, 4, ColorVertex.FORMAT);
         }
     }
 
-    private static void emitCellGeometry3D(VertexBufferWriter writer, int visibleFaces, int baseColor, float posX, float posZ, boolean interior) {
+    private static void emitCellGeometryExterior(VertexBufferWriter writer, int cellFaces, int cellColor, int cellX, int cellZ) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            final long buffer = stack.nmalloc(6 * 4 * ColorVertex.STRIDE);
+            final long vertexBuffer = stack.nmalloc(6 * 4 * ColorVertex.STRIDE);
+            int vertexCount = 0;
 
-            long ptr = buffer;
-            int count = 0;
+            long ptr = vertexBuffer;
 
-            for (var face : CloudFace.VALUES) {
-                if (!CloudFaceSet.contains(visibleFaces, face)) {
-                    continue;
-                }
+            final float x0 = cellX * CLOUD_WIDTH;
+            final float y0 = 0.0f;
+            final float z0 = cellZ * CLOUD_WIDTH;
 
-                final var vertices = VERTICES[face.ordinal()];
-                final int color = ColorABGR.mulRGB(baseColor, face.getShade());
+            final float x1 = x0 + CLOUD_WIDTH;
+            final float y1 = y0 + CLOUD_HEIGHT;
+            final float z1 = z0 + CLOUD_WIDTH;
 
-                for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
-                    Vector3f vertex = vertices[interior ? 3 - vertexIndex : vertexIndex];
-
-                    final float x = vertex.x + posX;
-                    final float y = vertex.y;
-                    final float z = vertex.z + posZ;
-
-                    ptr = writeVertex(ptr, x, y, z, color);
-                }
-
-                count += 4;
+            // -Y
+            if ((cellFaces & FACE_MASK_NEG_Y) != 0) {
+                final int vertexColor = ColorABGR.mulRGB(cellColor, BRIGHTNESS_NEG_Y);
+                ptr = writeVertex(ptr, x1, y0, z1, vertexColor);
+                ptr = writeVertex(ptr, x0, y0, z1, vertexColor);
+                ptr = writeVertex(ptr, x0, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y0, z0, vertexColor);
+                vertexCount += 4;
             }
 
-            if (count > 0) {
-                writer.push(stack, buffer, count, ColorVertex.FORMAT);
+            // +Y
+            if ((cellFaces & FACE_MASK_POS_Y) != 0) {
+                final int vertexColor = ColorABGR.mulRGB(cellColor, BRIGHTNESS_POS_Y);
+                ptr = writeVertex(ptr, x0, y1, z1, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z1, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z0, vertexColor);
+                ptr = writeVertex(ptr, x0, y1, z0, vertexColor);
+                vertexCount += 4;
             }
+
+            if ((cellFaces & (FACE_MASK_NEG_X | FACE_MASK_POS_X)) != 0) {
+                final int vertexColor = ColorABGR.mulRGB(cellColor, BRIGHTNESS_X_AXIS);
+
+                // -X
+                if ((cellFaces & FACE_MASK_NEG_X) != 0) {
+                    ptr = writeVertex(ptr, x0, y0, z1, vertexColor);
+                    ptr = writeVertex(ptr, x0, y1, z1, vertexColor);
+                    ptr = writeVertex(ptr, x0, y1, z0, vertexColor);
+                    ptr = writeVertex(ptr, x0, y0, z0, vertexColor);
+                    vertexCount += 4;
+                }
+
+                // +X
+                if ((cellFaces & FACE_MASK_POS_X) != 0) {
+                    ptr = writeVertex(ptr, x1, y1, z1, vertexColor);
+                    ptr = writeVertex(ptr, x1, y0, z1, vertexColor);
+                    ptr = writeVertex(ptr, x1, y0, z0, vertexColor);
+                    ptr = writeVertex(ptr, x1, y1, z0, vertexColor);
+                    vertexCount += 4;
+                }
+            }
+
+            if ((cellFaces & (FACE_MASK_NEG_Z | FACE_MASK_POS_Z)) != 0) {
+                final int vertexColor = ColorABGR.mulRGB(cellColor, BRIGHTNESS_Z_AXIS);
+
+                // -Z
+                if ((cellFaces & FACE_MASK_NEG_Z) != 0) {
+                    ptr = writeVertex(ptr, x1, y1, z0, vertexColor);
+                    ptr = writeVertex(ptr, x1, y0, z0, vertexColor);
+                    ptr = writeVertex(ptr, x0, y0, z0, vertexColor);
+                    ptr = writeVertex(ptr, x0, y1, z0, vertexColor);
+                    vertexCount += 4;
+                }
+
+                // +Z
+                if ((cellFaces & FACE_MASK_POS_Z) != 0) {
+                    ptr = writeVertex(ptr, x1, y0, z1, vertexColor);
+                    ptr = writeVertex(ptr, x1, y1, z1, vertexColor);
+                    ptr = writeVertex(ptr, x0, y1, z1, vertexColor);
+                    ptr = writeVertex(ptr, x0, y0, z1, vertexColor);
+                    vertexCount += 4;
+                }
+            }
+
+            writer.push(stack, vertexBuffer, vertexCount, ColorVertex.FORMAT);
+        }
+    }
+
+    private static void emitCellGeometryInterior(VertexBufferWriter writer, int baseColor, int cellX, int cellZ) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            final long vertexBuffer = stack.nmalloc(6 * 4 * ColorVertex.STRIDE);
+            long ptr = vertexBuffer;
+
+            final float x0 = cellX * CLOUD_WIDTH;
+            final float y0 = 0.0f;
+            final float z0 = cellZ * CLOUD_WIDTH;
+
+            final float x1 = x0 + CLOUD_WIDTH;
+            final float y1 = y0 + CLOUD_HEIGHT;
+            final float z1 = z0 + CLOUD_WIDTH;
+
+            {
+                // -Y
+                final int vertexColor = ColorABGR.mulRGB(baseColor, BRIGHTNESS_NEG_Y);
+                ptr = writeVertex(ptr, x1, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x0, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x0, y0, z1, vertexColor);
+                ptr = writeVertex(ptr, x1, y0, z1, vertexColor);
+            }
+
+            {
+                // +Y
+                final int vertexColor = ColorABGR.mulRGB(baseColor, BRIGHTNESS_POS_Y);
+                ptr = writeVertex(ptr, x0, y1, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z1, vertexColor);
+                ptr = writeVertex(ptr, x0, y1, z1, vertexColor);
+            }
+
+            {
+                final int vertexColor = ColorABGR.mulRGB(baseColor, BRIGHTNESS_X_AXIS);
+
+                // -X
+                ptr = writeVertex(ptr, x0, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x0, y1, z0, vertexColor);
+                ptr = writeVertex(ptr, x0, y1, z1, vertexColor);
+                ptr = writeVertex(ptr, x0, y0, z1, vertexColor);
+
+                // +X
+                ptr = writeVertex(ptr, x1, y1, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y0, z1, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z1, vertexColor);
+            }
+
+            {
+                final int vertexColor = ColorABGR.mulRGB(baseColor, BRIGHTNESS_Z_AXIS);
+
+                // -Z
+                ptr = writeVertex(ptr, x0, y1, z0, vertexColor);
+                ptr = writeVertex(ptr, x0, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y0, z0, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z0, vertexColor);
+
+                // +Z
+                ptr = writeVertex(ptr, x0, y0, z1, vertexColor);
+                ptr = writeVertex(ptr, x0, y1, z1, vertexColor);
+                ptr = writeVertex(ptr, x1, y1, z1, vertexColor);
+                ptr = writeVertex(ptr, x1, y0, z1, vertexColor);
+            }
+
+            writer.push(stack, vertexBuffer, 6 * 4, ColorVertex.FORMAT);
         }
     }
 
@@ -409,16 +507,10 @@ public class CloudRenderer {
         VertexBuffer.unbind();
     }
 
-    public void reloadTextures(ResourceProvider resourceProvider) {
+    public void reload(ResourceProvider resourceProvider) {
         this.destroy();
-
-        this.textureData = loadTextureData();
-
-        try {
-            this.shaderProgram = new ShaderInstance(resourceProvider, "clouds", DefaultVertexFormat.POSITION_COLOR);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        this.textureData = loadTextureData(resourceProvider);
+        this.shaderProgram = loadShaderProgram(resourceProvider);
     }
 
     public void destroy() {
@@ -427,25 +519,38 @@ public class CloudRenderer {
             this.shaderProgram = null;
         }
 
-        if (this.cachedGeometry != null) {
-            var vertexBuffer = this.cachedGeometry.vertexBuffer();
+        if (this.builtGeometry != null) {
+            var vertexBuffer = this.builtGeometry.vertexBuffer();
             vertexBuffer.close();
 
-            this.cachedGeometry = null;
+            this.builtGeometry = null;
         }
     }
 
-    private static CloudTextureData loadTextureData() {
-        ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
-        Resource resource = resourceManager.getResource(CLOUDS_TEXTURE_ID)
-                .orElseThrow();
+    private static @Nullable ShaderInstance loadShaderProgram(ResourceProvider resourceProvider) {
+        try {
+            return new ShaderInstance(resourceProvider, "clouds", DefaultVertexFormat.POSITION_COLOR);
+        } catch (Throwable t) {
+            LOGGER.error("Failed to compile shader program for cloud rendering. The rendering of clouds in the skybox will be disabled. " +
+                    "This may be caused by an incompatible resource pack.", t);
+        }
 
-        try (InputStream inputStream = resource.open()){
-            try (NativeImage nativeImage = NativeImage.read(inputStream)) {
-                return new CloudTextureData(nativeImage);
-            }
-        } catch (IOException ex) {
-            throw new RuntimeException("Failed to load texture data", ex);
+        return null;
+    }
+
+    private static @Nullable CloudTextureData loadTextureData(ResourceProvider resourceProvider) {
+        var resource = resourceProvider.getResource(CloudRenderer.CLOUDS_TEXTURE_ID)
+                .orElseThrow(); // always provided by default resource pack
+
+        try (var inputStream = resource.open();
+             var nativeImage = NativeImage.read(inputStream))
+        {
+            return CloudTextureData.load(nativeImage);
+        }
+        catch (Throwable t) {
+            LOGGER.error("Failed to load texture '{}'. The rendering of clouds in the skybox will be disabled. " +
+                    "This may be caused by an incompatible resource pack.", CloudRenderer.CLOUDS_TEXTURE_ID, t);
+            return null;
         }
     }
 
@@ -458,96 +563,96 @@ public class CloudRenderer {
         return Math.max(32, (Minecraft.getInstance().options.getEffectiveRenderDistance() * 2) + 9);
     }
 
-    private enum CloudFace {
-        NEG_Y(0.7F),
-        POS_Y(1.0f),
-        NEG_X(0.9F),
-        POS_X(0.9F),
-        NEG_Z(0.8F),
-        POS_Z(0.8F);
-
-        public static final CloudFace[] VALUES = CloudFace.values();
-        public static final int COUNT = VALUES.length;
-
-        private final int shade;
-
-        CloudFace(float shade) {
-            this.shade = ColorU8.normalizedFloatToByte(shade);
-        }
-
-        public int getShade() {
-            return this.shade;
-        }
+    private static boolean isTransparent(int argb) {
+        return ColorARGB.unpackAlpha(argb) < 10;
     }
 
-    private static class CloudFaceSet {
-        public static int empty() {
-            return 0;
-        }
-
-        public static boolean contains(int set, CloudFace face) {
-            return (set & (1 << face.ordinal())) != 0;
-        }
-
-        public static int add(int set, CloudFace face) {
-            return set | (1 << face.ordinal());
-        }
-
-        public static int remove(int set, CloudFace face) {
-            return set & ~(1 << face.ordinal());
-        }
-
-        public static int all() {
-            return (1 << CloudFace.COUNT) - 1;
-        }
-    }
-
-    private static boolean isTransparentCell(int color) {
-        return ColorARGB.unpackAlpha(color) <= 1;
+    private static int taxicabDistance(int x, int z) {
+        return Math.abs(x) + Math.abs(z);
     }
 
     private static class CloudTextureData {
         private final byte[] faces;
         private final int[] colors;
-        private boolean isBlank;
 
         private final int width, height;
 
-        public CloudTextureData(NativeImage texture) {
-            int width = texture.getWidth();
-            int height = texture.getHeight();
-
+        private CloudTextureData(int width, int height) {
             this.faces = new byte[width * height];
             this.colors = new int[width * height];
-            this.isBlank = true;
 
             this.width = width;
             this.height = height;
-
-            this.loadTextureData(texture, width, height);
         }
 
-        private void loadTextureData(NativeImage texture, int width, int height) {
-            for (int x = 0; x < width; x++) {
-                for (int z = 0; z < height; z++) {
-                    int index = this.getCellIndex(x, z);
-                    int color = texture.getPixelRGBA(x, z);
+        public Slice slice(int originX, int originY, int radius) {
+            final var src = this;
+            final var dst = new CloudTextureData.Slice(radius);
 
-                    this.colors[index] = color;
+            for (int dstY = 0; dstY < dst.height; dstY++) {
+                int srcX = Math.floorMod(originX - radius, this.width);
+                int srcY = Math.floorMod(originY - radius + dstY, this.height);
 
-                    if (!isTransparentCell(color)) {
-                        this.faces[index] = (byte) getOpenFaces(texture, color, x, z);
-                        this.isBlank = false;
-                    }
+                int dstX = 0;
+
+                while (dstX < dst.width) {
+                    final int length = Math.min(src.width - srcX, dst.width - dstX);
+
+                    final int srcPos = getCellIndex(srcX, srcY, src.width);
+                    final int dstPos = getCellIndex(dstX, dstY, dst.width);
+
+                    System.arraycopy(this.faces, srcPos, dst.faces, dstPos, length);
+                    System.arraycopy(this.colors, srcPos, dst.colors, dstPos, length);
+
+                    srcX = 0;
+                    dstX += length;
                 }
             }
+
+            return dst;
+        }
+
+        public static @Nullable CloudTextureData load(NativeImage image) {
+            final int width = image.getWidth();
+            final int height = image.getHeight();
+
+            var data = new CloudTextureData(width, height);
+
+            if (!data.loadTextureData(image, width, height)) {
+                return null; // The texture is empty, so it isn't necessary to render it
+            }
+
+            return data;
+        }
+
+        private boolean loadTextureData(NativeImage texture, int width, int height) {
+            Validate.isTrue(this.width == width);
+            Validate.isTrue(this.height == height);
+
+            boolean containsData = false;
+
+            for (int x = 0; x < width; x++) {
+                for (int z = 0; z < height; z++) {
+                    int color = texture.getPixelRGBA(x, z);
+
+                    if (isTransparent(color)) {
+                        continue;
+                    }
+
+                    int index = getCellIndex(x, z, width);
+                    this.colors[index] = color;
+                    this.faces[index] = (byte) getOpenFaces(texture, color, x, z);
+
+                    containsData = true;
+                }
+            }
+
+            return containsData;
         }
 
         private static int getOpenFaces(NativeImage image, int color, int x, int z) {
             // Since the cloud texture is only 2D, nothing can hide the top or bottom faces
-            int faces = CloudFaceSet.empty();
-            faces = CloudFaceSet.add(faces, CloudFace.NEG_Y);
-            faces = CloudFaceSet.add(faces, CloudFace.POS_Y);
+            int faces = FACE_MASK_NEG_Y | FACE_MASK_POS_Y;
 
             // Generate faces where the neighbor cell is a different color
             // Do not generate duplicate faces between two cells
@@ -556,7 +661,7 @@ public class CloudRenderer {
                 int neighbor = getNeighborTexel(image, x - 1, z);
 
                 if (color != neighbor) {
-                    faces = CloudFaceSet.add(faces, CloudFace.NEG_X);
+                    faces |= FACE_MASK_NEG_X;
                 }
             }
 
@@ -565,7 +670,7 @@ public class CloudRenderer {
                 int neighbor = getNeighborTexel(image, x + 1, z);
 
                 if (color != neighbor) {
-                    faces = CloudFaceSet.add(faces, CloudFace.POS_X);
+                    faces |= FACE_MASK_POS_X;
                 }
             }
 
@@ -574,7 +679,7 @@ public class CloudRenderer {
                 int neighbor = getNeighborTexel(image, x, z - 1);
 
                 if (color != neighbor) {
-                    faces = CloudFaceSet.add(faces, CloudFace.NEG_Z);
+                    faces |= FACE_MASK_NEG_Z;
                 }
             }
 
@@ -583,7 +688,7 @@ public class CloudRenderer {
                 int neighbor = getNeighborTexel(image, x, z + 1);
 
                 if (color != neighbor) {
-                    faces = CloudFaceSet.add(faces, CloudFace.POS_Z);
+                    faces |= FACE_MASK_POS_Z;
                 }
             }
 
@@ -609,23 +714,35 @@ public class CloudRenderer {
             return coord;
         }
 
-        public int getCellFaces(int index) {
-            return this.faces[index];
+        private static int getCellIndex(int x, int z, int pitch) {
+            return (z * pitch) + x;
         }
 
-        public int getCellColor(int index) {
-            return this.colors[index];
-        }
+        public static class Slice {
+            private final int width, height;
+            private final int radius;
+            private final byte[] faces;
+            private final int[] colors;
 
-        private int getCellIndexWrapping(int x, int z) {
-            return this.getCellIndex(
-                    Math.floorMod(x, this.width),
-                    Math.floorMod(z, this.height)
-            );
-        }
+            public Slice(int radius) {
+                this.width = 1 + (radius * 2);
+                this.height = 1 + (radius * 2);
+                this.radius = radius;
+                this.faces = new byte[this.width * this.height];
+                this.colors = new int[this.width * this.height];
+            }
 
-        private int getCellIndex(int x, int z) {
-            return (x * this.width) + z;
+            public int getCellIndex(int x, int z) {
+                return CloudTextureData.getCellIndex(x + this.radius, z + this.radius, this.width);
+            }
+
+            public int getCellFaces(int index) {
+                return Byte.toUnsignedInt(this.faces[index]);
+            }
+
+            public int getCellColor(int index) {
+                return this.colors[index];
+            }
         }
     }
 
@@ -633,7 +750,23 @@ public class CloudRenderer {
 
     }
 
-    public record CloudGeometryParameters(int originX, int originZ, int radius, int orientation, CloudStatus renderMode) {
+    public record CloudGeometryParameters(int originX, int originZ, int radius, @Nullable ViewOrientation orientation, CloudStatus renderMode) {
 
+    }
+
+    private enum ViewOrientation {
+        BELOW_CLOUDS,   // Top faces should *not* be rendered
+        INSIDE_CLOUDS,  // All faces *must* be rendered
+        ABOVE_CLOUDS;   // Bottom faces should *not* be rendered
+
+        public static @NotNull ViewOrientation getOrientation(Vec3 camera, float minY, float maxY) {
+            if (camera.y() <= minY + 0.125f /* epsilon */) {
+                return ViewOrientation.BELOW_CLOUDS;
+            } else if (camera.y() >= maxY - 0.125f /* epsilon */) {
+                return ViewOrientation.ABOVE_CLOUDS;
+            } else {
+                return ViewOrientation.INSIDE_CLOUDS;
+            }
+        }
     }
 }
