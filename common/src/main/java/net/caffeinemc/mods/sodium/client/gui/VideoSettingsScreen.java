@@ -15,6 +15,7 @@ import net.caffeinemc.mods.sodium.client.gui.screen.ConfigCorruptedScreen;
 import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.gui.widgets.PageListWidget;
+import net.caffeinemc.mods.sodium.client.gui.widgets.ScrollbarWidget;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
@@ -63,6 +64,8 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
     private boolean hasPendingChanges;
     private ControlElement hoveredElement;
+
+    private @Nullable ScrollbarWidget tooltipScrollbar;
 
     private @Nullable ScreenPrompt prompt;
 
@@ -237,7 +240,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        this.updateControls();
+        this.updateControls(mouseX, mouseY);
 
         super.render(graphics, this.prompt != null ? -1 : mouseX, this.prompt != null ? -1 : mouseY, delta);
 
@@ -254,9 +257,11 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     protected void renderMenuBackground(@NotNull GuiGraphics guiGraphics, int i, int j, int k, int l) {
     }
 
-    private void updateControls() {
+    private void updateControls(int mouseX, int mouseY) {
         var hovered = this.getActiveControls()
-                .filter(ControlElement::isHovered)
+                // using ControlElement#isHovered causes a one frame delay because it is updated in the elements render method
+                // this caused flickering when going from hovering the tooltip back to the option
+                .filter(element -> element.isMouseOver(mouseX, mouseY))
                 .findFirst()
                 .orElse(this.getActiveControls() // If there is no hovered element, use the focused element.
                         .filter(ControlElement::isFocused)
@@ -270,15 +275,94 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.closeButton.setEnabled(!hasChanges);
 
         this.hasPendingChanges = hasChanges;
-        this.hoveredElement = hovered;
+
+        this.updateHoveredElement(hovered, mouseX, mouseY);
     }
 
     private Stream<ControlElement> getActiveControls() {
         return this.optionList.getControls().stream();
     }
 
+    private void updateHoveredElement(ControlElement hovered, int mouseX, int mouseY) {
+        if (this.hoveredElement == hovered) {
+            return;
+        }
+
+        if (hovered != null) {
+            this.hoveredElement = hovered;
+
+            if (this.tooltipScrollbar != null) {
+                this.removeWidget(this.tooltipScrollbar);
+                this.tooltipScrollbar = null;
+            }
+
+            Dim2i dimensions = this.getTooltipDimensions(hovered, this.getTooltip(hovered));
+            if (dimensions.height() > this.height) {
+                this.tooltipScrollbar = this.addRenderableWidget(new ScrollbarWidget(new Dim2i(
+                        dimensions.getLimitX() - 5,
+                        dimensions.y(),
+                        5,
+                        this.height
+                )));
+                this.tooltipScrollbar.setScrollbarContext(this.height, dimensions.height());
+            }
+        } else if (this.shouldUnHoverElement(this.hoveredElement, mouseX, mouseY)) {
+            this.hoveredElement = null;
+
+            if (this.tooltipScrollbar != null) {
+                this.removeWidget(this.tooltipScrollbar);
+                this.tooltipScrollbar = null;
+            }
+        }
+    }
+
+    private boolean shouldUnHoverElement(ControlElement element, int mouseX, int mouseY) {
+        Dim2i dimensions = this.getTooltipDimensions(element, this.getTooltip(element));
+
+        // handle the space between options and their tooltip
+        if (mouseX >= element.getLimitX() && mouseX < dimensions.x() && mouseY >= element.getY() && mouseY < element.getLimitY()) {
+            return false;
+        }
+        return !dimensions.containsCursor(mouseX, mouseY);
+    }
+
     private void renderOptionTooltip(GuiGraphics graphics, ControlElement element) {
         int textPadding = Layout.INNER_MARGIN;
+        int lineHeight = this.font.lineHeight + 3;
+
+        List<FormattedCharSequence> tooltip = this.getTooltip(element);
+        Dim2i dimensions = this.getTooltipDimensions(element, tooltip);
+
+        int scrollAmount = 0;
+        if (this.tooltipScrollbar != null) {
+            scrollAmount = this.tooltipScrollbar.getScrollAmount();
+        }
+
+        graphics.fill(dimensions.x(), dimensions.y(), dimensions.getLimitX(), dimensions.getLimitY(), 0x40000000);
+        for (int i = 0; i < tooltip.size(); i++) {
+            graphics.drawString(this.font, tooltip.get(i), dimensions.x() + textPadding, dimensions.y() + textPadding + (i * lineHeight) - scrollAmount, Colors.FOREGROUND);
+        }
+    }
+
+    private List<FormattedCharSequence> getTooltip(ControlElement element) {
+        int textPadding = Layout.INNER_MARGIN;
+
+        int boxWidth = Math.min(200, this.width - element.getLimitX());
+
+        var option = element.getOption();
+        var splitWidth = boxWidth - (textPadding * 2);
+
+        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), splitWidth));
+        OptionImpact impact = option.getImpact();
+
+        if (impact != null) {
+            var impactText = Component.translatable("sodium.options.performance_impact_string", impact.getName());
+            tooltip.addAll(this.font.split(impactText.withStyle(ChatFormatting.GRAY), splitWidth));
+        }
+        return tooltip;
+    }
+
+    private Dim2i getTooltipDimensions(ControlElement element, List<FormattedCharSequence> tooltip) {
         int boxMargin = Layout.INNER_MARGIN;
         int lineHeight = this.font.lineHeight + 3;
 
@@ -286,18 +370,6 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         int boxX = element.getLimitX() + boxMargin;
 
         int boxWidth = Math.min(200, this.width - boxX - boxMargin);
-
-        var option = element.getOption();
-        var splitWidth = boxWidth - (textPadding * 2);
-        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), splitWidth));
-
-        OptionImpact impact = option.getImpact();
-
-        if (impact != null) {
-            var impactText = Component.translatable("sodium.options.performance_impact_string",
-                    impact.getName());
-            tooltip.addAll(this.font.split(impactText.withStyle(ChatFormatting.GRAY), splitWidth));
-        }
 
         int boxHeight = (tooltip.size() * lineHeight) + boxMargin;
         int boxYLimit = boxY + boxHeight;
@@ -307,12 +379,11 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         if (boxYLimit > boxYCutoff) {
             boxY -= boxYLimit - boxYCutoff;
         }
-
-        graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x40000000);
-
-        for (int i = 0; i < tooltip.size(); i++) {
-            graphics.drawString(this.font, tooltip.get(i), boxX + textPadding, boxY + textPadding + (i * lineHeight), Colors.FOREGROUND);
+        if (boxY < 0) {
+            boxY = 0;
         }
+
+        return new Dim2i(boxX, boxY, boxWidth, boxHeight);
     }
 
     private void undoChanges() {
@@ -385,9 +456,12 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
                 }
             }
             return false;
-        } else {
-            return super.mouseScrolled(d, e, f, amount);
         }
+        if (this.tooltipScrollbar != null && this.getTooltipDimensions(this.hoveredElement, this.getTooltip(this.hoveredElement)).containsCursor(d, e)) {
+            this.tooltipScrollbar.scroll((int) (-amount * 10));
+            return true;
+        }
+        return super.mouseScrolled(d, e, f, amount);
     }
 
     @Override
