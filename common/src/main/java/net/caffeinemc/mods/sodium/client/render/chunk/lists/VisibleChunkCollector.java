@@ -32,22 +32,22 @@ public class VisibleChunkCollector implements OcclusionCuller.Visitor {
     }
 
     @Override
-    public void visit(RenderSection section, boolean visible) {
-        RenderRegion region = section.getRegion();
-        ChunkRenderList renderList = region.getRenderList();
+    public void visit(RenderSection section) {
+        // only process section (and associated render list) if it has content that needs rendering
+        if (section.getFlags() != 0) {
+            RenderRegion region = section.getRegion();
+            ChunkRenderList renderList = region.getRenderList();
 
-        // Even if a section does not have render objects, we must ensure the render list is initialized and put
-        // into the sorted queue of lists, so that we maintain the correct order of draw calls.
-        if (renderList.getLastVisibleFrame() != this.frame) {
-            renderList.reset(this.frame);
+            if (renderList.getLastVisibleFrame() != this.frame) {
+                renderList.reset(this.frame);
 
-            this.sortedRenderLists.add(renderList);
-        }
+                this.sortedRenderLists.add(renderList);
+            }
 
-        if (visible && section.getFlags() != 0) {
             renderList.add(section);
         }
 
+        // always add to rebuild lists though, because it might just not be built yet
         this.addToRebuildLists(section);
     }
 
