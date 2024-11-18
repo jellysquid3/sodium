@@ -234,50 +234,24 @@ public class OcclusionCuller {
         var originY = origin.getY();
         var originZ = origin.getZ();
 
-        // face-touching neighbors
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY - 1, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY + 1, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY, originZ + 1);
+        for (var dx = -1; dx <= 1; dx++) {
+            for (var dy = -1; dy <= 1; dy++) {
+                for (var dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dy == 0 && dz == 0) {
+                        continue;
+                    }
 
-        // edge-touching neighbors
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY - 1, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY - 1, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY + 1, originZ);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY + 1, originZ);
+                    var section = this.getRenderSection(originX + dx, originY + dy, originZ + dz);
 
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY, originZ + 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY, originZ + 1);
+                    // additionally render not yet visited but visible sections
+                    if (section != null && section.getLastVisibleFrame() != frame && isNeighborSectionVisible(section, viewport, searchDistance)) {
+                        // reset state on first visit, but don't enqueue
+                        section.setLastVisibleFrame(frame);
 
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY - 1, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY + 1, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY - 1, originZ + 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX, originY + 1, originZ + 1);
-
-        // corner-touching neighbors
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY - 1, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY - 1, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY + 1, originZ - 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY + 1, originZ - 1);
-
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY - 1, originZ + 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY - 1, originZ + 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX - 1, originY + 1, originZ + 1);
-        visitOriginNeighbor(visitor, viewport, searchDistance, frame, originX + 1, originY + 1, originZ + 1);
-    }
-
-    private void visitOriginNeighbor(Visitor visitor, Viewport viewport, float searchDistance, int frame, int x, int y, int z) {
-        var section = this.getRenderSection(x, y, z);
-
-        if (section != null && section.getLastVisibleFrame() != frame && isNeighborSectionVisible(section, viewport, searchDistance)) {
-            // reset state on first visit, but don't enqueue
-            section.setLastVisibleFrame(frame);
-
-            visitor.visit(section, true);
+                        visitor.visit(section, true);
+                    }
+                }
+            }
         }
     }
 
