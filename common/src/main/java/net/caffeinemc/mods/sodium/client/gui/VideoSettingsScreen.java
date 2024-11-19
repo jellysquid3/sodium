@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.gui;
 
-import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.config.ConfigManager;
 import net.caffeinemc.mods.sodium.client.config.structure.IntegerOption;
@@ -12,22 +11,19 @@ import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
 import net.caffeinemc.mods.sodium.client.gui.screen.ConfigCorruptedScreen;
-import net.caffeinemc.mods.sodium.client.gui.widgets.FlatButtonWidget;
-import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
-import net.caffeinemc.mods.sodium.client.gui.widgets.PageListWidget;
-import net.caffeinemc.mods.sodium.client.gui.widgets.ScrollbarWidget;
+import net.caffeinemc.mods.sodium.client.gui.widgets.*;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
-import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -60,12 +56,11 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private OptionListWidget optionList;
 
     private FlatButtonWidget applyButton, closeButton, undoButton;
-    private FlatButtonWidget donateButton, hideDonateButton;
+    private DonationButtonWidget donateButton;
 
     private boolean hasPendingChanges;
-    private ControlElement hoveredElement;
 
-    private @Nullable ScrollbarWidget tooltipScrollbar;
+    private final ScrollableTooltip tooltip = new ScrollableTooltip(this);
 
     private @Nullable ScreenPrompt prompt;
 
@@ -195,47 +190,25 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
 
-        this.undoButton = new FlatButtonWidget(new Dim2i(270, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
-        this.applyButton = new FlatButtonWidget(new Dim2i(130, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), ConfigManager.CONFIG::applyAllOptions, true, false);
-        this.closeButton = new FlatButtonWidget(new Dim2i(200, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
+        this.applyButton = new FlatButtonWidget(new Dim2i(this.pageList.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), ConfigManager.CONFIG::applyAllOptions, true, false);
+        this.closeButton = new FlatButtonWidget(new Dim2i(this.applyButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
+        this.undoButton = new FlatButtonWidget(new Dim2i(this.closeButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
 
-        this.donateButton = new FlatButtonWidget(new Dim2i(this.width - 128, Layout.INNER_MARGIN, 100, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.donate"), this::openDonationPage, true, false);
-        this.hideDonateButton = new FlatButtonWidget(new Dim2i(this.width - 26, Layout.INNER_MARGIN, Layout.BUTTON_SHORT, Layout.BUTTON_SHORT), Component.literal("x"), this::hideDonationButton, true, false);
-
-        if (SodiumClientMod.options().notifications.hasClearedDonationButton) {
-            // TODO: fix, this is for debugging
-            // this.setDonationButtonVisibility(false);
-        }
+        this.donateButton = new DonationButtonWidget(List.of(this.applyButton, this.closeButton, this.undoButton), this.width, this::openDonationPage, this::addRenderableWidget);
 
         this.addRenderableWidget(this.pageList);
         this.addRenderableWidget(this.undoButton);
         this.addRenderableWidget(this.applyButton);
         this.addRenderableWidget(this.closeButton);
-        this.addRenderableWidget(this.donateButton);
-        this.addRenderableWidget(this.hideDonateButton);
-    }
-
-    private void setDonationButtonVisibility(boolean value) {
-        this.donateButton.setVisible(value);
-        this.hideDonateButton.setVisible(value);
-    }
-
-    private void hideDonationButton() {
-        SodiumOptions options = SodiumClientMod.options();
-        options.notifications.hasClearedDonationButton = true;
-
-        try {
-            SodiumOptions.writeToDisk(options);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save configuration", e);
-        }
-
-        this.setDonationButtonVisibility(false);
     }
 
     private void rebuildGUIOptions() {
         this.removeWidget(this.optionList);
-        this.optionList = this.addRenderableWidget(new OptionListWidget(this, new Dim2i(130, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT, 210, this.height - (Layout.INNER_MARGIN * 2 + Layout.OUTER_MARGIN + Layout.BUTTON_SHORT)), this.currentPage, this.currentMod.theme()));
+        this.optionList = this.addRenderableWidget(new OptionListWidget(this, new Dim2i(
+                130, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT,
+                210, this.height - (Layout.INNER_MARGIN * 2 + Layout.BOTTOM_MARGIN + Layout.BUTTON_SHORT)),
+                this.currentPage, this.currentMod.theme()
+        ));
     }
 
     @Override
@@ -244,9 +217,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         super.render(graphics, this.prompt != null ? -1 : mouseX, this.prompt != null ? -1 : mouseY, delta);
 
-        if (this.hoveredElement != null) {
-            this.renderOptionTooltip(graphics, this.hoveredElement);
-        }
+        this.tooltip.render(graphics);
 
         if (this.prompt != null) {
             this.prompt.render(graphics, mouseX, mouseY, delta);
@@ -274,116 +245,15 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.undoButton.setVisible(hasChanges);
         this.closeButton.setEnabled(!hasChanges);
 
+        this.donateButton.updateDisplay();
+
         this.hasPendingChanges = hasChanges;
 
-        this.updateHoveredElement(hovered, mouseX, mouseY);
+        this.tooltip.onControlHover(hovered, mouseX, mouseY);
     }
 
     private Stream<ControlElement> getActiveControls() {
         return this.optionList.getControls().stream();
-    }
-
-    private void updateHoveredElement(ControlElement hovered, int mouseX, int mouseY) {
-        if (this.hoveredElement == hovered) {
-            return;
-        }
-
-        if (hovered != null) {
-            this.hoveredElement = hovered;
-
-            if (this.tooltipScrollbar != null) {
-                this.removeWidget(this.tooltipScrollbar);
-                this.tooltipScrollbar = null;
-            }
-
-            Dim2i dimensions = this.getTooltipDimensions(hovered, this.getTooltip(hovered));
-            if (dimensions.height() > this.height) {
-                this.tooltipScrollbar = this.addRenderableWidget(new ScrollbarWidget(new Dim2i(
-                        dimensions.getLimitX() - 5,
-                        dimensions.y(),
-                        5,
-                        this.height
-                )));
-                this.tooltipScrollbar.setScrollbarContext(this.height, dimensions.height());
-            }
-        } else if (this.shouldUnHoverElement(this.hoveredElement, mouseX, mouseY)) {
-            this.hoveredElement = null;
-
-            if (this.tooltipScrollbar != null) {
-                this.removeWidget(this.tooltipScrollbar);
-                this.tooltipScrollbar = null;
-            }
-        }
-    }
-
-    private boolean shouldUnHoverElement(ControlElement element, int mouseX, int mouseY) {
-        Dim2i dimensions = this.getTooltipDimensions(element, this.getTooltip(element));
-
-        // handle the space between options and their tooltip
-        if (mouseX >= element.getLimitX() && mouseX < dimensions.x() && mouseY >= element.getY() && mouseY < element.getLimitY()) {
-            return false;
-        }
-        return !dimensions.containsCursor(mouseX, mouseY);
-    }
-
-    private void renderOptionTooltip(GuiGraphics graphics, ControlElement element) {
-        int textPadding = Layout.INNER_MARGIN;
-        int lineHeight = this.font.lineHeight + 3;
-
-        List<FormattedCharSequence> tooltip = this.getTooltip(element);
-        Dim2i dimensions = this.getTooltipDimensions(element, tooltip);
-
-        int scrollAmount = 0;
-        if (this.tooltipScrollbar != null) {
-            scrollAmount = this.tooltipScrollbar.getScrollAmount();
-        }
-
-        graphics.fill(dimensions.x(), dimensions.y(), dimensions.getLimitX(), dimensions.getLimitY(), 0x40000000);
-        for (int i = 0; i < tooltip.size(); i++) {
-            graphics.drawString(this.font, tooltip.get(i), dimensions.x() + textPadding, dimensions.y() + textPadding + (i * lineHeight) - scrollAmount, Colors.FOREGROUND);
-        }
-    }
-
-    private List<FormattedCharSequence> getTooltip(ControlElement element) {
-        int textPadding = Layout.INNER_MARGIN;
-
-        int boxWidth = Math.min(200, this.width - element.getLimitX());
-
-        var option = element.getOption();
-        var splitWidth = boxWidth - (textPadding * 2);
-
-        List<FormattedCharSequence> tooltip = new ArrayList<>(this.font.split(option.getTooltip(), splitWidth));
-        OptionImpact impact = option.getImpact();
-
-        if (impact != null) {
-            var impactText = Component.translatable("sodium.options.performance_impact_string", impact.getName());
-            tooltip.addAll(this.font.split(impactText.withStyle(ChatFormatting.GRAY), splitWidth));
-        }
-        return tooltip;
-    }
-
-    private Dim2i getTooltipDimensions(ControlElement element, List<FormattedCharSequence> tooltip) {
-        int boxMargin = Layout.INNER_MARGIN;
-        int lineHeight = this.font.lineHeight + 3;
-
-        int boxY = element.getY();
-        int boxX = element.getLimitX() + boxMargin;
-
-        int boxWidth = Math.min(200, this.width - boxX - boxMargin);
-
-        int boxHeight = (tooltip.size() * lineHeight) + boxMargin;
-        int boxYLimit = boxY + boxHeight;
-        int boxYCutoff = this.height - Layout.INNER_MARGIN;
-
-        // If the box is going to be cut off on the Y-axis, move it back up the difference
-        if (boxYLimit > boxYCutoff) {
-            boxY -= boxYLimit - boxYCutoff;
-        }
-        if (boxY < 0) {
-            boxY = 0;
-        }
-
-        return new Dim2i(boxX, boxY, boxWidth, boxHeight);
     }
 
     private void undoChanges() {
@@ -427,7 +297,8 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     @Override
-    public boolean mouseScrolled(double d, double e, double f, double amount) {
+    public boolean mouseScrolled(double x, double y, double f, double amount) {
+        // change the gui scale with scrolling if the control key is held
         if (Screen.hasControlDown()) {
             var location = ResourceLocation.parse("sodium:general.gui_scale");
             var option = ConfigManager.CONFIG.getOption(location);
@@ -457,11 +328,22 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             }
             return false;
         }
-        if (this.tooltipScrollbar != null && this.getTooltipDimensions(this.hoveredElement, this.getTooltip(this.hoveredElement)).containsCursor(d, e)) {
-            this.tooltipScrollbar.scroll((int) (-amount * 10));
+
+        if (this.tooltip.mouseScrolled(x, y, amount)) {
             return true;
         }
-        return super.mouseScrolled(d, e, f, amount);
+
+        return super.mouseScrolled(x, y, f, amount);
+    }
+
+    @Override
+    public <T extends GuiEventListener & Renderable & NarratableEntry> T addRenderableWidget(T guiEventListener) {
+        return super.addRenderableWidget(guiEventListener);
+    }
+
+    @Override
+    public void removeWidget(GuiEventListener guiEventListener) {
+        super.removeWidget(guiEventListener);
     }
 
     @Override
