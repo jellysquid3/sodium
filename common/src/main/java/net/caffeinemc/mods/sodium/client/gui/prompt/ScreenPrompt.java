@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class ScreenPrompt implements GuiEventListener, Renderable {
-    private static final ButtonTheme PROMPT_THEME = new ButtonTheme(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xff393939, 0xff2b2b2b, 0xff2b2b2b);
+    private static final ButtonTheme PROMPT_THEME = new ButtonTheme(Colors.FOREGROUND, Colors.FOREGROUND, Colors.FOREGROUND, 0xff393939, 0xff2b2b2b, 0xff2b2b2b);
 
     private final ScreenPromptable parent;
     private final List<FormattedText> text;

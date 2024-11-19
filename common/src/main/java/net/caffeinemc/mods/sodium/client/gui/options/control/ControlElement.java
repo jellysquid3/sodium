@@ -52,7 +52,7 @@ public abstract class ControlElement extends AbstractWidget {
 
         this.hovered = this.isMouseOver(mouseX, mouseY);
 
-        this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), this.hovered ? 0xE0000000 : 0x90000000);
+        this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), this.hovered ? Colors.BACKGROUND_HOVER : Colors.BACKGROUND_DEFAULT);
         this.drawString(graphics, label, this.getX() + 6, this.getCenterY() - 4, Colors.FOREGROUND);
 
         if (this.isFocused()) {

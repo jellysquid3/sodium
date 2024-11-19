@@ -6,6 +6,7 @@ import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
 import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
+import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -26,7 +27,7 @@ public class PageListWidget extends AbstractParentWidget {
         this.rebuild();
     }
 
-    public void rebuild() {
+    private void rebuild() {
         int x = this.getX();
         int y = this.getY();
         int width = this.getWidth();
@@ -78,7 +79,7 @@ public class PageListWidget extends AbstractParentWidget {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fillGradient(this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), 0x40000000, 0x90000000);
+        graphics.fillGradient(this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), Colors.BACKGROUND_LIGHT, Colors.BACKGROUND_DEFAULT);
         var scissorEnd = this.getLimitY() - Layout.BUTTON_SHORT_BOTTOM_Y;
         graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), scissorEnd);
         super.render(graphics, mouseX, mouseY, delta);

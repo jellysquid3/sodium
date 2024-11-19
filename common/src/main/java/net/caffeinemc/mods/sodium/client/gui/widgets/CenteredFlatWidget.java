@@ -29,7 +29,7 @@ public abstract class CenteredFlatWidget extends AbstractWidget implements Rende
         this.label = label;
         this.subtitle = subtitle;
         this.isSelectable = isSelectable;
-        this.theme = new ButtonTheme(theme, 0x05FFFFFF, 0x90000000, 0x40000000);
+        this.theme = new ButtonTheme(theme, Colors.BACKGROUND_HIGHLIGHT, Colors.BACKGROUND_DEFAULT, Colors.BACKGROUND_LIGHT);
     }
 
     public CenteredFlatWidget(Dim2i dim, Component label, boolean isSelectable, ColorTheme theme) {
@@ -69,7 +69,7 @@ public abstract class CenteredFlatWidget extends AbstractWidget implements Rende
         }
 
         if (this.enabled && this.isFocused()) {
-            this.drawBorder(graphics, x1, y1, x2, y2, Colors.FOREGROUND);
+            this.drawBorder(graphics, x1, y1, x2, y2, Colors.BUTTON_BORDER);
         }
     }
 

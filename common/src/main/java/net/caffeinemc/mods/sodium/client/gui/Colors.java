@@ -8,10 +8,16 @@ import java.awt.*;
 public class Colors {
     public static final int THEME = 0xFF94E4D3;
     public static final int THEME_LIGHTER = 0xFFCCFDEE;
-    // public static final int THEME_DARKER = 0xF06f9090;
     public static final int THEME_DARKER = 0xFF7A9E9E;
     public static final int FOREGROUND = 0xFFFFFFFF;
     public static final int FOREGROUND_DISABLED = 0xFFAAAAAA;
+
+    public static final int BACKGROUND_LIGHT = 0x40000000;
+    public static final int BACKGROUND_HOVER = 0xE0000000;
+    public static final int BACKGROUND_DEFAULT = 0x90000000;
+    public static final int BACKGROUND_HIGHLIGHT = 0x05FFFFFF;
+
+    public static final int BUTTON_BORDER = 0x8000FFEE;
 
     private static final float LIGHTEN_FACTOR = 0.3f;
     private static final float DARKEN_FACTOR = -0.23f;

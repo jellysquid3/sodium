@@ -14,8 +14,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class FlatButtonWidget extends AbstractWidget implements Renderable {
     private static final ButtonTheme DEFAULT_THEME = new ButtonTheme(
-            0xFFFFFFFF, 0xFFFFFFFF, 0x90FFFFFF,
-            0xE0000000, 0x90000000, 0x60000000);
+            Colors.FOREGROUND, Colors.FOREGROUND, Colors.FOREGROUND_DISABLED,
+            Colors.BACKGROUND_HOVER, Colors.BACKGROUND_DEFAULT, Colors.BACKGROUND_LIGHT);
 
     private final Runnable action;
     private final boolean drawBackground;
