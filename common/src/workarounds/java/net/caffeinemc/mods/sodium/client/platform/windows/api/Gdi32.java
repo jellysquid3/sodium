@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.platform.windows.api;
 
-import org.apache.commons.lang3.Validate;
 import org.lwjgl.system.JNI;
 import org.lwjgl.system.SharedLibrary;
 
@@ -21,19 +20,24 @@ public class Gdi32 {
 
     // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtqueryadapterinfo
     public static int /* NTSTATUS */ nd3dKmtQueryAdapterInfo(long ptr /* D3DKMT_QUERYADAPTERINFO */) {
-        Validate.isTrue(PFN_D3DKMTQueryAdapterInfo != NULL);
-        return JNI.callPI(ptr, PFN_D3DKMTQueryAdapterInfo);
+        return JNI.callPI(ptr, checkPfn(PFN_D3DKMTQueryAdapterInfo));
     }
 
     // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtenumadapters2
     public static int /* NTSTATUS */ nD3DKMTEnumAdapters(long ptr /* D3DKMT_ENUMADAPTERS */) {
-        Validate.isTrue(PFN_D3DKMTEnumAdapters != NULL);
-        return JNI.callPI(ptr, PFN_D3DKMTEnumAdapters);
+        return JNI.callPI(ptr, checkPfn(PFN_D3DKMTEnumAdapters));
     }
 
     // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtcloseadapter
     public static int /* NTSTATUS */ nD3DKMTCloseAdapter(long ptr /* D3DKMT_CLOSEADAPTER */) {
-        Validate.isTrue(PFN_D3DKMTCloseAdapter != NULL);
-        return JNI.callPI(ptr, PFN_D3DKMTCloseAdapter);
+        return JNI.callPI(ptr, checkPfn(PFN_D3DKMTCloseAdapter));
+    }
+
+    private static long checkPfn(long pfn) {
+        if (pfn == NULL) {
+            throw new NullPointerException("Function pointer not available");
+        }
+
+        return pfn;
     }
 }

@@ -18,11 +18,8 @@ public class SodiumWorkarounds implements GraphicsBootstrapper {
         GraphicsAdapterProbe.findAdapters();
         PreLaunchChecks.onGameInit();
         Workarounds.init();
-        final boolean applyNvidiaWorkarounds = Workarounds.isWorkaroundEnabled(Workarounds.Reference.NVIDIA_THREADED_OPTIMIZATIONS);
 
-        if (applyNvidiaWorkarounds) {
-            System.out.println("[Sodium] Applying NVIDIA workarounds earlier on Forge.");
-            NvidiaWorkarounds.install();
-        }
+        // Context creation happens earlier on NeoForge, so we need to apply this now
+        NvidiaWorkarounds.applyEnvironmentChanges();
     }
 }
