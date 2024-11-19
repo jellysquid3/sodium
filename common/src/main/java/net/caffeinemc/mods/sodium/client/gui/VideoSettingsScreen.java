@@ -36,7 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-// TODO: show a scroll bar on the tooltip if it's too big to fit on the screen
 // TODO: make the search bar work
 // TODO: wrap options within groups in two columns
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
