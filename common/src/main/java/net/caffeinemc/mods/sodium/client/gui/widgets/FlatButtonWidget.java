@@ -27,7 +27,6 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
     private boolean enabled = true;
     private boolean visible = true;
 
-
     public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean leftAlign, ButtonTheme theme) {
         super(dim);
         this.label = label;
@@ -50,24 +49,28 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
         this.hovered = this.isMouseOver(mouseX, mouseY);
 
         int backgroundColor = this.enabled ? (this.hovered ? this.theme.bgHighlight : this.theme.bgDefault) : this.theme.bgInactive;
-        int textColor = this.enabled ? this.theme.themeLighter : this.theme.themeDarker;
-
-        int strWidth = this.font.width(this.label);
+        int textColor = this.getTextColor();
 
         if (this.drawBackground) {
             this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), backgroundColor);
         }
 
-        this.drawString(graphics, this.label, this.leftAlign ? this.getX() + Layout.TEXT_LEFT_PADDING : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - 4, textColor);
+        if (this.label != null) {
+            int strWidth = this.font.width(this.label);
+            this.drawString(graphics, this.label, this.leftAlign ? this.getX() + Layout.TEXT_LEFT_PADDING : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - 4, textColor);
+        }
 
         if (this.enabled && this.selected) {
             this.drawRect(graphics, this.getX(), this.getLimitY() - 1, this.getLimitX(), this.getLimitY(), Colors.THEME);
         }
 
         if (!this.drawBackground) {
-            this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), 0x8000FFEE);
-
+            this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), Colors.BUTTON_BORDER);
         }
+    }
+
+    protected int getTextColor() {
+        return this.enabled ? this.theme.themeLighter : this.theme.themeDarker;
     }
 
     public void setSelected(boolean selected) {
@@ -120,5 +123,9 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
         if (!this.enabled || !this.visible)
             return null;
         return super.nextFocusPath(event);
+    }
+
+    public boolean isVisible() {
+        return this.visible;
     }
 }

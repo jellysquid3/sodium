@@ -3,13 +3,11 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-// TODO: make this extend sodium's AbstractWidget
-public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/AbstractWidget {
+// TODO: override some methods to make it not focusable?
+public class ScrollbarWidget extends AbstractWidget {
     private static final int COLOR = ColorABGR.pack(50, 50, 50, 150);
     private static final int HIGHLIGHT_COLOR = ColorABGR.pack(100, 100, 100, 150);
 
@@ -27,7 +25,7 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
     }
 
     public ScrollbarWidget(Dim2i dim2i, boolean horizontal) {
-        super(dim2i.x(), dim2i.y(), dim2i.width(), dim2i.height(), Component.empty());
+        super(dim2i);
         this.horizontal = horizontal;
     }
 
@@ -38,7 +36,7 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
     }
 
     public void setScrollbarContext(int total) {
-        this.setScrollbarContext(this.horizontal ? this.width : this.height, total);
+        this.setScrollbarContext(this.horizontal ? this.getWidth() : this.getHeight(), total);
     }
 
     public boolean canScroll() {
@@ -55,7 +53,7 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
     }
 
     @Override
-    protected void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         if (!this.canScroll()) {
             return;
         }
@@ -69,15 +67,15 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
             graphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), COLOR);
             int x1, y1, x2, y2;
             if (this.horizontal) {
-                x1 = this.getX() + this.getHighlightStart(this.width);
+                x1 = this.getX() + this.getHighlightStart(this.getWidth());
                 y1 = this.getY();
-                x2 = x1 + this.getHighlightLength(this.width);
-                y2 = y1 + this.height;
+                x2 = x1 + this.getHighlightLength(this.getWidth());
+                y2 = y1 + this.getHeight();
             } else {
                 x1 = this.getX();
-                y1 = this.getY() + this.getHighlightStart(this.height);
-                x2 = x1 + this.width;
-                y2 = y1 + this.getHighlightLength(this.height);
+                y1 = this.getY() + this.getHighlightStart(this.getHeight());
+                x2 = x1 + this.getWidth();
+                y2 = y1 + this.getHighlightLength(this.getHeight());
             }
             graphics.fill(x1, y1, x2, y2, HIGHLIGHT_COLOR);
         }
@@ -86,15 +84,15 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
     private boolean isMouseOverHighlight(double mouseX, double mouseY) {
         int x1, y1, x2, y2;
         if (this.horizontal) {
-            x1 = this.getX() + this.getHighlightStart(this.width);
+            x1 = this.getX() + this.getHighlightStart(this.getWidth());
             y1 = this.getY();
-            x2 = x1 + this.getHighlightLength(this.width);
-            y2 = y1 + this.height;
+            x2 = x1 + this.getHighlightLength(this.getWidth());
+            y2 = y1 + this.getHeight();
         } else {
             x1 = this.getX();
-            y1 = this.getY() + this.getHighlightStart(this.height);
-            x2 = x1 + this.width;
-            y2 = y1 + this.getHighlightLength(this.height);
+            y1 = this.getY() + this.getHighlightStart(this.getHeight());
+            x2 = x1 + this.getWidth();
+            y2 = y1 + this.getHighlightLength(this.getHeight());
         }
         return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
     }
@@ -116,9 +114,9 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
             this.dragging = true;
         } else {
             if (this.horizontal) {
-                this.scroll(mouseX > this.getHighlightStart(this.width) ? this.width : -this.width);
+                this.scroll(mouseX > this.getHighlightStart(this.getWidth()) ? this.getWidth() : -this.getWidth());
             } else {
-                this.scroll(mouseY > this.getHighlightStart(this.height) ? this.height : -this.height);
+                this.scroll(mouseY > this.getHighlightStart(this.getHeight()) ? this.getHeight() : -this.getHeight());
             }
         }
         return true;
@@ -141,6 +139,6 @@ public class ScrollbarWidget extends /*net.minecraft.client.gui.components.*/Abs
     }
 
     @Override
-    protected void updateWidgetNarration(@NotNull NarrationElementOutput output) {
+    public void updateNarration(NarrationElementOutput builder) {
     }
 }

@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OptionListWidget extends AbstractParentWidget {
+    private static final int SCROLLBAR_OFFSET = 5;
+
     private final OptionPage page;
     private final ColorTheme theme;
     private final List<ControlElement> controls;
@@ -37,7 +39,7 @@ public class OptionListWidget extends AbstractParentWidget {
         int maxWidth = 0;
 
         this.clearChildren();
-        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - Layout.SCROLLBAR_WIDTH, y, Layout.SCROLLBAR_WIDTH, height)));
+        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width + SCROLLBAR_OFFSET, y, Layout.SCROLLBAR_WIDTH, height)));
 
         int entryHeight = 18;
         int listHeight = 0;
@@ -45,7 +47,7 @@ public class OptionListWidget extends AbstractParentWidget {
             // Add each option's control element
             for (Option option : group.options()) {
                 var control = option.getControl();
-                var element = control.createElement(screen,this, new Dim2i(x, y + listHeight, width - 10, entryHeight), this.theme);
+                var element = control.createElement(screen,this, new Dim2i(x, y + listHeight, width, entryHeight), this.theme);
 
                 this.addRenderableChild(element);
                 this.controls.add(element);
@@ -65,11 +67,8 @@ public class OptionListWidget extends AbstractParentWidget {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), this.getLimitY());
+        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX() + SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
-
-//        this.verticalScrollScissorGradient(graphics, this.getLimitY());
-
         graphics.disableScissor();
     }
 

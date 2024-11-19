@@ -75,7 +75,6 @@ public class ScreenPrompt implements GuiEventListener, Renderable {
         int textY = boxY + padding;
 
         int textMaxWidth = this.width - (padding * 2);
-        int textMaxHeight = this.height - (padding * 2);
 
         var font = Minecraft.getInstance().font;
 
