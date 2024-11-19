@@ -6,11 +6,10 @@ import com.mojang.blaze3d.platform.DisplayData;
 import com.mojang.blaze3d.platform.ScreenManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
-import net.caffeinemc.mods.sodium.client.compatibility.checks.PostLaunchChecks;
 import net.caffeinemc.mods.sodium.client.compatibility.checks.ModuleScanner;
-import net.caffeinemc.mods.sodium.client.gl.GlContextInfo;
-import net.caffeinemc.mods.sodium.client.compatibility.workarounds.Workarounds;
+import net.caffeinemc.mods.sodium.client.compatibility.checks.PostLaunchChecks;
 import net.caffeinemc.mods.sodium.client.compatibility.workarounds.nvidia.NvidiaWorkarounds;
+import net.caffeinemc.mods.sodium.client.compatibility.environment.GlContextInfo;
 import net.caffeinemc.mods.sodium.client.platform.NativeWindowHandle;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.minecraft.Util;
@@ -38,59 +37,46 @@ public class WindowMixin {
     @Final
     private static Logger LOGGER;
 
-    @Shadow
-    @Final
-    private long window;
-
     @Unique
     private long wglPrevContext = MemoryUtil.NULL;
 
     @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwCreateWindow(IILjava/lang/CharSequence;JJ)J"), expect = 0, require = 0)
     private long wrapGlfwCreateWindow(int width, int height, CharSequence title, long monitor, long share) {
-        final boolean applyNvidiaWorkarounds = Workarounds.isWorkaroundEnabled(Workarounds.Reference.NVIDIA_THREADED_OPTIMIZATIONS);
-
-        if (applyNvidiaWorkarounds) {
-            NvidiaWorkarounds.install();
-        }
+        NvidiaWorkarounds.applyEnvironmentChanges();
 
         try {
             return GLFW.glfwCreateWindow(width, height, title, monitor, share);
         } finally {
-            if (applyNvidiaWorkarounds) {
-                NvidiaWorkarounds.uninstall();
-            }
+            NvidiaWorkarounds.undoEnvironmentChanges();
         }
     }
 
     @SuppressWarnings("all")
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/neoforged/fml/loading/ImmediateWindowHandler;setupMinecraftWindow(Ljava/util/function/IntSupplier;Ljava/util/function/IntSupplier;Ljava/util/function/Supplier;Ljava/util/function/LongSupplier;)J"), expect = 0, require = 0)
     private long wrapGlfwCreateWindowForge(final IntSupplier width, final IntSupplier height, final Supplier<String> title, final LongSupplier monitor, Operation<Long> op) {
-        final boolean applyNvidiaWorkarounds = Workarounds.isWorkaroundEnabled(Workarounds.Reference.NVIDIA_THREADED_OPTIMIZATIONS);
+        boolean applyWorkaroundsLate = !PlatformRuntimeInformation.getInstance()
+                .platformHasEarlyLoadingScreen();
 
-        if (applyNvidiaWorkarounds && !PlatformRuntimeInformation.getInstance().platformHasEarlyLoadingScreen()) {
-            NvidiaWorkarounds.install();
+        if (applyWorkaroundsLate) {
+            NvidiaWorkarounds.applyEnvironmentChanges();
         }
 
         try {
             return op.call(width, height, title, monitor);
         } finally {
-            if (applyNvidiaWorkarounds) {
-                NvidiaWorkarounds.uninstall();
+            if (applyWorkaroundsLate) {
+                NvidiaWorkarounds.undoEnvironmentChanges();
             }
         }
     }
 
+
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL;createCapabilities()Lorg/lwjgl/opengl/GLCapabilities;", shift = At.Shift.AFTER))
     private void postContextReady(WindowEventHandler eventHandler, ScreenManager monitorTracker, DisplayData settings, String videoMode, String title, CallbackInfo ci) {
         GlContextInfo driver = GlContextInfo.create();
-
-        if (driver == null) {
-            LOGGER.warn("Could not retrieve identifying strings for OpenGL implementation");
-        } else {
-            LOGGER.info("OpenGL Vendor: {}", driver.vendor());
-            LOGGER.info("OpenGL Renderer: {}", driver.renderer());
-            LOGGER.info("OpenGL Version: {}", driver.version());
-        }
+        LOGGER.info("OpenGL Vendor: {}", driver.vendor());
+        LOGGER.info("OpenGL Renderer: {}", driver.renderer());
+        LOGGER.info("OpenGL Version: {}", driver.version());
 
         // Capture the current WGL context so that we can detect it being replaced later.
         if (Util.getPlatform() == Util.OS.WINDOWS) {
@@ -99,6 +85,7 @@ public class WindowMixin {
             this.wglPrevContext = MemoryUtil.NULL;
         }
 
+        NvidiaWorkarounds.applyContextChanges(driver);
         PostLaunchChecks.onContextInitialized();
         ModuleScanner.checkModules((NativeWindowHandle) this);
     }

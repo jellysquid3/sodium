@@ -69,9 +69,8 @@ dependencies {
 
     // We need to be careful during pre-launch that we don't touch any Minecraft classes, since other mods
     // will not yet have an opportunity to apply transformations.
-    configurationPreLaunch("org.apache.commons:commons-lang3:3.14.0")
-    configurationPreLaunch("commons-io:commons-io:2.15.1")
     configurationPreLaunch("org.lwjgl:lwjgl:3.3.3")
+    configurationPreLaunch("org.lwjgl:lwjgl-opengl:3.3.3")
     configurationPreLaunch("net.java.dev.jna:jna:5.14.0")
     configurationPreLaunch("net.java.dev.jna:jna-platform:5.14.0")
     configurationPreLaunch("org.slf4j:slf4j-api:2.0.9")

@@ -1,19 +1,30 @@
 package net.caffeinemc.mods.sodium.client.compatibility.environment;
 
-import org.apache.commons.lang3.SystemUtils;
+import java.util.Locale;
 
 public class OsUtils {
+    private static final OperatingSystem OS = determineOs();
 
-    public static OperatingSystem getOs() {
-        if (SystemUtils.IS_OS_WINDOWS) {
-            return OperatingSystem.WIN;
-        } else if (SystemUtils.IS_OS_MAC) {
-            return OperatingSystem.MAC;
-        } else if (SystemUtils.IS_OS_LINUX) {
-            return OperatingSystem.LINUX;
+    public static OperatingSystem determineOs() {
+        var name = System.getProperty("os.name");
+
+        if (name != null) {
+            var normalized = name.toLowerCase(Locale.ROOT);
+
+            if (normalized.startsWith("windows")) {
+                return OperatingSystem.WIN;
+            } else if (normalized.startsWith("mac")) {
+                return OperatingSystem.MAC;
+            } else if (normalized.startsWith("linux")) {
+                return OperatingSystem.LINUX;
+            }
         }
 
         return OperatingSystem.UNKNOWN;
+    }
+
+    public static OperatingSystem getOs() {
+        return OS;
     }
 
     public enum OperatingSystem {

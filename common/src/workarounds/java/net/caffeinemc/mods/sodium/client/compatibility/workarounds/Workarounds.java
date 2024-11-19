@@ -1,15 +1,17 @@
 package net.caffeinemc.mods.sodium.client.compatibility.workarounds;
 
 import net.caffeinemc.mods.sodium.client.compatibility.environment.OsUtils;
-import net.caffeinemc.mods.sodium.client.compatibility.environment.probe.GraphicsAdapterInfo;
 import net.caffeinemc.mods.sodium.client.compatibility.environment.probe.GraphicsAdapterProbe;
-import net.caffeinemc.mods.sodium.client.compatibility.environment.probe.GraphicsAdapterVendor;
+import net.caffeinemc.mods.sodium.client.compatibility.workarounds.nvidia.NvidiaWorkarounds;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.d3dkmt.D3DKMT;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -37,10 +39,8 @@ public class Workarounds {
         var workarounds = EnumSet.noneOf(Reference.class);
         var operatingSystem = OsUtils.getOs();
 
-        var graphicsAdapters = GraphicsAdapterProbe.getAdapters();
-
-        if (isUsingNvidiaGraphicsCard(operatingSystem, graphicsAdapters)) {
-            workarounds.add(Reference.NVIDIA_THREADED_OPTIMIZATIONS);
+        if (NvidiaWorkarounds.isUsingNvidiaGraphicsCard()) {
+            workarounds.add(Reference.NVIDIA_THREADED_OPTIMIZATIONS_BROKEN);
         }
 
         if (isUsingIntelGen8OrOlder()) {
@@ -84,12 +84,6 @@ public class Workarounds {
         return false;
     }
 
-    private static boolean isUsingNvidiaGraphicsCard(OsUtils.OperatingSystem operatingSystem, Collection<? extends GraphicsAdapterInfo> adapters) {
-
-        return (operatingSystem == OsUtils.OperatingSystem.WIN || operatingSystem == OsUtils.OperatingSystem.LINUX) &&
-                adapters.stream().anyMatch(adapter -> adapter.vendor() == GraphicsAdapterVendor.NVIDIA);
-    }
-
     public static boolean isWorkaroundEnabled(Reference id) {
         return ACTIVE_WORKAROUNDS.get()
                 .contains(id);
@@ -101,7 +95,7 @@ public class Workarounds {
          * performance issues and crashes.
          * <a href="https://github.com/CaffeineMC/sodium/issues/1816">GitHub Issue</a>
          */
-        NVIDIA_THREADED_OPTIMIZATIONS,
+        NVIDIA_THREADED_OPTIMIZATIONS_BROKEN,
 
         /**
          * Requesting a No Error Context causes a crash at startup when using a Wayland session.
