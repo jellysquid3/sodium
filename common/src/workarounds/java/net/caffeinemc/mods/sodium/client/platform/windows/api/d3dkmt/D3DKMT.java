@@ -5,7 +5,6 @@ import net.caffeinemc.mods.sodium.client.compatibility.environment.probe.Graphic
 import net.caffeinemc.mods.sodium.client.platform.windows.WindowsFileVersion;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.Gdi32;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.version.Version;
-import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
@@ -13,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -201,8 +200,18 @@ public class D3DKMT {
         }
     }
 
-    // Returns (null) if input is (null).
-    private static String getOpenGlIcdName(String path) {
-        return FilenameUtils.removeExtension(FilenameUtils.getName(path));
+    private static String getOpenGlIcdName(@Nullable String filePath) {
+        if (filePath == null) {
+            return null;
+        }
+
+        var fileName = Paths.get(filePath)
+                .getFileName();
+
+        if (fileName == null) {
+            return null;
+        }
+
+        return fileName.toString();
     }
 }
