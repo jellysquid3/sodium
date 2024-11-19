@@ -68,7 +68,7 @@ public class NvidiaWorkarounds {
             return;
         }
 
-        LOGGER.warn("Modifying process environment to apply workarounds for the NVIDIA graphics driver...");
+        LOGGER.info("Modifying process environment to apply workarounds for the NVIDIA graphics driver...");
 
         try {
             if (OsUtils.getOs() == OperatingSystem.WIN) {
@@ -117,7 +117,7 @@ public class NvidiaWorkarounds {
             return;
         }
 
-        LOGGER.warn("Modifying OpenGL context to apply workarounds for the NVIDIA graphics driver...");
+        LOGGER.info("Modifying OpenGL context to apply workarounds for the NVIDIA graphics driver...");
 
         if (Workarounds.isWorkaroundEnabled(Workarounds.Reference.NVIDIA_THREADED_OPTIMIZATIONS_BROKEN)) {
             if (OsUtils.getOs() == OperatingSystem.WIN) {
@@ -133,22 +133,25 @@ public class NvidiaWorkarounds {
         var capabilities = GL.getCapabilities();
 
         if (capabilities.GL_KHR_debug) {
-            LOGGER.warn("Using GL_DEBUG_OUTPUT_SYNCHRONOUS to force the NVIDIA driver to disable threaded" +
+            LOGGER.info("Enabling GL_DEBUG_OUTPUT_SYNCHRONOUS to force the NVIDIA driver to disable threaded" +
                     "command submission");
             GL32C.glEnable(KHRDebug.GL_DEBUG_OUTPUT_SYNCHRONOUS);
         } else {
-            LOGGER.error("GL_KHR_debug does not appear to be supported on this system, unable to " +
-                    "disable threaded command submission for NVIDIA graphics driver! You are likely to " +
-                    "experience severe performance issues and frequent crashes.");
+            LOGGER.error("GL_KHR_debug does not appear to be supported, unable to disable threaded " +
+                    "command submission!");
             logWarning();
         }
     }
 
     private static void logWarning() {
+        LOGGER.error("READ ME!");
         LOGGER.error("READ ME! The workarounds for the NVIDIA Graphics Driver did not apply correctly!");
         LOGGER.error("READ ME! You are very likely going to run into unexplained crashes and severe performance issues.");
         LOGGER.error("READ ME! More information about what went wrong can be found above this message.");
+        LOGGER.error("READ ME!");
         LOGGER.error("READ ME! Please help us understand why this problem occurred by opening a bug report on our issue tracker:");
         LOGGER.error("READ ME!   https://github.com/CaffeineMC/sodium/issues");
+        LOGGER.error("READ ME!");
+
     }
 }
