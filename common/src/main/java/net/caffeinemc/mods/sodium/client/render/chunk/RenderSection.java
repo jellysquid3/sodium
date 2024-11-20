@@ -139,30 +139,44 @@ public class RenderSection {
         this.disposed = true;
     }
 
-    public void setInfo(@Nullable BuiltSectionInfo info) {
+    public boolean setInfo(@Nullable BuiltSectionInfo info) {
         if (info != null) {
-            this.setRenderState(info);
+            return this.setRenderState(info);
         } else {
-            this.clearRenderState();
+            return this.clearRenderState();
         }
     }
 
-    private void setRenderState(@NotNull BuiltSectionInfo info) {
+    private boolean setRenderState(@NotNull BuiltSectionInfo info) {
+        var prevBuilt = this.built;
+        var prevFlags = this.flags;
+        var prevVisibilityData = this.visibilityData;
+
         this.built = true;
         this.flags = info.flags;
         this.visibilityData = info.visibilityData;
+
         this.globalBlockEntities = info.globalBlockEntities;
         this.culledBlockEntities = info.culledBlockEntities;
         this.animatedSprites = info.animatedSprites;
+
+        // the section is marked as having received graph-relevant changes if it's build state, flags, or connectedness has changed.
+        // the entities and sprites don't need to be checked since whether they exist is encoded in the flags.
+        return !prevBuilt || prevFlags != this.flags || prevVisibilityData != this.visibilityData;
     }
 
-    private void clearRenderState() {
+    private boolean clearRenderState() {
+        var wasBuilt = this.built;
+
         this.built = false;
         this.flags = RenderSectionFlags.NONE;
         this.visibilityData = VisibilityEncoding.NULL;
         this.globalBlockEntities = null;
         this.culledBlockEntities = null;
         this.animatedSprites = null;
+
+        // changes to data if it moves from built to not built don't matter, so only build state changes matter
+        return wasBuilt;
     }
 
     /**
