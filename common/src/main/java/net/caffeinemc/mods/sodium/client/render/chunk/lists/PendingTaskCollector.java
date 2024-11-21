@@ -15,12 +15,6 @@ import net.minecraft.util.Mth;
 import java.util.EnumMap;
 import java.util.Map;
 
-/*
-TODO:
-- check if there's also bumps in the fps when crossing chunk borders on dev
-- tune priority values, test frustum effect by giving it a large value
-- experiment with non-linear distance scaling (if < some radius, bonus priority for being close)
- */
 public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
     public static final int SECTION_Y_MIN = -128; // used instead of baseOffsetY to accommodate all permissible y values (-2048 to 2048 blocks)
 
