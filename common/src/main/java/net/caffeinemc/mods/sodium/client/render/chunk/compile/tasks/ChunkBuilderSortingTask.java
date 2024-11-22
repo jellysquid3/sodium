@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks;
 
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.MeshTaskSizeEstimator;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.DynamicSorter;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -42,7 +43,7 @@ public class ChunkBuilderSortingTask extends ChunkBuilderTask<ChunkSortOutput> {
     }
 
     @Override
-    public long getEffort() {
+    public long estimateTaskSizeWith(MeshTaskSizeEstimator estimator) {
         return this.sorter.getQuadCount();
     }
 }

@@ -20,17 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class ChunkBuilder {
-    /**
-     * The low and high efforts given to the sorting and meshing tasks,
-     * respectively. This split into two separate effort categories means more
-     * sorting tasks, which are faster, can be scheduled compared to mesh tasks.
-     * These values need to capture that there's a limit to how much data can be
-     * uploaded per frame. Since sort tasks generate index data, which is smaller
-     * per quad and (on average) per section, more of their results can be uploaded
-     * in one frame. This number should essentially be a conservative estimate of
-     * min((mesh task upload size) / (sort task upload size), (mesh task time) /
-     * (sort task time)).
-     */
     static final Logger LOGGER = LogManager.getLogger("ChunkBuilder");
 
     private final ChunkJobQueue queue = new ChunkJobQueue();

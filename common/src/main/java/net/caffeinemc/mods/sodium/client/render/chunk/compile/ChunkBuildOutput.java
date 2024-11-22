@@ -32,14 +32,6 @@ public class ChunkBuildOutput extends ChunkSortOutput {
         return this.meshes.get(pass);
     }
 
-    public long getEffort() {
-        long size = 0;
-        for (var data : this.meshes.values()) {
-            size += data.getVertexData().getLength();
-        }
-        return 1 + (size >> 8); // make sure the number isn't huge
-    }
-
     @Override
     public void destroy() {
         super.destroy();
@@ -47,5 +39,18 @@ public class ChunkBuildOutput extends ChunkSortOutput {
         for (BuiltSectionMeshParts data : this.meshes.values()) {
             data.getVertexData().free();
         }
+    }
+
+    private long getMeshSize() {
+        long size = 0;
+        for (var data : this.meshes.values()) {
+            size += data.getVertexData().getLength();
+        }
+        return size;
+    }
+
+    @Override
+    public long calculateResultSize() {
+        return super.calculateResultSize() + this.getMeshSize();
     }
 }

@@ -10,10 +10,10 @@ import net.caffeinemc.mods.sodium.client.render.chunk.async.*;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.BuilderTaskOutput;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkBuildOutput;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkSortOutput;
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder;
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobCollector;
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobResult;
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.JobEffortEstimator;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.JobDurationEstimator;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.MeshResultSize;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.MeshTaskSizeEstimator;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.*;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderSortingTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderTask;
@@ -71,7 +71,8 @@ public class RenderSectionManager {
     private final Long2ReferenceMap<RenderSection> sectionByPosition = new Long2ReferenceOpenHashMap<>();
 
     private final ConcurrentLinkedDeque<ChunkJobResult<? extends BuilderTaskOutput>> buildResults = new ConcurrentLinkedDeque<>();
-    private final JobEffortEstimator jobEffortEstimator = new JobEffortEstimator();
+    private final JobDurationEstimator jobDurationEstimator = new JobDurationEstimator();
+    private final MeshTaskSizeEstimator meshTaskSizeEstimator = new MeshTaskSizeEstimator();
     private ChunkJobCollector lastBlockingCollector;
     private long thisFrameBlockingTasks;
     private long nextFrameBlockingTasks;
@@ -575,7 +576,10 @@ public class RenderSectionManager {
             TranslucentData oldData = result.render.getTranslucentData();
             if (result instanceof ChunkBuildOutput chunkBuildOutput) {
                 touchedSectionInfo |= this.updateSectionInfo(result.render, chunkBuildOutput.info);
-                result.render.setLastMeshingTaskEffort(chunkBuildOutput.getEffort());
+
+                var resultSize = chunkBuildOutput.getResultSize();
+                result.render.setLastMeshResultSize(resultSize);
+                this.meshTaskSizeEstimator.addBatchEntry(MeshResultSize.forSection(result.render, resultSize));
 
                 if (chunkBuildOutput.translucentData != null) {
                     this.sortTriggering.integrateTranslucentData(oldData, chunkBuildOutput.translucentData, this.cameraPosition, this::scheduleSort);
@@ -599,6 +603,8 @@ public class RenderSectionManager {
 
             result.render.setLastUploadFrame(result.submitTime);
         }
+
+        this.meshTaskSizeEstimator.flushNewData();
 
         return touchedSectionInfo;
     }
@@ -642,11 +648,11 @@ public class RenderSectionManager {
             results.add(result.unwrap());
             var jobEffort = result.getJobEffort();
             if (jobEffort != null) {
-                this.jobEffortEstimator.addJobEffort(jobEffort);
+                this.jobDurationEstimator.addBatchEntry(jobEffort);
             }
         }
 
-        this.jobEffortEstimator.flushNewData();
+        this.jobDurationEstimator.flushNewData();
 
         return results;
     }
@@ -670,21 +676,22 @@ public class RenderSectionManager {
         if (updateImmediately) {
             // for a perfect frame where everything is finished use the last frame's blocking collector
             // and add all tasks to it so that they're waited on
-            this.submitSectionTasks(thisFrameBlockingCollector, thisFrameBlockingCollector, thisFrameBlockingCollector);
+            this.submitSectionTasks(Long.MAX_VALUE, thisFrameBlockingCollector, thisFrameBlockingCollector, thisFrameBlockingCollector);
 
             this.thisFrameBlockingTasks = thisFrameBlockingCollector.getSubmittedTaskCount();
             thisFrameBlockingCollector.awaitCompletion(this.builder);
         } else {
             var nextFrameBlockingCollector = new ChunkJobCollector(this.buildResults::add);
             var remainingDuration = this.builder.getTotalRemainingDuration(this.averageFrameDuration);
+            var remainingUploadSize = this.regions.getStagingBuffer().getUploadSizeLimit(this.averageFrameDuration);
             var deferredCollector = new ChunkJobCollector(remainingDuration, this.buildResults::add);
 
             // if zero frame delay is allowed, submit important sorts with the current frame blocking collector.
             // otherwise submit with the collector that the next frame is blocking on.
             if (SodiumClientMod.options().performance.getSortBehavior().getDeferMode() == DeferMode.ZERO_FRAMES) {
-                this.submitSectionTasks(thisFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
+                this.submitSectionTasks(remainingUploadSize, thisFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
             } else {
-                this.submitSectionTasks(nextFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
+                this.submitSectionTasks(remainingUploadSize, nextFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
             }
 
             this.thisFrameBlockingTasks = thisFrameBlockingCollector.getSubmittedTaskCount();
@@ -701,6 +708,7 @@ public class RenderSectionManager {
     }
 
     private void submitSectionTasks(
+            long remainingUploadSize,
             ChunkJobCollector importantCollector,
             ChunkJobCollector semiImportantCollector,
             ChunkJobCollector deferredCollector) {
@@ -711,11 +719,15 @@ public class RenderSectionManager {
                 case ALWAYS -> deferredCollector;
             };
 
-            submitSectionTasks(collector, deferMode);
+            // don't limit on size for zero frame defer (needs to be done, no matter the limit)
+            remainingUploadSize = submitSectionTasks(remainingUploadSize, deferMode != DeferMode.ZERO_FRAMES, collector, deferMode);
+            if (remainingUploadSize <= 0) {
+                break;
+            }
         }
     }
 
-    private void submitSectionTasks(ChunkJobCollector collector, DeferMode deferMode) {
+    private long submitSectionTasks(long remainingUploadSize, boolean limitOnSize, ChunkJobCollector collector, DeferMode deferMode) {
         LongHeapPriorityQueue frustumQueue = null;
         LongHeapPriorityQueue globalQueue = null;
         float frustumPriorityBias = 0;
@@ -743,7 +755,8 @@ public class RenderSectionManager {
         long frustumItem = 0;
         long globalItem = 0;
 
-        while ((!frustumQueue.isEmpty() || !globalQueue.isEmpty()) && collector.hasBudgetRemaining()) {
+        while ((!frustumQueue.isEmpty() || !globalQueue.isEmpty()) &&
+                collector.hasBudgetRemaining() && (!limitOnSize || remainingUploadSize > 0)) {
             // get the first item from the non-empty queues and see which one has higher priority.
             // if the priority is not infinity, then the item priority was fetched the last iteration and doesn't need updating.
             if (!frustumQueue.isEmpty() && Float.isInfinite(frustumPriority)) {
@@ -780,10 +793,9 @@ public class RenderSectionManager {
                 continue;
             }
 
-            int frame = this.frame;
             ChunkBuilderTask<? extends BuilderTaskOutput> task;
             if (type == ChunkUpdateType.SORT || type == ChunkUpdateType.IMPORTANT_SORT) {
-                task = this.createSortTask(section, frame);
+                task = this.createSortTask(section, this.frame);
 
                 if (task == null) {
                     // when a sort task is null it means the render section has no dynamic data and
@@ -791,7 +803,7 @@ public class RenderSectionManager {
                     continue;
                 }
             } else {
-                task = this.createRebuildTask(section, frame);
+                task = this.createRebuildTask(section, this.frame);
 
                 if (task == null) {
                     // if the section is empty or doesn't exist submit this null-task to set the
@@ -804,7 +816,7 @@ public class RenderSectionManager {
                     // rebuild that must have happened in the meantime includes new non-dynamic
                     // index data.
                     var result = ChunkJobResult.successfully(new ChunkBuildOutput(
-                            section, frame, NoData.forEmptySection(section.getPosition()),
+                            section, this.frame, NoData.forEmptySection(section.getPosition()),
                             BuiltSectionInfo.EMPTY, Collections.emptyMap()));
                     this.buildResults.add(result);
 
@@ -815,13 +827,16 @@ public class RenderSectionManager {
             if (task != null) {
                 var job = this.builder.scheduleTask(task, type.isImportant(), collector::onJobFinished);
                 collector.addSubmittedJob(job);
+                remainingUploadSize -= job.getEstimatedSize();
 
                 section.setTaskCancellationToken(job);
             }
 
-            section.setLastSubmittedFrame(frame);
+            section.setLastSubmittedFrame(this.frame);
             section.clearPendingUpdate();
         }
+
+        return remainingUploadSize;
     }
 
     public @Nullable ChunkBuilderMeshingTask createRebuildTask(RenderSection render, int frame) {
@@ -832,14 +847,14 @@ public class RenderSectionManager {
         }
 
         var task = new ChunkBuilderMeshingTask(render, frame, this.cameraPosition, context);
-        task.estimateDurationWith(this.jobEffortEstimator);
+        task.calculateEstimations(this.jobDurationEstimator, this.meshTaskSizeEstimator);
         return task;
     }
 
     public ChunkBuilderSortingTask createSortTask(RenderSection render, int frame) {
         var task = ChunkBuilderSortingTask.createTask(render, frame, this.cameraPosition);
         if (task != null) {
-            task.estimateDurationWith(this.jobEffortEstimator);
+            task.calculateEstimations(this.jobDurationEstimator, this.meshTaskSizeEstimator);
         }
         return task;
     }

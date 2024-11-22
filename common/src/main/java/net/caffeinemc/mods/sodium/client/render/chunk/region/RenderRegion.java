@@ -25,6 +25,10 @@ import java.util.Arrays;
 import java.util.Map;
 
 public class RenderRegion {
+    public static final int SECTION_VERTEX_COUNT_ESTIMATE = 756;
+    public static final int SECTION_INDEX_COUNT_ESTIMATE = (SECTION_VERTEX_COUNT_ESTIMATE / 4) * 6;
+    public static final int SECTION_BUFFER_ESTIMATE = SECTION_VERTEX_COUNT_ESTIMATE * ChunkMeshFormats.COMPACT.getVertexFormat().getStride() + SECTION_INDEX_COUNT_ESTIMATE * Integer.BYTES;
+
     public static final int REGION_WIDTH = 8;
     public static final int REGION_HEIGHT = 4;
     public static final int REGION_LENGTH = 8;
@@ -285,11 +289,8 @@ public class RenderRegion {
         public DeviceResources(CommandList commandList, StagingBuffer stagingBuffer) {
             int stride = ChunkMeshFormats.COMPACT.getVertexFormat().getStride();
 
-            // the magic number 756 for the initial size is arbitrary, it was made up.
-            var initialVertices = 756;
-            this.geometryArena = new GlBufferArena(commandList, REGION_SIZE * initialVertices, stride, stagingBuffer);
-            var initialIndices = (initialVertices / 4) * 6;
-            this.indexArena = new GlBufferArena(commandList, REGION_SIZE * initialIndices, Integer.BYTES, stagingBuffer);
+            this.geometryArena = new GlBufferArena(commandList, REGION_SIZE * SECTION_VERTEX_COUNT_ESTIMATE, stride, stagingBuffer);
+            this.indexArena = new GlBufferArena(commandList, REGION_SIZE * SECTION_INDEX_COUNT_ESTIMATE, Integer.BYTES, stagingBuffer);
         }
 
         public void updateTessellation(CommandList commandList, GlTessellation tessellation) {
