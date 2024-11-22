@@ -64,6 +64,15 @@ public class GlobalCullTask extends CullTask<GlobalCullResult> {
     }
 
     @Override
+    public AsyncTaskType getTaskType() {
+        return switch (this.cullType) {
+            case WIDE -> AsyncTaskType.WIDE_CULL;
+            case REGULAR -> AsyncTaskType.REGULAR_CULL;
+            default -> throw new IllegalStateException("Unexpected value: " + this.cullType);
+        };
+    }
+
+    @Override
     public CullType getCullType() {
         return this.cullType;
     }

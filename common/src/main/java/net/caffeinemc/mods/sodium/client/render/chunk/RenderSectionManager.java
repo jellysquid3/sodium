@@ -57,6 +57,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class RenderSectionManager {
     private static final float NEARBY_REBUILD_DISTANCE = Mth.square(16.0f);
@@ -70,8 +71,11 @@ public class RenderSectionManager {
     private final Long2ReferenceMap<RenderSection> sectionByPosition = new Long2ReferenceOpenHashMap<>();
 
     private final ConcurrentLinkedDeque<ChunkJobResult<? extends BuilderTaskOutput>> buildResults = new ConcurrentLinkedDeque<>();
-    private ChunkJobCollector lastBlockingCollector;
     private final JobEffortEstimator jobEffortEstimator = new JobEffortEstimator();
+    private ChunkJobCollector lastBlockingCollector;
+    private long thisFrameBlockingTasks;
+    private long nextFrameBlockingTasks;
+    private long deferredTasks;
 
     private final ChunkRenderer chunkRenderer;
 
@@ -653,6 +657,10 @@ public class RenderSectionManager {
     }
 
     public void updateChunks(boolean updateImmediately) {
+        this.thisFrameBlockingTasks = 0;
+        this.nextFrameBlockingTasks = 0;
+        this.deferredTasks = 0;
+
         var thisFrameBlockingCollector = this.lastBlockingCollector;
         this.lastBlockingCollector = null;
         if (thisFrameBlockingCollector == null) {
@@ -664,6 +672,7 @@ public class RenderSectionManager {
             // and add all tasks to it so that they're waited on
             this.submitSectionTasks(thisFrameBlockingCollector, thisFrameBlockingCollector, thisFrameBlockingCollector);
 
+            this.thisFrameBlockingTasks = thisFrameBlockingCollector.getSubmittedTaskCount();
             thisFrameBlockingCollector.awaitCompletion(this.builder);
         } else {
             var nextFrameBlockingCollector = new ChunkJobCollector(this.buildResults::add);
@@ -677,6 +686,10 @@ public class RenderSectionManager {
             } else {
                 this.submitSectionTasks(nextFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
             }
+
+            this.thisFrameBlockingTasks = thisFrameBlockingCollector.getSubmittedTaskCount();
+            this.nextFrameBlockingTasks = nextFrameBlockingCollector.getSubmittedTaskCount();
+            this.deferredTasks = deferredCollector.getSubmittedTaskCount();
 
             // wait on this frame's blocking collector which contains the important tasks from this frame
             // and semi-important tasks from the last frame
@@ -999,18 +1012,28 @@ public class RenderSectionManager {
             count++;
         }
 
-        // TODO: information about pending async culling tasks, restore some information about task scheduling?
-
         list.add(String.format("Geometry Pool: %d/%d MiB (%d buffers)", MathUtil.toMib(deviceUsed), MathUtil.toMib(deviceAllocated), count));
         list.add(String.format("Transfer Queue: %s", this.regions.getStagingBuffer().toString()));
 
-        list.add(String.format("Chunk Builder: Permits=%02d (%04d%%) | Busy=%02d | Total=%02d",
-                this.builder.getScheduledJobCount(), (int)(this.builder.getBusyFraction(this.lastFrameDuration) * 100), this.builder.getBusyThreadCount(), this.builder.getTotalThreadCount())
+        list.add(String.format("Chunk Builder: Schd=%02d | Busy=%02d (%04d%%) | Total=%02d",
+                this.builder.getScheduledJobCount(), this.builder.getBusyThreadCount(), (int)(this.builder.getBusyFraction(this.lastFrameDuration) * 100), this.builder.getTotalThreadCount())
         );
 
-        list.add(String.format("Chunk Queues: U=%02d", this.buildResults.size()));
+        list.add(String.format("Tasks: N0=%03d | N1=%03d | Def=%03d, Recv=%03d",
+                this.thisFrameBlockingTasks, this.nextFrameBlockingTasks, this.deferredTasks, this.buildResults.size())
+        );
 
         this.sortTriggering.addDebugStrings(list);
+
+        var taskSlots = new String[AsyncTaskType.VALUES.length];
+        for (var task : this.pendingTasks) {
+            var type = task.getTaskType();
+            taskSlots[type.ordinal()] = type.abbreviation;
+        }
+        list.add("Tree Builds: " + Arrays
+                .stream(taskSlots)
+                .map(slot -> slot == null ? "_" : slot)
+                .collect(Collectors.joining(" ")));
 
         return list;
     }
@@ -1037,11 +1060,7 @@ public class RenderSectionManager {
         }
         var cullTypeName = "-";
         if (renderTreeCullType != null) {
-            cullTypeName = switch (renderTreeCullType) {
-                case WIDE -> "W";
-                case REGULAR -> "R";
-                case FRUSTUM -> "F";
-            };
+            cullTypeName = renderTreeCullType.abbreviation;
         }
         return cullTypeName;
     }

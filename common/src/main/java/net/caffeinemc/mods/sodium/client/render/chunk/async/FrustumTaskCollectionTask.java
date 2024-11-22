@@ -3,7 +3,6 @@ package net.caffeinemc.mods.sodium.client.render.chunk.async;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.FrustumTaskCollector;
-import net.caffeinemc.mods.sodium.client.render.chunk.lists.PendingTaskCollector;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.TaskSectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
@@ -24,5 +23,10 @@ public class FrustumTaskCollectionTask extends AsyncRenderTask<FrustumTaskListsR
 
         var frustumTaskLists = collector.getPendingTaskLists();
         return () -> frustumTaskLists;
+    }
+
+    @Override
+    public AsyncTaskType getTaskType() {
+        return AsyncTaskType.FRUSTUM_TASK_COLLECTION;
     }
 }

@@ -50,6 +50,11 @@ public class FrustumCullTask extends CullTask<FrustumCullResult> {
     }
 
     @Override
+    public AsyncTaskType getTaskType() {
+        return AsyncTaskType.FRUSTUM_CULL;
+    }
+
+    @Override
     public CullType getCullType() {
         return CullType.FRUSTUM;
     }

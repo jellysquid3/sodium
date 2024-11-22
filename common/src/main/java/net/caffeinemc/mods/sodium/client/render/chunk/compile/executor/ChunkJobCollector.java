@@ -53,4 +53,8 @@ public class ChunkJobCollector {
     public boolean hasBudgetRemaining() {
         return this.duration > 0;
     }
+
+    public long getSubmittedTaskCount() {
+        return this.submitted.size();
+    }
 }

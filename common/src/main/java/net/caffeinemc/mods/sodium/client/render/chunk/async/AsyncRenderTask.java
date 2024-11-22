@@ -73,4 +73,6 @@ public abstract class AsyncRenderTask<T> implements Callable<T>, CancellationTok
     }
 
     protected abstract T runTask();
+
+    public abstract AsyncTaskType getTaskType();
 }

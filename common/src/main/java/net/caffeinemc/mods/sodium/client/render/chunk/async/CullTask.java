@@ -15,8 +15,4 @@ public abstract class CullTask<T> extends AsyncRenderTask<T> {
     }
 
     public abstract CullType getCullType();
-
-    protected int getOcclusionToken() {
-        return (this.getCullType().ordinal() << 28) ^ this.frame;
-    }
 }
