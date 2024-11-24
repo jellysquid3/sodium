@@ -1,0 +1,57 @@
+{
+    "textures": {
+        "base": "block/brewing_stand_base",
+        "particle": "block/brewing_stand",
+        "stand": "block/brewing_stand"
+    },
+    "elements": [
+        {
+            "from": [ 7, 0, 7 ],
+            "to": [ 9, 14, 9 ],
+            "faces": {
+                "north": { "uv": [ 7, 2, 9, 16 ], "texture": "#stand" },
+                "east": { "uv": [ 7, 2, 9, 16 ], "texture": "#stand" },
+                "south": { "uv": [ 7, 2, 9, 16 ], "texture": "#stand" },
+                "west": { "uv": [ 7, 2, 9, 16 ], "texture": "#stand" },
+                "up": { "uv": [ 7, 7, 9, 9 ], "texture": "#stand" },
+                "down": { "uv": [ 7, 7, 9, 9 ], "texture": "#stand", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 9, 0, 5 ],
+            "to": [ 15, 2, 11 ],
+            "faces": {
+                "north": { "uv": [ 9, 14, 15, 16 ], "texture": "#base" },
+                "east": { "uv": [ 5, 14, 11, 16 ], "texture": "#base" },
+                "south": { "uv": [ 9, 14, 15, 16 ], "texture": "#base" },
+                "west": { "uv": [ 5, 14, 11, 16 ], "texture": "#base" },
+                "up": { "uv": [ 9, 5, 15, 11 ], "texture": "#base" },
+                "down": { "uv": [ 9, 5, 15, 11 ], "texture": "#base", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 1, 0, 1 ],
+            "to": [ 7, 2, 7 ],
+            "faces": {
+                "north": { "uv": [ 1, 14, 7, 16 ], "texture": "#base" },
+                "east": { "uv": [ 1, 14, 7, 16 ], "texture": "#base" },
+                "south": { "uv": [ 1, 14, 7, 16 ], "texture": "#base" },
+                "west": { "uv": [ 1, 14, 7, 16 ], "texture": "#base" },
+                "up": { "uv": [ 1, 1, 7, 7 ], "texture": "#base" },
+                "down": { "uv": [ 1, 1, 7, 7 ], "texture": "#base", "cullface": "down" }
+            }
+        },
+        {
+            "from": [ 1, 0, 9 ],
+            "to": [ 7, 2, 15 ],
+            "faces": {
+                "north": { "uv": [ 1, 14, 7, 16 ], "texture": "#base" },
+                "east": { "uv": [ 9, 14, 15, 16 ], "texture": "#base" },
+                "south": { "uv": [ 1, 14, 7, 16 ], "texture": "#base" },
+                "west": { "uv": [ 9, 14, 15, 16 ], "texture": "#base" },
+                "up": { "uv": [ 1, 9, 7, 15 ], "texture": "#base" },
+                "down": { "uv": [ 1, 9, 7, 15 ], "texture": "#base", "cullface": "down" }
+            }
+        }
+    ]
+}
