@@ -50,12 +50,11 @@ public class OcclusionCuller {
         RenderSection section;
 
         while ((section = readQueue.dequeue()) != null) {
-            boolean visible = isSectionVisible(section, viewport, searchDistance);
-            visitor.visit(section, visible);
-
-            if (!visible) {
+            if (!isSectionVisible(section, viewport, searchDistance)) {
                 continue;
             }
+
+            visitor.visit(section);
 
             int connections;
 
@@ -249,7 +248,7 @@ public class OcclusionCuller {
         section.setLastVisibleFrame(frame);
         section.setIncomingDirections(GraphDirectionSet.NONE);
 
-        visitor.visit(section, true);
+        visitor.visit(section);
 
         int outgoing;
 
@@ -335,6 +334,6 @@ public class OcclusionCuller {
     }
 
     public interface Visitor {
-        void visit(RenderSection section, boolean visible);
+        void visit(RenderSection section);
     }
 }
