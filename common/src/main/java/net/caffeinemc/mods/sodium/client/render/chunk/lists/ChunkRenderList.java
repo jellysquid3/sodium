@@ -1,11 +1,14 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
+import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
+import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
+import net.caffeinemc.mods.sodium.client.util.iterator.ByteArrayIterator;
 import net.caffeinemc.mods.sodium.client.util.iterator.ByteIterator;
 import net.caffeinemc.mods.sodium.client.util.iterator.ReversibleByteArrayIterator;
-import net.caffeinemc.mods.sodium.client.util.iterator.ByteArrayIterator;
-import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkRenderList {
@@ -35,6 +38,39 @@ public class ChunkRenderList {
 
         this.size = 0;
         this.lastVisibleFrame = frame;
+    }
+
+    // clamping the relative camera position to the region bounds means there can only be very few different distances
+    private static final int SORTING_HISTOGRAM_SIZE = RenderRegion.REGION_WIDTH + RenderRegion.REGION_HEIGHT + RenderRegion.REGION_LENGTH - 2;
+
+    public void sortSections(CameraTransform transform, int[] sortItems) {
+        var cameraX = Mth.clamp((transform.intX >> 4) - this.region.getChunkX(), 0, RenderRegion.REGION_WIDTH - 1);
+        var cameraY = Mth.clamp((transform.intY >> 4) - this.region.getChunkY(), 0, RenderRegion.REGION_HEIGHT - 1);
+        var cameraZ = Mth.clamp((transform.intZ >> 4) - this.region.getChunkZ(), 0, RenderRegion.REGION_LENGTH - 1);
+
+        int[] histogram = new int[SORTING_HISTOGRAM_SIZE];
+
+        for (int i = 0; i < this.sectionsWithGeometryCount; i++) {
+            var index = this.sectionsWithGeometry[i] & 0xFF; // makes sure the byte -> int conversion is unsigned
+            var x = Math.abs(LocalSectionIndex.unpackX(index) - cameraX);
+            var y = Math.abs(LocalSectionIndex.unpackY(index) - cameraY);
+            var z = Math.abs(LocalSectionIndex.unpackZ(index) - cameraZ);
+
+            var distance = x + y + z;
+            histogram[distance]++;
+            sortItems[i] = distance << 8 | index;
+        }
+
+        // prefix sum to calculate indexes
+        for (int i = 1; i < SORTING_HISTOGRAM_SIZE; i++) {
+            histogram[i] += histogram[i - 1];
+        }
+
+        for (int i = 0; i < this.sectionsWithGeometryCount; i++) {
+            var item = sortItems[i];
+            var distance = item >>> 8;
+            this.sectionsWithGeometry[--histogram[distance]] = (byte) item;
+        }
     }
 
     public void add(RenderSection render) {
