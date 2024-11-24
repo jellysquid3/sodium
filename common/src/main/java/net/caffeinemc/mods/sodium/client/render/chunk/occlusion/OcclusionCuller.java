@@ -233,18 +233,16 @@ public class OcclusionCuller {
             this.initOutsideWorldHeight(queue, viewport, searchDistance, frame,
                     this.level.getMaxSectionY(), GraphDirection.UP);
         } else {
-            this.initWithinWorld(visitor, queue, viewport, useOcclusionCulling, frame);
+            var originSection = this.sections.get(origin.asLong());
+            if (originSection != null) {
+                this.initAtExistingSection(visitor, queue, originSection, useOcclusionCulling, frame);
+            } else {
+                this.initAtNonExistingSection(visitor, queue, viewport, useOcclusionCulling, searchDistance, frame);
+            }
         }
     }
 
-    private void initWithinWorld(Visitor visitor, WriteQueue<RenderSection> queue, Viewport viewport, boolean useOcclusionCulling, int frame) {
-        var origin = viewport.getChunkCoord();
-        var section = this.getRenderSection(origin.getX(), origin.getY(), origin.getZ());
-
-        if (section == null) {
-            return;
-        }
-
+    private void initAtExistingSection(Visitor visitor, WriteQueue<RenderSection> queue, RenderSection section, boolean useOcclusionCulling, int frame) {
         section.setLastVisibleFrame(frame);
         section.setIncomingDirections(GraphDirectionSet.NONE);
 
@@ -262,6 +260,68 @@ public class OcclusionCuller {
         }
 
         visitNeighbors(queue, section, outgoing, frame);
+    }
+
+    private void initAtNonExistingSection(Visitor visitor, WriteQueue<RenderSection> queue, Viewport viewport, boolean useOcclusionCulling, float searchDistance, int frame) {
+        var origin = viewport.getChunkCoord();
+        var minY = this.level.getMinSectionY();
+        var maxY = this.level.getMaxSectionY();
+        var originX = origin.getX();
+        var originY = origin.getY();
+        var originZ = origin.getZ();
+
+        // iterate shells until one is found with a loaded and visible section
+        var foundAny = false;
+        var radius = 1;
+        while (!foundAny) {
+            // iterate a shell around the origin
+            var bigStep = radius * 2;
+            for (var dy = -radius; dy <= radius; dy++) {
+                var y = originY + dy;
+                // skip layers outside the world's y range
+                if (y < minY || y > maxY) {
+                    continue;
+                }
+
+                // iterate only the perimeter with the current radius
+                var notYFace = !(dy == -radius || dy == radius);
+                for (var dx = -radius; dx <= radius; dx++) {
+                    var zStep = notYFace && (dx == -radius || dx == radius) ? bigStep : 1;
+                    for (var dz = -radius; dz <= radius; dz += zStep) {
+                        var x = originX + dx;
+                        var z = originZ + dz;
+
+                        // visit loaded visible sections and queue their neighbors
+                        var section = this.getRenderSection(x, y, z);
+                        if (section != null && isSectionVisible(section, viewport, searchDistance)) {
+                            foundAny = true;
+
+                            // use all directions as incoming, using just some yields a broken result
+                            var incoming = GraphDirectionSet.ALL;
+                            section.setIncomingDirections(incoming);
+                            section.setLastVisibleFrame(frame);
+
+                            visitor.visit(section);
+
+                            // reduce set of neighbors to visit based on visibility connections
+                            int connections = getOutwardDirections(origin, section);
+                            if (useOcclusionCulling) {
+                                connections &= VisibilityEncoding.getConnections(section.getVisibilityData(), incoming);
+                            }
+
+                            visitNeighbors(queue, section, connections, frame);
+                        }
+                    }
+                }
+            }
+
+            radius++;
+
+            // don't exceed the search distance with the init search
+            if (radius << 4 > searchDistance) {
+                break;
+            }
+        }
     }
 
     // Enqueues sections that are inside the viewport using diamond spiral iteration to avoid sorting and ensure a
