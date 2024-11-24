@@ -1,5 +1,6 @@
 package net.caffeinemc.mods.sodium.client.compatibility.checks;
 
+import net.caffeinemc.mods.sodium.client.compatibility.workarounds.nvidia.NvidiaWorkarounds;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
 import org.slf4j.Logger;
@@ -19,6 +20,13 @@ public class PostLaunchChecks {
             LOGGER.error("It appears that PojavLauncher is being used with an OpenGL compatibility layer. This will " +
                     "likely cause severe performance issues, graphical issues, and crashes when used with Sodium. This " +
                     "configuration is not supported -- you are on your own!");
+        }
+
+        if (NvidiaWorkarounds.isUsingOutOfDateWindowsDriver()) {
+            Console.instance().logMessage(MessageLevel.SEVERE, "sodium.console.drivers.nvidia.bad_version", true, 30.0);
+            LOGGER.error("The NVIDIA graphics driver appears to be out of date. This will likely cause severe " +
+                    "performance issues and crashes when used with Sodium. The graphics driver should be updated to " +
+                    "the latest version (version 566.14 or newer).");
         }
     }
 

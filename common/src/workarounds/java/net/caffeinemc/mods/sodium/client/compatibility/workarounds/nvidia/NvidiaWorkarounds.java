@@ -60,6 +60,32 @@ public class NvidiaWorkarounds {
         return null;
     }
 
+    public static boolean isUsingOutOfDateWindowsDriver() {
+        if (OsUtils.getOs() != OperatingSystem.WIN) {
+            return false;
+        }
+
+        for (var adapter : GraphicsAdapterProbe.getAdapters()) {
+            if (adapter.vendor() != GraphicsAdapterVendor.NVIDIA) {
+                continue;
+            }
+
+            if (adapter instanceof D3DKMT.WDDMAdapterInfo wddmAdapterInfo) {
+                var driverVersion = wddmAdapterInfo.openglIcdVersion();
+
+                if (driverVersion.z() == 15) { // Only match 5XX.XX drivers
+                    // Broken in x.y.15.2647 (526.47)
+                    // Fixed in x.y.15.6614 (566.14)
+                    if (driverVersion.w() >= 2647 && driverVersion.w() < 6614) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     public static void applyEnvironmentChanges() {
         // We can't know if the OpenGL context will actually be initialized using the NVIDIA ICD, but we need to
         // modify the process environment *now* otherwise the driver will initialize with bad settings. For non-NVIDIA
@@ -152,6 +178,5 @@ public class NvidiaWorkarounds {
         LOGGER.error("READ ME! Please help us understand why this problem occurred by opening a bug report on our issue tracker:");
         LOGGER.error("READ ME!   https://github.com/CaffeineMC/sodium/issues");
         LOGGER.error("READ ME!");
-
     }
 }
