@@ -98,11 +98,11 @@ public class CloudRenderer {
         var renderMode = Minecraft.getInstance().options.getCloudsType();
 
         // Translation of the clouds texture in world-space
-        float worldX = (float) (cameraPos.x + ((ticks + tickDelta) * 0.03F));
-        float worldZ = (float) (cameraPos.z + 3.96F);
+        double worldX = (cameraPos.x + ((ticks + tickDelta) * 0.03D));
+        double worldZ = (cameraPos.z + 3.96D);
 
-        float textureWidth = this.textureData.width * CLOUD_WIDTH;
-        float textureHeight = this.textureData.height * CLOUD_WIDTH;
+        double textureWidth = this.textureData.width * CLOUD_WIDTH;
+        double textureHeight = this.textureData.height * CLOUD_WIDTH;
         worldX -= Mth.floor(worldX / textureWidth) * textureWidth;
         worldZ -= Mth.floor(worldZ / textureHeight) * textureHeight;
 
@@ -139,9 +139,9 @@ public class CloudRenderer {
         }
 
         // Apply world->view transform
-        final float viewPosX = (worldX - (cellX * CLOUD_WIDTH));
+        final float viewPosX = (float) (worldX - (cellX * CLOUD_WIDTH));
         final float viewPosY = (float) cameraPos.y() - height;
-        final float viewPosZ = (worldZ - (cellZ * CLOUD_WIDTH));
+        final float viewPosZ = (float) (worldZ - (cellZ * CLOUD_WIDTH));
 
         Matrix4f modelViewMatrix = new Matrix4f(modelView);
         modelViewMatrix.translate(-viewPosX, -viewPosY, -viewPosZ);
