@@ -23,7 +23,7 @@ public class OptionImpl<S, T> implements Option<T> {
     private final EnumSet<OptionFlag> flags;
 
     private final Component name;
-    private final Component tooltip;
+    private final Function<T, Component> tooltip;
 
     private final OptionImpact impact;
 
@@ -34,7 +34,7 @@ public class OptionImpl<S, T> implements Option<T> {
 
     private OptionImpl(OptionStorage<S> storage,
                        Component name,
-                       Component tooltip,
+                       Function<T, Component> tooltip,
                        OptionBinding<S, T> binding,
                        Function<OptionImpl<S, T>, Control<T>> control,
                        EnumSet<OptionFlag> flags,
@@ -59,7 +59,7 @@ public class OptionImpl<S, T> implements Option<T> {
 
     @Override
     public Component getTooltip() {
-        return this.tooltip;
+        return this.tooltip.apply(this.modifiedValue);
     }
 
     @Override
@@ -121,7 +121,7 @@ public class OptionImpl<S, T> implements Option<T> {
     public static class Builder<S, T> {
         private final OptionStorage<S> storage;
         private Component name;
-        private Component tooltip;
+        private Function<T, Component> tooltip;
         private OptionBinding<S, T> binding;
         private Function<OptionImpl<S, T>, Control<T>> control;
         private OptionImpact impact;
@@ -141,6 +141,14 @@ public class OptionImpl<S, T> implements Option<T> {
         }
 
         public Builder<S, T> setTooltip(Component tooltip) {
+            Validate.notNull(tooltip, "Argument must not be null");
+
+            this.tooltip = t -> tooltip;
+
+            return this;
+        }
+
+        public Builder<S, T> setTooltip(Function<T, Component> tooltip) {
             Validate.notNull(tooltip, "Argument must not be null");
 
             this.tooltip = tooltip;

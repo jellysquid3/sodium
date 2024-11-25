@@ -73,9 +73,6 @@ public abstract class AbstractBlockRenderContext extends AbstractRenderContext {
         }
     };
 
-    @Deprecated
-    private final BakedModelConsumerImpl vanillaModelConsumer = new BakedModelConsumerImpl();
-
     /**
      * The world which the block is being rendered in.
      */
@@ -156,13 +153,6 @@ public abstract class AbstractBlockRenderContext extends AbstractRenderContext {
     @Override
     public ItemDisplayContext itemTransformationMode() {
         throw new UnsupportedOperationException("itemTransformationMode can only be called on an item render context.");
-    }
-
-    @SuppressWarnings("removal")
-    @Deprecated
-    @Override
-    public BakedModelConsumer bakedModelConsumer() {
-        return this.vanillaModelConsumer;
     }
 
     /**
@@ -259,19 +249,5 @@ public abstract class AbstractBlockRenderContext extends AbstractRenderContext {
         }
 
         editorQuad.clear();
-    }
-
-    @SuppressWarnings("removal")
-    @Deprecated
-    private class BakedModelConsumerImpl implements BakedModelConsumer {
-        @Override
-        public void accept(BakedModel model) {
-            accept(model, AbstractBlockRenderContext.this.state);
-        }
-
-        @Override
-        public void accept(BakedModel model, @Nullable BlockState state) {
-            AbstractBlockRenderContext.this.bufferDefaultModel(model, state);
-        }
     }
 }

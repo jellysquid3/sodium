@@ -27,7 +27,7 @@ public class NeoForgeBlockAccess implements PlatformBlockAccess {
 
     @Override
     public boolean shouldSkipRender(BlockGetter level, BlockState selfState, BlockState otherState, BlockPos selfPos, BlockPos otherPos, Direction facing) {
-        return (otherState.hidesNeighborFace(level, otherPos, selfState, DirectionUtil.getOpposite(facing))) && selfState.supportsExternalFaceHiding();
+        return selfState.supportsExternalFaceHiding() && (otherState.hidesNeighborFace(level, otherPos, selfState, DirectionUtil.getOpposite(facing)));
     }
 
     @Override
@@ -56,6 +56,12 @@ public class NeoForgeBlockAccess implements PlatformBlockAccess {
 
     @Override
     public boolean shouldBlockEntityGlow(BlockEntity blockEntity, LocalPlayer player) {
-        return blockEntity.hasCustomOutlineRendering(player);
+        // TODO: NeoForge does not yet have a hook on 1.21.2.
+        return false;
+    }
+
+    @Override
+    public boolean shouldOccludeFluid(Direction adjDirection, BlockState adjBlockState, FluidState fluid) {
+        return adjBlockState.shouldHideAdjacentFluidFace(adjDirection, fluid);
     }
 }

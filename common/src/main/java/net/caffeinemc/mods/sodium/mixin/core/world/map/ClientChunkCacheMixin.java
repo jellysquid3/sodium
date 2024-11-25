@@ -30,7 +30,7 @@ public class ClientChunkCacheMixin {
             method = "drop",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;replace(ILnet/minecraft/world/level/chunk/LevelChunk;Lnet/minecraft/world/level/chunk/LevelChunk;)Lnet/minecraft/world/level/chunk/LevelChunk;",
+                    target = "Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;drop(ILnet/minecraft/world/level/chunk/LevelChunk;)V",
                     shift = At.Shift.AFTER
             )
     )

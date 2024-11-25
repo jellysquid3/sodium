@@ -18,6 +18,8 @@ import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionMeshParts
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.DefaultTerrainRenderPasses;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.SharedIndexSorter;
 import org.jetbrains.annotations.NotNull;
 
@@ -113,6 +115,8 @@ public class RenderRegionManager {
             }
         }
 
+        ProfilerFiller profiler = Profiler.get();
+
         // If we have nothing to upload, abort!
         var translucentStorage = region.getStorage(DefaultTerrainRenderPasses.TRANSLUCENT);
         var needsSharedIndexUpdate = translucentStorage != null && translucentStorage.needsSharedIndexUpdate();
@@ -121,6 +125,8 @@ public class RenderRegionManager {
         }
 
         var resources = region.createResources(commandList);
+
+        profiler.push("upload_vertices");
 
         if (!uploads.isEmpty()) {
             var arena = resources.getGeometryArena();
@@ -141,7 +147,9 @@ public class RenderRegionManager {
             }
         }
 
+        profiler.popPush("upload_indices");
         var indexBufferChanged = false;
+
         if (!indexUploads.isEmpty()) {
             var arena = resources.getIndexArena();
             indexBufferChanged = arena.upload(commandList, indexUploads.stream()
@@ -160,6 +168,8 @@ public class RenderRegionManager {
         if (indexBufferChanged) {
             region.refreshIndexedTesselation(commandList);
         }
+
+        profiler.pop();
     }
 
     private Reference2ReferenceMap.FastEntrySet<RenderRegion, List<BuilderTaskOutput>> createMeshUploadQueues(Collection<BuilderTaskOutput> results) {

@@ -4,67 +4,63 @@ import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.minecraft.util.Mth;
 
 public class BoxBlur {
-
-    public static void blur(ColorBuffer buf, ColorBuffer tmp, int radius) {
-        if (buf.width != tmp.width || buf.height != tmp.height) {
-            throw new IllegalArgumentException("Color buffers must have same dimensions");
-        }
-
-        if (isHomogenous(buf.data)) {
+    public static void blur(int[] src, int[] tmp, int width, int height, int radius) {
+        if (isHomogenous(src)) {
             return;
         }
 
-        blurImpl(buf.data, tmp.data, buf.width, buf.height, radius); // X-axis
-        blurImpl(tmp.data, buf.data, buf.width, buf.height, radius); // Y-axis
+        blurImpl(src, tmp, radius, width - radius, width, 0, height, height, radius); // X-axis
+        blurImpl(tmp, src, radius, width - radius, width, radius, height - radius, height, radius); // Y-axis
     }
 
-    private static void blurImpl(int[] src, int[] dst, int width, int height, int radius) {
-        int multiplier = getAveragingMultiplier((radius * 2) + 1);
+    private static void blurImpl(int[] src, int[] dst, int x0, int x1, int width, int y0, int y1, int height, int radius) {
+        int windowSize = (radius * 2) + 1;
+        int multiplier = getAveragingMultiplier(windowSize);
 
-        for (int y = 0; y < height; y++) {
-            int srcRowOffset = ColorBuffer.getIndex(0, y, width);
+        for (int y = y0; y < y1; y++) {
+            int accR = 0;
+            int accG = 0;
+            int accB = 0;
 
-            int red, green, blue;
+            int windowPivotIndex = ColorBuffer.getIndex(x0, y, width);
+            int windowTailIndex = windowPivotIndex - radius;
+            int windowHeadIndex = windowPivotIndex + radius;
 
-            {
-                int color = src[srcRowOffset];
-                red = ColorARGB.unpackRed(color);
-                green = ColorARGB.unpackGreen(color);
-                blue = ColorARGB.unpackBlue(color);
+            // Initialize window
+            for (int x = -radius; x <= radius; x++) {
+                var color = src[windowPivotIndex + x];
+                accR += ColorARGB.unpackRed(color);
+                accG += ColorARGB.unpackGreen(color);
+                accB += ColorARGB.unpackBlue(color);
             }
 
-            // Extend the window backwards by repeating the colors at the edge N times
-            red += red * radius;
-            green += green * radius;
-            blue += blue * radius;
+            // Scan forwards
+            int x = x0;
 
-            // Extend the window forwards by sampling ahead N times
-            for (int x = 1; x <= radius; x++) {
-                var color = src[srcRowOffset + x];
-                red += ColorARGB.unpackRed(color);
-                green += ColorARGB.unpackGreen(color);
-                blue += ColorARGB.unpackBlue(color);
-            }
-
-            for (int x = 0; x < width; x++) {
+            while (true) {
                 // The x and y coordinates are transposed to flip the output image
-                dst[ColorBuffer.getIndex(y, x, width)] = averageRGB(red, green, blue, multiplier);
+                // noinspection SuspiciousNameCombination
+                dst[ColorBuffer.getIndex(y, x, width)] = averageRGB(accR, accG, accB, multiplier);
+                x++;
+
+                if (x >= x1) {
+                    break;
+                }
 
                 {
                     // Remove the color values that are behind the window
-                    var color = src[srcRowOffset + Math.max(0, x - radius)];
-
-                    red -= ColorARGB.unpackRed(color);
-                    green -= ColorARGB.unpackGreen(color);
-                    blue -= ColorARGB.unpackBlue(color);
+                    var color = src[windowTailIndex++];
+                    accR -= ColorARGB.unpackRed(color);
+                    accG -= ColorARGB.unpackGreen(color);
+                    accB -= ColorARGB.unpackBlue(color);
                 }
 
                 {
                     // Add the color values that are ahead of the window
-                    var color = src[srcRowOffset + Math.min(width - 1, x + radius + 1)];
-                    red += ColorARGB.unpackRed(color);
-                    green += ColorARGB.unpackGreen(color);
-                    blue += ColorARGB.unpackBlue(color);
+                    var color = src[++windowHeadIndex];
+                    accR += ColorARGB.unpackRed(color);
+                    accG += ColorARGB.unpackGreen(color);
+                    accB += ColorARGB.unpackBlue(color);
                 }
             }
         }
@@ -108,7 +104,7 @@ public class BoxBlur {
     }
 
     public static class ColorBuffer {
-        protected final int[] data;
+        public final int[] data;
         protected final int width, height;
 
         public ColorBuffer(int width, int height) {
@@ -121,13 +117,12 @@ public class BoxBlur {
             this.data[getIndex(x, y, this.width)] = color;
         }
 
-
         public int get(int x, int y) {
             return this.data[getIndex(x, y, this.width)];
         }
 
         public static int getIndex(int x, int y, int width) {
-            return (y * width) + x;
+            return x + (y * width);
         }
     }
 }

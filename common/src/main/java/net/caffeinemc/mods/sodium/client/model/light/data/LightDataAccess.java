@@ -65,8 +65,8 @@ public abstract class LightDataAccess {
         BlockState state = level.getBlockState(pos);
 
         boolean em = state.emissiveRendering(level, pos);
-        boolean op = state.isViewBlocking(level, pos) && state.getLightBlock(level, pos) != 0;
-        boolean fo = state.isSolidRender(level, pos);
+        boolean op = state.isViewBlocking(level, pos) && state.getLightBlock() != 0;
+        boolean fo = state.isSolidRender();
         boolean fc = state.isCollisionShapeFullBlock(level, pos);
 
         int lu = PlatformBlockAccess.getInstance().getLightEmission(state, level, pos);

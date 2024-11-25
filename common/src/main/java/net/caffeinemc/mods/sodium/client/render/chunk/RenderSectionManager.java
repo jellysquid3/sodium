@@ -146,7 +146,7 @@ public class RenderSectionManager {
 
         this.occlusionCuller.findVisible(visitor, viewport, searchDistance, useOcclusionCulling, frame);
 
-        this.renderLists = visitor.createRenderLists();
+        this.renderLists = visitor.createRenderLists(viewport);
         this.taskLists = visitor.getRebuildLists();
     }
 
@@ -167,7 +167,7 @@ public class RenderSectionManager {
         BlockPos origin = camera.getBlockPosition();
 
         if (spectator && this.level.getBlockState(origin)
-                .isSolidRender(this.level, origin))
+                .isSolidRender())
         {
             useOcclusionCulling = false;
         } else {
@@ -626,13 +626,13 @@ public class RenderSectionManager {
     }
 
     private float getEffectiveRenderDistance() {
-        var color = RenderSystem.getShaderFogColor();
-        var distance = RenderSystem.getShaderFogEnd();
+        var alpha = RenderSystem.getShaderFog().alpha();
+        var distance = RenderSystem.getShaderFog().end();
 
         var renderDistance = this.getRenderDistance();
 
         // The fog must be fully opaque in order to skip rendering of chunks behind it
-        if (!Mth.equal(color[3], 1.0f)) {
+        if (!Mth.equal(alpha, 1.0f)) {
             return renderDistance;
         }
 
@@ -729,13 +729,13 @@ public class RenderSectionManager {
     }
 
     public void onChunkAdded(int x, int z) {
-        for (int y = this.level.getMinSection(); y < this.level.getMaxSection(); y++) {
+        for (int y = this.level.getMinSectionY(); y <= this.level.getMaxSectionY(); y++) {
             this.onSectionAdded(x, y, z);
         }
     }
 
     public void onChunkRemoved(int x, int z) {
-        for (int y = this.level.getMinSection(); y < this.level.getMaxSection(); y++) {
+        for (int y = this.level.getMinSectionY(); y <= this.level.getMaxSectionY(); y++) {
             this.onSectionRemoved(x, y, z);
         }
     }

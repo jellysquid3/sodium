@@ -22,6 +22,7 @@ import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.caffeinemc.mods.sodium.client.services.PlatformBlockAccess;
 import net.caffeinemc.mods.sodium.client.util.NativeBuffer;
 import net.caffeinemc.mods.sodium.client.world.LevelRendererExtension;
+import net.caffeinemc.mods.sodium.mixin.core.render.world.EntityRendererAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -31,11 +32,14 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.BlockDestructionProgress;
 import net.minecraft.util.Mth;
+import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -172,7 +176,7 @@ public class SodiumWorldRenderer {
             this.reload();
         }
 
-        ProfilerFiller profiler = this.client.getProfiler();
+        ProfilerFiller profiler = Profiler.get();
         profiler.push("camera_setup");
 
         LocalPlayer player = this.client.player;
@@ -186,7 +190,7 @@ public class SodiumWorldRenderer {
         Matrix4f projectionMatrix = new Matrix4f(RenderSystem.getProjectionMatrix());
         float pitch = camera.getXRot();
         float yaw = camera.getYRot();
-        float fogDistance = RenderSystem.getShaderFogEnd();
+        float fogDistance = RenderSystem.getShaderFog().end();
 
         if (this.lastCameraPos == null) {
             this.lastCameraPos = new Vector3d(pos);
@@ -476,7 +480,7 @@ public class SodiumWorldRenderer {
      * Returns whether or not the entity intersects with any visible chunks in the graph.
      * @return True if the entity is visible, otherwise false
      */
-    public boolean isEntityVisible(Entity entity) {
+    public <T extends Entity, S extends EntityRenderState> boolean isEntityVisible(EntityRenderer<T, S> renderer, T entity) {
         if (!this.useEntityCulling) {
             return true;
         }
@@ -486,7 +490,7 @@ public class SodiumWorldRenderer {
             return true;
         }
 
-        AABB bb = entity.getBoundingBoxForCulling();
+        AABB bb = ((EntityRendererAccessor) renderer).getCullingBox(entity);
 
         // bail on very large entities to avoid checking many sections
         double entityVolume = (bb.maxX - bb.minX) * (bb.maxY - bb.minY) * (bb.maxZ - bb.minZ);
@@ -501,7 +505,7 @@ public class SodiumWorldRenderer {
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
         // Boxes outside the valid level height will never map to a rendered chunk
         // Always render these boxes, or they'll be culled incorrectly!
-        if (y2 < this.level.getMinBuildHeight() + 0.5D || y1 > this.level.getMaxBuildHeight() - 0.5D) {
+        if (y2 < this.level.getMinY() + 0.5D || y1 > this.level.getMaxY() - 0.5D) {
             return true;
         }
 

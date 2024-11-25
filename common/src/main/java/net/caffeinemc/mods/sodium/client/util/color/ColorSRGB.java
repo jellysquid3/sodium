@@ -1,7 +1,8 @@
 
 package net.caffeinemc.mods.sodium.client.util.color;
 
-import net.minecraft.util.FastColor;
+
+import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 
 /**
  * This is a port of the fast-srgb8 library from thomcc on <a href="https://github.com/thomcc/fast-srgb8">GitHub</a>.
@@ -82,7 +83,7 @@ public class ColorSRGB {
      * @param a The alpha-component in linear RGB space (0 to 255)
      */
     public static int linearToSrgb(float r, float g, float b, int a) {
-        return FastColor.ABGR32.color(a, linearToSrgb(b), linearToSrgb(g), linearToSrgb(r));
+        return ColorABGR.pack(linearToSrgb(r), linearToSrgb(g), linearToSrgb(b), a);
     }
 
     /**

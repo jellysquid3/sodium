@@ -1,17 +1,22 @@
 package net.caffeinemc.mods.sodium.mixin.features.render.world.clouds;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.resource.ResourceHandle;
 import net.caffeinemc.mods.sodium.client.render.immediate.CloudRenderer;
 import net.minecraft.client.Camera;
+import net.minecraft.client.CloudStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Objects;
@@ -34,29 +39,51 @@ public class LevelRendererMixin {
      * @author jellysquid3
      * @reason Optimize cloud rendering
      */
-    @Inject(method = "renderClouds", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/DimensionSpecialEffects;getCloudHeight()F"), cancellable = true) // Inject after Forge checks dimension support
-    public void renderClouds(PoseStack poseStack, Matrix4f matrix4f, Matrix4f projectionMatrix, float tickDelta, double x, double y, double z, CallbackInfo ci) {
+    @Group(name = "sodium$cloudsOverride", min = 1, max = 1)
+    @Dynamic
+    @Inject(
+            method = "method_62205",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/CloudRenderer;render(ILnet/minecraft/client/CloudStatus;FLorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lnet/minecraft/world/phys/Vec3;F)V"
+            ),
+            require = 0,
+            cancellable = true
+    )
+    public void renderCloudsFabric(ResourceHandle<RenderTarget> resourceHandle, int cloudColor, CloudStatus cloudStatus, float cloudHeight, Matrix4f matModelView, Matrix4f matProjection, Vec3 camera, float partialTicks, CallbackInfo ci) {
         ci.cancel();
 
+        this.sodium$renderClouds(matModelView, matProjection, cloudColor);
+    }
+
+    @Group(name = "sodium$cloudsOverride", min = 1, max = 1)
+    @Dynamic
+    @Inject(method = { "lambda$addCloudsPass$6" }, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/CloudRenderer;render(ILnet/minecraft/client/CloudStatus;FLorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lnet/minecraft/world/phys/Vec3;F)V"), cancellable = true, require = 0) // Inject after Forge checks dimension support
+    public void renderCloudsNeo(ResourceHandle<?> resourcehandle, float p_365209_, Vec3 p_362985_, Matrix4f modelView, Matrix4f projectionMatrix, int color, CloudStatus p_364196_, float p_362337_, CallbackInfo ci) {
+        ci.cancel();
+
+        this.sodium$renderClouds(modelView, projectionMatrix, color);
+    }
+
+    @Unique
+    private void sodium$renderClouds(Matrix4f matModelView, Matrix4f matProjection, int color) {
         if (this.cloudRenderer == null) {
             this.cloudRenderer = new CloudRenderer(this.minecraft.getResourceManager());
         }
 
-        poseStack.pushPose();
-        poseStack.mulPose(matrix4f);
-
-        ClientLevel level = Objects.requireNonNull(this.level);
         Camera camera = this.minecraft.gameRenderer.getMainCamera();
+        ClientLevel level = Objects.requireNonNull(this.level);
 
-        this.cloudRenderer.render(camera, level, projectionMatrix, poseStack, this.ticks, tickDelta);
+        var ticks = this.ticks;
+        var partialTicks = this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        poseStack.popPose();
+        this.cloudRenderer.render(camera, level, matProjection, matModelView, ticks, partialTicks, color);
     }
 
     @Inject(method = "onResourceManagerReload(Lnet/minecraft/server/packs/resources/ResourceManager;)V", at = @At("RETURN"))
     private void onReload(ResourceManager manager, CallbackInfo ci) {
         if (this.cloudRenderer != null) {
-            this.cloudRenderer.reloadTextures(manager);
+            this.cloudRenderer.reload(manager);
         }
     }
 

@@ -343,6 +343,11 @@ public class QuadViewImpl implements QuadView, ModelQuadView {
     }
 
     @Override
+    public int getMaxLightQuad(int idx) {
+        return lightmap(idx);
+    }
+
+    @Override
     public int getFlags() {
         return geometryFlags();
     }

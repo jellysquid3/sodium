@@ -41,8 +41,8 @@ public class LevelBiomeSlice {
 
     private void copyBiomeData(Level level, ChunkRenderContext context) {
         var defaultValue = level.registryAccess()
-                .registryOrThrow(Registries.BIOME)
-                .getHolderOrThrow(Biomes.PLAINS);
+                .lookupOrThrow(Registries.BIOME)
+                .getOrThrow(Biomes.PLAINS);
 
         for (int sectionX = 0; sectionX < 3; sectionX++) {
             for (int sectionY = 0; sectionY < 3; sectionY++) {

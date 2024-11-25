@@ -26,7 +26,7 @@ public class MultiPartBakedModelMixin {
 
     @Shadow
     @Final
-    private List<Pair<Predicate<BlockState>, BakedModel>> selectors;
+    private List<MultiPartBakedModel.Selector> selectors;
 
     /**
      * @author JellySquid
@@ -52,9 +52,9 @@ public class MultiPartBakedModelMixin {
             try {
                 List<BakedModel> modelList = new ArrayList<>(this.selectors.size());
 
-                for (Pair<Predicate<BlockState>, BakedModel> pair : this.selectors) {
-                    if (pair.getLeft().test(state)) {
-                        modelList.add(pair.getRight());
+                for (MultiPartBakedModel.Selector selector : this.selectors) {
+                    if (selector.condition().test(state)) {
+                        modelList.add(selector.model());
                     }
                 }
 

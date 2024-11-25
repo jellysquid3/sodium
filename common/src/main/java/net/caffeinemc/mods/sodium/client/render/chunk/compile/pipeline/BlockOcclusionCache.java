@@ -30,53 +30,62 @@ public class BlockOcclusionCache {
     }
 
     /**
-     * @param selfState The state of the block in the level
+     * @param selfBlockState The state of the block in the level
      * @param view The block view for this render context
      * @param selfPos The position of the block
      * @param facing The facing direction of the side to check
      * @return True if the block side facing {@param dir} is not occluded, otherwise false
      */
-    public boolean shouldDrawSide(BlockState selfState, BlockGetter view, BlockPos selfPos, Direction facing) {
-        BlockPos.MutableBlockPos otherPos = this.cachedPositionObject;
-        otherPos.set(selfPos.getX() + facing.getStepX(), selfPos.getY() + facing.getStepY(), selfPos.getZ() + facing.getStepZ());
+    public boolean shouldDrawSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing) {
+        BlockPos.MutableBlockPos neighborPos = this.cachedPositionObject;
+        neighborPos.setWithOffset(selfPos, facing);
 
-        BlockState otherState = view.getBlockState(otherPos);
+        // The block state of the neighbor
+        BlockState neighborBlockState = view.getBlockState(neighborPos);
 
-        // Blocks can define special behavior to control whether faces are rendered.
+        // The cull shape of the neighbor between the block being rendered and it
+        VoxelShape neighborShape = neighborBlockState.getFaceOcclusionShape(DirectionUtil.getOpposite(facing));
+
+        // Minecraft enforces that if the neighbor has a full-block occlusion shape, the face is always hidden
+        if (isFullShape(neighborShape)) {
+            return false;
+        }
+
+        // Blocks can define special behavior to control whether their faces are rendered.
         // This is mostly used by transparent blocks (Leaves, Glass, etc.) to not render interior faces between blocks
         // of the same type.
-        if (selfState.skipRendering(otherState, facing) || PlatformBlockAccess.getInstance().shouldSkipRender(view, selfState, otherState, selfPos, otherPos, facing)) {
+        if (selfBlockState.skipRendering(neighborBlockState, facing)) {
+            return false;
+        } else if (PlatformBlockAccess.getInstance()
+                .shouldSkipRender(view, selfBlockState, neighborBlockState, selfPos, neighborPos, facing)) {
             return false;
         }
 
-        // If the other block is transparent, then it is unable to hide any geometry.
-        if (!otherState.canOcclude()) {
+        // After any custom behavior has been handled, check if the neighbor block is transparent or has an empty
+        // cull shape. These blocks cannot hide any geometry.
+        if (isEmptyShape(neighborShape) || !neighborBlockState.canOcclude()) {
             return true;
         }
 
-        // The cull shape of the block being rendered
-        VoxelShape selfShape = selfState.getFaceOcclusionShape(view, selfPos, facing);
+        // The cull shape between of the block being rendered, between it and the neighboring block
+        VoxelShape selfShape = selfBlockState.getFaceOcclusionShape(facing);
 
-        // If the block being rendered has an empty cull shape, intersection tests will always fail
-        if (selfShape.isEmpty()) {
+        // If the block being rendered has an empty cull shape, there will be no intersection with the neighboring
+        // block's cull shape, so no geometry can be hidden.
+        if (isEmptyShape(selfShape)) {
             return true;
-        }
-
-        // The cull shape of the block neighboring the one being rendered
-        VoxelShape otherShape = otherState.getFaceOcclusionShape(view, otherPos, DirectionUtil.getOpposite(facing));
-
-        // If the other block has an empty cull shape, then it cannot hide any geometry
-        if (otherShape.isEmpty()) {
-            return true;
-        }
-
-        // If both blocks use a full-cube cull shape, then they will always hide the faces between each other
-        if (selfShape == Shapes.block() && otherShape == Shapes.block()) {
-            return false;
         }
 
         // No other simplifications apply, so we need to perform a full shape comparison, which is very slow
-        return this.lookup(selfShape, otherShape);
+        return this.lookup(selfShape, neighborShape);
+    }
+
+    private static boolean isFullShape(VoxelShape selfShape) {
+        return selfShape == Shapes.block();
+    }
+
+    private static boolean isEmptyShape(VoxelShape voxelShape) {
+        return voxelShape == Shapes.empty() || voxelShape.isEmpty();
     }
 
     private boolean lookup(VoxelShape self, VoxelShape other) {

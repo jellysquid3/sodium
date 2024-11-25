@@ -1,6 +1,8 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks;
 
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.Sorter;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.joml.Vector3dc;
 
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
@@ -23,7 +25,13 @@ public class ChunkBuilderSortingTask extends ChunkBuilderTask<ChunkSortOutput> {
         if (cancellationToken.isCancelled()) {
             return null;
         }
+
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("translucency sorting");
+
         this.sorter.writeIndexBuffer(this, false);
+
+        profiler.pop();
         return new ChunkSortOutput(this.render, this.submitTime, this.sorter);
     }
 

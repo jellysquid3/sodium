@@ -127,4 +127,11 @@ public interface ModelQuadView {
 
         return normal == 0 ? getFaceNormal() : normal;
     }
+
+    /**
+     * Gets the maximum light value for this vertex.
+     * @param idx The vertex index.
+     * @return Lightmap value.
+     */
+    int getMaxLightQuad(int idx);
 }

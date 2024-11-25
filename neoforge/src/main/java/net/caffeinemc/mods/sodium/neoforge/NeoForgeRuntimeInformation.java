@@ -1,7 +1,6 @@
 package net.caffeinemc.mods.sodium.neoforge;
 
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
-import net.neoforged.fml.loading.FMLConfig;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.LoadingModList;
@@ -26,7 +25,7 @@ public class NeoForgeRuntimeInformation implements PlatformRuntimeInformation {
 
     @Override
     public boolean platformHasEarlyLoadingScreen() {
-        return FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL);
+        return true;
     }
 
     @Override

@@ -10,7 +10,6 @@ import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
 
 import static net.caffeinemc.mods.sodium.client.render.immediate.model.ModelCuboid.*;
 
@@ -31,7 +30,7 @@ public class EntityRenderer {
 
     private static final Matrix3f lastMatrix = new Matrix3f();
 
-    private static final long SCRATCH_BUFFER = MemoryUtil.nmemAlignedAlloc(64, NUM_CUBE_FACES * NUM_FACE_VERTICES * EntityVertex.STRIDE);
+    private static final int VERTEX_BUFFER_BYTES = NUM_CUBE_FACES * NUM_FACE_VERTICES * EntityVertex.STRIDE;
 
     private static final Vector3f[] CUBE_CORNERS = new Vector3f[NUM_CUBE_VERTICES];
     private static final int[][] CUBE_VERTICES = new int[NUM_CUBE_FACES][];
@@ -74,24 +73,26 @@ public class EntityRenderer {
 
     public static void renderCuboid(PoseStack.Pose matrices, VertexBufferWriter writer, ModelCuboid cuboid, int light, int overlay, int color) {
         prepareNormalsIfChanged(matrices);
-
         prepareVertices(matrices, cuboid);
 
-        var vertexCount = emitQuads(cuboid, color, overlay, light);
-
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            writer.push(stack, SCRATCH_BUFFER, vertexCount, EntityVertex.FORMAT);
+            final var vertexBuffer = stack.nmalloc(16, VERTEX_BUFFER_BYTES);
+            final var vertexCount = emitQuads(vertexBuffer, cuboid, color, overlay, light);
+
+            if (vertexCount > 0) {
+                writer.push(stack, vertexBuffer, vertexCount, EntityVertex.FORMAT);
+            }
         }
     }
 
-    private static int emitQuads(ModelCuboid cuboid, int color, int overlay, int light) {
+    private static int emitQuads(final long buffer, ModelCuboid cuboid, int color, int overlay, int light) {
         final var positions = cuboid.mirror ? VERTEX_POSITIONS_MIRRORED : VERTEX_POSITIONS;
         final var textures = cuboid.mirror ? VERTEX_TEXTURES_MIRRORED : VERTEX_TEXTURES;
         final var normals = cuboid.mirror ? CUBE_NORMALS_MIRRORED :  CUBE_NORMALS;
 
         var vertexCount = 0;
 
-        long ptr = SCRATCH_BUFFER;
+        long ptr = buffer;
 
         for (int quadIndex = 0; quadIndex < NUM_CUBE_FACES; quadIndex++) {
             if (!cuboid.shouldDrawFace(quadIndex)) {

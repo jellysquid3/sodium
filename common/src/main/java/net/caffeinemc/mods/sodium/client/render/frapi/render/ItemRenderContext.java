@@ -19,6 +19,7 @@ package net.caffeinemc.mods.sodium.client.render.frapi.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.MatrixUtil;
+import net.caffeinemc.mods.sodium.api.util.ColorMixer;
 import net.caffeinemc.mods.sodium.client.render.frapi.helper.ColorHelper;
 import net.caffeinemc.mods.sodium.client.render.frapi.mesh.EncodingFormat;
 import net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableQuadViewImpl;
@@ -31,15 +32,12 @@ import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
 import net.fabricmc.fabric.api.util.TriState;
 import net.fabricmc.fabric.impl.renderer.VanillaModelEncoder;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.item.ItemColors;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -69,9 +67,6 @@ public class ItemRenderContext extends AbstractRenderContext {
         }
     };
 
-    @Deprecated
-    private final BakedModelConsumerImpl vanillaModelConsumer = new BakedModelConsumerImpl();
-
     private final ItemColors colorMap;
     private final VanillaModelBufferer vanillaBufferer;
 
@@ -92,7 +87,6 @@ public class ItemRenderContext extends AbstractRenderContext {
     private int overlay;
 
     private boolean isDefaultTranslucent;
-    private boolean isTranslucentDirect;
     private boolean isDefaultGlint;
     private boolean isGlintDynamicDisplay;
 
@@ -124,13 +118,6 @@ public class ItemRenderContext extends AbstractRenderContext {
         return transformMode;
     }
 
-    @SuppressWarnings("removal")
-    @Deprecated
-    @Override
-    public BakedModelConsumer bakedModelConsumer() {
-        return vanillaModelConsumer;
-    }
-
     public void renderModel(ItemStack itemStack, ItemDisplayContext transformMode, boolean invert, PoseStack poseStack, MultiBufferSource bufferSource, int lightmap, int overlay, BakedModel model) {
         this.itemStack = itemStack;
         this.transformMode = transformMode;
@@ -158,24 +145,6 @@ public class ItemRenderContext extends AbstractRenderContext {
     }
 
     private void computeOutputInfo() {
-        isDefaultTranslucent = true;
-        isTranslucentDirect = true;
-
-        Item item = itemStack.getItem();
-
-        if (item instanceof BlockItem blockItem) {
-            BlockState state = blockItem.getBlock().defaultBlockState();
-            RenderType renderType = ItemBlockRenderTypes.getChunkRenderType(state);
-
-            if (renderType != RenderType.translucent()) {
-                isDefaultTranslucent = false;
-            }
-
-            if (transformMode != ItemDisplayContext.GUI && !transformMode.firstPerson()) {
-                isTranslucentDirect = false;
-            }
-        }
-
         isDefaultGlint = itemStack.hasFoil();
         isGlintDynamicDisplay = ItemRendererAccessor.sodium$hasAnimatedTexture(itemStack);
 
@@ -202,7 +171,7 @@ public class ItemRenderContext extends AbstractRenderContext {
             final int itemColor = colorMap.getColor(itemStack, colorIndex);
 
             for (int i = 0; i < 4; i++) {
-                quad.color(i, ColorHelper.multiplyColor(itemColor, quad.color(i)));
+                quad.color(i, ColorMixer.mulComponentWise(itemColor, quad.color(i)));
             }
         }
     }
@@ -250,13 +219,13 @@ public class ItemRenderContext extends AbstractRenderContext {
         if (translucent) {
             if (glint) {
                 if (translucentGlintVertexConsumer == null) {
-                    translucentGlintVertexConsumer = createTranslucentVertexConsumer(true);
+                    translucentGlintVertexConsumer = createVertexConsumer(Sheets.translucentItemSheet(), true);
                 }
 
                 return translucentGlintVertexConsumer;
             } else {
                 if (translucentVertexConsumer == null) {
-                    translucentVertexConsumer = createTranslucentVertexConsumer(false);
+                    translucentVertexConsumer = createVertexConsumer(Sheets.translucentItemSheet(), false);
                 }
 
                 return translucentVertexConsumer;
@@ -264,13 +233,13 @@ public class ItemRenderContext extends AbstractRenderContext {
         } else {
             if (glint) {
                 if (cutoutGlintVertexConsumer == null) {
-                    cutoutGlintVertexConsumer = createCutoutVertexConsumer(true);
+                    cutoutGlintVertexConsumer = createVertexConsumer(Sheets.cutoutBlockSheet(), true);
                 }
 
                 return cutoutGlintVertexConsumer;
             } else {
                 if (cutoutVertexConsumer == null) {
-                    cutoutVertexConsumer = createCutoutVertexConsumer(false);
+                    cutoutVertexConsumer = createVertexConsumer(Sheets.cutoutBlockSheet(), false);
                 }
 
                 return cutoutVertexConsumer;
@@ -278,40 +247,22 @@ public class ItemRenderContext extends AbstractRenderContext {
         }
     }
 
-    private VertexConsumer createTranslucentVertexConsumer(boolean glint) {
-        if (glint && isGlintDynamicDisplay) {
-            return createDynamicDisplayGlintVertexConsumer(Minecraft.useShaderTransparency() && !isTranslucentDirect ? Sheets.translucentItemSheet() : Sheets.translucentCullBlockSheet());
-        }
+    private VertexConsumer createVertexConsumer(RenderType renderType, boolean glint) {
+        if (isGlintDynamicDisplay && glint) {
+            if (dynamicDisplayGlintEntry == null) {
+                dynamicDisplayGlintEntry = poseStack.last().copy();
 
-        if (isTranslucentDirect) {
-            return ItemRenderer.getFoilBufferDirect(bufferSource, Sheets.translucentCullBlockSheet(), true, glint);
-        } else if (Minecraft.useShaderTransparency()) {
-            return ItemRenderer.getFoilBuffer(bufferSource, Sheets.translucentItemSheet(), true, glint);
-        } else {
-            return ItemRenderer.getFoilBuffer(bufferSource, Sheets.translucentItemSheet(), true, glint);
-        }
-    }
-
-    private VertexConsumer createCutoutVertexConsumer(boolean glint) {
-        if (glint && isGlintDynamicDisplay) {
-            return createDynamicDisplayGlintVertexConsumer(Sheets.cutoutBlockSheet());
-        }
-
-        return ItemRenderer.getFoilBufferDirect(bufferSource, Sheets.cutoutBlockSheet(), true, glint);
-    }
-
-    private VertexConsumer createDynamicDisplayGlintVertexConsumer(RenderType type) {
-        if (dynamicDisplayGlintEntry == null) {
-            dynamicDisplayGlintEntry = poseStack.last().copy();
-
-            if (transformMode == ItemDisplayContext.GUI) {
-                MatrixUtil.mulComponentWise(dynamicDisplayGlintEntry.pose(), 0.5F);
-            } else if (transformMode.firstPerson()) {
-                MatrixUtil.mulComponentWise(dynamicDisplayGlintEntry.pose(), 0.75F);
+                if (transformMode == ItemDisplayContext.GUI) {
+                    MatrixUtil.mulComponentWise(dynamicDisplayGlintEntry.pose(), 0.5F);
+                } else if (transformMode.firstPerson()) {
+                    MatrixUtil.mulComponentWise(dynamicDisplayGlintEntry.pose(), 0.75F);
+                }
             }
+
+            return ItemRenderer.getCompassFoilBuffer(bufferSource, renderType, dynamicDisplayGlintEntry);
         }
 
-        return ItemRenderer.getCompassFoilBuffer(bufferSource, type, dynamicDisplayGlintEntry);
+        return ItemRenderer.getFoilBuffer(bufferSource, renderType, true, glint);
     }
 
     public void bufferDefaultModel(BakedModel model, @Nullable BlockState state) {
@@ -319,20 +270,6 @@ public class ItemRenderContext extends AbstractRenderContext {
             VanillaModelEncoder.emitItemQuads(model, state, randomSupplier, ItemRenderContext.this);
         } else {
             vanillaBufferer.accept(model, itemStack, lightmap, overlay, poseStack, defaultVertexConsumer);
-        }
-    }
-
-    @SuppressWarnings("removal")
-    @Deprecated
-    private class BakedModelConsumerImpl implements BakedModelConsumer {
-        @Override
-        public void accept(BakedModel model) {
-            accept(model, null);
-        }
-
-        @Override
-        public void accept(BakedModel model, @Nullable BlockState state) {
-            bufferDefaultModel(model, state);
         }
     }
 

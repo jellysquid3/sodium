@@ -26,6 +26,7 @@ import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadView;
 import net.fabricmc.fabric.api.renderer.v1.model.SpriteFinder;
+import net.minecraft.client.renderer.LightTexture;
 import net.fabricmc.fabric.api.util.TriState;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -258,6 +259,14 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
         headerBits = EncodingFormat.normalFace(headerBits, bakedView.getNormalFace());
         data[baseIndex + HEADER_BITS] = EncodingFormat.geometryFlags(headerBits, bakedView.getFlags());
         isGeometryInvalid = false;
+
+        int lightEmission = quad.getLightEmission();
+
+        if (lightEmission > 0) {
+            for (int i = 0; i < 4; i++) {
+                lightmap(i, LightTexture.lightCoordsWithEmission(lightmap(i), lightEmission));
+            }
+        }
 
         cachedSprite(quad.getSprite());
         return this;

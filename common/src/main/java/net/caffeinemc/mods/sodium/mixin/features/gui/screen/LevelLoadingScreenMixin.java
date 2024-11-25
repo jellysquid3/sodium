@@ -1,16 +1,14 @@
 package net.caffeinemc.mods.sodium.mixin.features.gui.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
-import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
-import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
+import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
+import net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.server.level.progress.StoringChunkProgressListener;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.joml.Matrix4f;
@@ -47,7 +45,28 @@ public class LevelLoadingScreenMixin {
      * @author JellySquid
      */
     @Overwrite
-    public static void renderChunks(GuiGraphics graphics, StoringChunkProgressListener tracker, int mapX, int mapY, int mapScale, int mapPadding) {
+    public static void renderChunks(GuiGraphics graphics, StoringChunkProgressListener listener, int mapX, int mapY, int mapScale, int mapPadding) {
+        Matrix4f pose = graphics.pose()
+                .last()
+                .pose();
+
+        graphics.drawSpecial((bufferSource -> {
+            var writer = VertexBufferWriter.of(bufferSource.getBuffer(RenderType.gui()));
+
+            sodium$drawChunkMap(listener, mapX, mapY, mapScale, mapPadding, writer, pose);
+        }));
+
+    }
+
+    @Unique
+    private static void sodium$drawChunkMap(StoringChunkProgressListener listener,
+                                            int mapX,
+                                            int mapY,
+                                            int mapScale,
+                                            int mapPadding,
+                                            VertexBufferWriter writer,
+                                            Matrix4f pose)
+    {
         if (STATUS_TO_COLOR_FAST == null) {
             STATUS_TO_COLOR_FAST = new Reference2IntOpenHashMap<>(COLORS.size());
             STATUS_TO_COLOR_FAST.put(null, NULL_STATUS_COLOR);
@@ -55,21 +74,8 @@ public class LevelLoadingScreenMixin {
                     .forEach(entry -> STATUS_TO_COLOR_FAST.put(entry.getKey(), ColorARGB.toABGR(entry.getIntValue(), 0xFF)));
         }
 
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        Matrix4f matrix = graphics.pose().last().pose();
-
-        Tesselator tessellator = Tesselator.getInstance();
-
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        
-        BufferBuilder bufferBuilder = tessellator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-
-        var writer = VertexBufferWriter.of(bufferBuilder);
-
-        int centerSize = tracker.getFullDiameter();
-        int size = tracker.getDiameter();
+        int centerSize = listener.getFullDiameter();
+        int size = listener.getDiameter();
 
         int tileSize = mapScale + mapPadding;
 
@@ -77,10 +83,10 @@ public class LevelLoadingScreenMixin {
             int mapRenderCenterSize = centerSize * tileSize - mapPadding;
             int radius = mapRenderCenterSize / 2 + 1;
 
-            addRect(writer, matrix, mapX - radius, mapY - radius, mapX - radius + 1, mapY + radius, DEFAULT_STATUS_COLOR);
-            addRect(writer, matrix, mapX + radius - 1, mapY - radius, mapX + radius, mapY + radius, DEFAULT_STATUS_COLOR);
-            addRect(writer, matrix, mapX - radius, mapY - radius, mapX + radius, mapY - radius + 1, DEFAULT_STATUS_COLOR);
-            addRect(writer, matrix, mapX - radius, mapY + radius - 1, mapX + radius, mapY + radius, DEFAULT_STATUS_COLOR);
+            addRect(writer, pose, mapX - radius, mapY - radius, mapX - radius + 1, mapY + radius, DEFAULT_STATUS_COLOR);
+            addRect(writer, pose, mapX + radius - 1, mapY - radius, mapX + radius, mapY + radius, DEFAULT_STATUS_COLOR);
+            addRect(writer, pose, mapX - radius, mapY - radius, mapX + radius, mapY - radius + 1, DEFAULT_STATUS_COLOR);
+            addRect(writer, pose, mapX - radius, mapY + radius - 1, mapX + radius, mapY + radius, DEFAULT_STATUS_COLOR);
         }
 
         int mapRenderSize = size * tileSize - mapPadding;
@@ -96,7 +102,7 @@ public class LevelLoadingScreenMixin {
             for (int z = 0; z < size; ++z) {
                 int tileY = mapStartY + z * tileSize;
 
-                ChunkStatus status = tracker.getStatus(x, z);
+                ChunkStatus status = listener.getStatus(x, z);
                 int color;
 
                 if (prevStatus == status) {
@@ -108,18 +114,9 @@ public class LevelLoadingScreenMixin {
                     prevColor = color;
                 }
 
-                addRect(writer, matrix, tileX, tileY, tileX + mapScale, tileY + mapScale, color);
+                addRect(writer, pose, tileX, tileY, tileX + mapScale, tileY + mapScale, color);
             }
         }
-
-        MeshData data = bufferBuilder.build();
-
-        if (data != null) {
-            BufferUploader.drawWithShader(data);
-        }
-        Tesselator.getInstance().clear();
-
-        RenderSystem.disableBlend();
     }
 
     @Unique

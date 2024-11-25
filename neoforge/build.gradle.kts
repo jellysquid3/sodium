@@ -9,7 +9,7 @@ base {
 }
 
 repositories {
-    maven("https://maven.pkg.github.com/ims212/Forge_Fabric_API") {
+    maven("https://maven.pkg.github.com/ims212/ForgifiedFabricAPI") {
         credentials {
             username = "IMS212"
             // Read only token
@@ -54,7 +54,7 @@ dependencies {
     }
 
     addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-api-base:0.4.42+d1308ded19")
-    addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-renderer-api-v1:3.4.0+acb05a3919")
+    addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-renderer-api-v1:4.0.3+63dbf70448")
     addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-rendering-data-attachment-v1:0.3.48+73761d2e19")
     addEmbeddedFabricModule("org.sinytra.forgified-fabric-api:fabric-block-view-api-v2:1.0.10+9afaaf8c19")
 

@@ -13,7 +13,6 @@ accessible class net/minecraft/client/renderer/FogRenderer$MobEffectFogFunction
 accessible class net/minecraft/client/renderer/texture/Stitcher$Holder
 accessible class net/minecraft/world/level/biome/Biome$ClimateSettings
 accessible method net/minecraft/client/renderer/SectionBufferBuilderPool <init> (Ljava/util/List;)V
-
 accessible method com/mojang/blaze3d/vertex/PoseStack$Pose <init> (Lorg/joml/Matrix4f;Lorg/joml/Matrix3f;)V
 accessible field com/mojang/blaze3d/vertex/PoseStack$Pose trustedNormals Z
 

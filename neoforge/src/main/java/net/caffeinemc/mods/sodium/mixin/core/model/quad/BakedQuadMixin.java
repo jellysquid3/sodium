@@ -4,6 +4,7 @@ import net.caffeinemc.mods.sodium.client.model.quad.BakedQuadView;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFlags;
 import net.caffeinemc.mods.sodium.client.util.ModelQuadUtil;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -40,6 +41,9 @@ public abstract class BakedQuadMixin implements BakedQuadView {
     @Shadow
     public abstract boolean hasAmbientOcclusion();
 
+    @Shadow
+    public abstract int getLightEmission();
+
     @Unique
     private int flags;
 
@@ -50,9 +54,9 @@ public abstract class BakedQuadMixin implements BakedQuadView {
     private ModelQuadFacing normalFace = null;
 
     @Inject(method = {
-            "<init>([IILnet/minecraft/core/Direction;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;ZZ)V"
+            "<init>([IILnet/minecraft/core/Direction;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;ZIZ)V"
     }, at = @At("RETURN"))
-    private void init(int[] is, int i, Direction face, TextureAtlasSprite arg2, boolean bl, boolean hasAmbientOcclusion, CallbackInfo ci) {
+    private void init(int[] is, int i, Direction face, TextureAtlasSprite arg2, boolean bl, int ambientLight, boolean hasAmbientOcclusion, CallbackInfo ci) {
         this.flags = ModelQuadFlags.getQuadFlags(this, face);
     }
 
@@ -132,6 +136,11 @@ public abstract class BakedQuadMixin implements BakedQuadView {
     @Override
     public Direction getLightFace() {
         return this.direction;
+    }
+
+    @Override
+    public int getMaxLightQuad(int idx) {
+        return LightTexture.lightCoordsWithEmission(getLight(idx), getLightEmission());
     }
 
     @Override

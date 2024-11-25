@@ -1,10 +1,13 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.executor;
 
+import com.mojang.jtracy.TracyClient;
+import com.mojang.jtracy.Zone;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.BuilderTaskOutput;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkBuildContext;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexType;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import org.apache.commons.lang3.Validate;
@@ -48,7 +51,7 @@ public class ChunkBuilder {
 
         for (int i = 0; i < count; i++) {
             ChunkBuildContext context = new ChunkBuildContext(level, vertexType);
-            WorkerRunnable worker = new WorkerRunnable(context);
+            WorkerRunnable worker = new WorkerRunnable("Chunk Render Task Executor #" + i, context);
 
             Thread thread = new Thread(worker, "Chunk Render Task Executor #" + i);
             thread.setPriority(Math.max(0, Thread.NORM_PRIORITY - 2));
@@ -184,9 +187,11 @@ public class ChunkBuilder {
     private class WorkerRunnable implements Runnable {
         // Making this thread-local provides a small boost to performance by avoiding the overhead in synchronizing
         // caches between different CPU cores
+        private final String name;
         private final ChunkBuildContext context;
 
-        public WorkerRunnable(ChunkBuildContext context) {
+        public WorkerRunnable(String name, ChunkBuildContext context) {
+            this.name = name;
             this.context = context;
         }
 
@@ -209,6 +214,8 @@ public class ChunkBuilder {
 
                 ChunkBuilder.this.busyThreadCount.getAndIncrement();
 
+                Zone zone = TracyClient.beginZone(name, SharedConstants.IS_RUNNING_IN_IDE);
+
                 try {
                     job.execute(this.context);
                 } finally {
@@ -216,6 +223,8 @@ public class ChunkBuilder {
 
                     ChunkBuilder.this.busyThreadCount.decrementAndGet();
                 }
+
+                zone.close();
             }
         }
     }

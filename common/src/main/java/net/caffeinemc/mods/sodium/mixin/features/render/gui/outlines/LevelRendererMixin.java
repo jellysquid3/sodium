@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
+import net.minecraft.client.renderer.ShapeRenderer;
 import org.joml.Math;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -19,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(LevelRenderer.class)
+@Mixin(ShapeRenderer.class)
 public class LevelRendererMixin {
     /**
      * @author JellySquid

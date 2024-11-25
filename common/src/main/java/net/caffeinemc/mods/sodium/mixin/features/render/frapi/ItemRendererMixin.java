@@ -52,11 +52,10 @@ public abstract class ItemRendererMixin {
     @Unique
     private final ThreadLocal<ItemRenderContext> contexts = ThreadLocal.withInitial(() -> new ItemRenderContext(itemColors, vanillaBufferer));
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/BakedModel;isCustomRenderer()Z"), cancellable = true)
-    private void beforeRenderItem(ItemStack stack, ItemDisplayContext transformMode, boolean invert, PoseStack matrixStack, MultiBufferSource vertexConsumerProvider, int light, int overlay, BakedModel model, CallbackInfo ci) {
+    @Inject(method = "renderItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/BakedModel;isCustomRenderer()Z"), cancellable = true)
+    private void beforeRenderItem(ItemStack stack, ItemDisplayContext transformMode, PoseStack matrixStack, MultiBufferSource vertexConsumerProvider, int light, int overlay, BakedModel model, boolean invert, CallbackInfo ci) {
         if (!((FabricBakedModel) model).isVanillaAdapter()) {
             contexts.get().renderModel(stack, transformMode, invert, matrixStack, vertexConsumerProvider, light, overlay, model);
-            matrixStack.popPose();
             ci.cancel();
         }
     }

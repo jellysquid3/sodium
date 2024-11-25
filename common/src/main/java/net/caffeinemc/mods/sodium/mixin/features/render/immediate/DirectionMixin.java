@@ -29,7 +29,7 @@ public class DirectionMixin {
      */
     @SuppressWarnings({ "StatementWithEmptyBody", "JavadocReference" })
     @Overwrite
-    public static Direction getNearest(float x, float y, float z) {
+    public static Direction getApproximateNearest(float x, float y, float z) {
         // Vanilla quirk: return NORTH if all coordinates are zero
         if (x == 0 && y == 0 && z == 0)
             return Direction.NORTH;

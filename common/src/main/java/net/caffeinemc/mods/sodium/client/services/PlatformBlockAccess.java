@@ -85,4 +85,13 @@ public interface PlatformBlockAccess {
      * @return Whether this block entity should activate the outline shader.
      */
     boolean shouldBlockEntityGlow(BlockEntity blockEntity, LocalPlayer player);
+
+    /**
+     * Determines if a fluid adjacent to the block on the given side should not be rendered.
+     *
+     * @param adjDirection      the face of this block that the fluid is adjacent to
+     * @param fluid the fluid that is touching that face
+     * @return if this block should cause the fluid's face to not render
+     */
+    boolean shouldOccludeFluid(Direction adjDirection, BlockState adjBlockState, FluidState fluid);
 }

@@ -147,4 +147,9 @@ public class ModelQuad implements ModelQuadViewMutable {
     public Direction getLightFace() {
         return this.direction;
     }
+
+    @Override
+    public int getMaxLightQuad(int idx) {
+        return getLight(idx);
+    }
 }

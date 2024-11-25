@@ -3,7 +3,6 @@ package net.caffeinemc.mods.sodium.client.model.quad.blender;
 import net.caffeinemc.mods.sodium.client.model.quad.ModelQuadView;
 import net.caffeinemc.mods.sodium.client.model.color.ColorProvider;
 import net.caffeinemc.mods.sodium.client.world.LevelSlice;
-import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.api.util.ColorMixer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
@@ -17,56 +16,40 @@ public abstract class BlendedColorProvider<T> implements ColorProvider<T> {
     }
 
     private int getVertexColor(LevelSlice slice, BlockPos pos, BlockPos.MutableBlockPos scratchPos, ModelQuadView quad, T state, int vertexIndex) {
-        // Offset the position by -0.5f to align smooth blending with flat blending.
-        final float posX = quad.getX(vertexIndex) - 0.5f;
-        final float posY = quad.getY(vertexIndex) - 0.5f;
-        final float posZ = quad.getZ(vertexIndex) - 0.5f;
+        // The vertex position
+        // We add a half-texel offset since we are sampling points within a color texture
+        final float x = quad.getX(vertexIndex) - 0.5f;
+        final float y = quad.getY(vertexIndex) - 0.5f;
+        final float z = quad.getZ(vertexIndex) - 0.5f;
 
-        // Floor the positions here to always get the largest integer below the input
-        // as negative values by default round toward zero when casting to an integer.
-        // Which would cause negative ratios to be calculated in the interpolation later on.
-        final int posIntX = Mth.floor(posX);
-        final int posIntY = Mth.floor(posY);
-        final int posIntZ = Mth.floor(posZ);
+        // Integer component of vertex position
+        final int intX = Mth.floor(x);
+        final int intY = Mth.floor(y);
+        final int intZ = Mth.floor(z);
 
-        // Integer component of position vector
-        final int blockIntX = pos.getX() + posIntX;
-        final int blockIntY = pos.getY() + posIntY;
-        final int blockIntZ = pos.getZ() + posIntZ;
+        // Fractional component of vertex position
+        final float fracX = x - intX;
+        final float fracY = y - intY;
+        final float fracZ = z - intZ;
 
-        // Retrieve the color values for each neighboring block
-        final int c00 = this.getColor(slice, state, scratchPos.set(blockIntX + 0, blockIntY, blockIntZ + 0));
-        final int c01 = this.getColor(slice, state, scratchPos.set(blockIntX + 0, blockIntY, blockIntZ + 1));
-        final int c10 = this.getColor(slice, state, scratchPos.set(blockIntX + 1, blockIntY, blockIntZ + 0));
-        final int c11 = this.getColor(slice, state, scratchPos.set(blockIntX + 1, blockIntY, blockIntZ + 1));
+        // Block coordinates (in world space) which the vertex is located within
+        // This is calculated after converting from floating point to avoid precision loss with large coordinates
+        final int blockX = pos.getX() + intX;
+        final int blockY = pos.getY() + intY;
+        final int blockZ = pos.getZ() + intZ;
 
-        // Linear interpolation across the Z-axis
-        int z0;
+        // Retrieve the color values for each neighboring value
+        // This creates a 2x2 matrix which is then sampled during interpolation
+        final int m00 = this.getColor(slice, state, scratchPos.set(blockX + 0, blockY, blockZ + 0));
+        final int m01 = this.getColor(slice, state, scratchPos.set(blockX + 0, blockY, blockZ + 1));
+        final int m10 = this.getColor(slice, state, scratchPos.set(blockX + 1, blockY, blockZ + 0));
+        final int m11 = this.getColor(slice, state, scratchPos.set(blockX + 1, blockY, blockZ + 1));
 
-        if (c00 != c01) {
-            z0 = ColorMixer.mix(c00, c01, posZ - posIntZ);
-        } else {
-            z0 = c00;
-        }
-
-        int z1;
-
-        if (c10 != c11) {
-            z1 = ColorMixer.mix(c10, c11, posZ - posIntZ);
-        } else {
-            z1 = c10;
-        }
-
-        // Linear interpolation across the X-axis
-        int x0;
-
-        if (z0 != z1) {
-            x0 = ColorMixer.mix(z0, z1, posX - posIntX);
-        } else {
-            x0 = z0;
-        }
-
-        return x0;
+        // Perform interpolation across the X-axis, and then Y-axis
+        // y0 = (m00 * (1.0 - x)) + (m10 * x)
+        // y1 = (m01 * (1.0 - x)) + (m11 * x)
+        // result = (y0 * (1.0 - y)) + (y1 * y)
+        return ColorMixer.mix2d(m00, m01, m10, m11, fracX, fracZ);
     }
 
     protected abstract int getColor(LevelSlice slice, T state, BlockPos pos);

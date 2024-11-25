@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.mixin.features.render.gui.font;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.client.render.vertex.VertexConsumerUtils;
 import net.caffeinemc.mods.sodium.api.vertex.format.common.GlyphVertex;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
@@ -52,7 +53,7 @@ public class BakedGlyphMixin {
      * @author JellySquid
      */
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void drawFast(boolean italic, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, float red, float green, float blue, float alpha, int light, CallbackInfo ci) {
+    private void drawFast(boolean italic, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, int c, int light, CallbackInfo ci) {
         var writer = VertexConsumerUtils.convertOrLog(vertexConsumer);
 
         if (writer == null) {
@@ -68,7 +69,7 @@ public class BakedGlyphMixin {
         float w1 = italic ? 1.0F - 0.25F * this.up : 0.0F;
         float w2 = italic ? 1.0F - 0.25F * this.down : 0.0F;
 
-        int color = ColorABGR.pack(red, green, blue, alpha);
+        int color = ColorARGB.toABGR(c);
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             long buffer = stack.nmalloc(4 * GlyphVertex.STRIDE);

@@ -4,6 +4,7 @@ import net.caffeinemc.mods.sodium.client.model.quad.BakedQuadView;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFlags;
 import net.caffeinemc.mods.sodium.client.util.ModelQuadUtil;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -16,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(BakedQuad.class)
-public class BakedQuadMixin implements BakedQuadView {
+public abstract class BakedQuadMixin implements BakedQuadView {
     @Shadow
     @Final
     protected int[] vertices;
@@ -37,6 +38,9 @@ public class BakedQuadMixin implements BakedQuadView {
     @Final
     private boolean shade;
 
+    @Shadow
+    public abstract int getLightEmission();
+
     @Unique
     private int flags;
 
@@ -47,7 +51,7 @@ public class BakedQuadMixin implements BakedQuadView {
     private ModelQuadFacing normalFace = null;
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void init(int[] vertexData, int colorIndex, Direction face, TextureAtlasSprite sprite, boolean shade, CallbackInfo ci) {
+    private void init(int[] is, int i, Direction face, TextureAtlasSprite textureAtlasSprite, boolean bl, int j, CallbackInfo ci) {
         this.normal = this.calculateNormal();
         this.normalFace = ModelQuadFacing.fromPackedNormal(this.normal);
 
@@ -122,6 +126,11 @@ public class BakedQuadMixin implements BakedQuadView {
     @Override
     public Direction getLightFace() {
         return this.direction;
+    }
+
+    @Override
+    public int getMaxLightQuad(int idx) {
+        return LightTexture.lightCoordsWithEmission(getLight(idx), getLightEmission());
     }
 
     @Override

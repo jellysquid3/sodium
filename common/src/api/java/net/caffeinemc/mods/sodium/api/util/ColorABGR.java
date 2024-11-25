@@ -1,5 +1,7 @@
 package net.caffeinemc.mods.sodium.api.util;
 
+import java.nio.ByteOrder;
+
 /**
  * Provides some utilities for packing and unpacking color components from packed integer colors in ABGR format, which
  * is used by OpenGL for color vectors.
@@ -9,10 +11,15 @@ package net.caffeinemc.mods.sodium.api.util;
  * | Alpha     | Blue      | Green     | Red        |
  */
 public class ColorABGR implements ColorU8 {
-    private static final int RED_COMPONENT_OFFSET = 0;
+    private static final int RED_COMPONENT_OFFSET   = 0;
     private static final int GREEN_COMPONENT_OFFSET = 8;
-    private static final int BLUE_COMPONENT_OFFSET = 16;
+    private static final int BLUE_COMPONENT_OFFSET  = 16;
     private static final int ALPHA_COMPONENT_OFFSET = 24;
+
+    private static final int RED_COMPONENT_MASK     = COMPONENT_MASK << RED_COMPONENT_OFFSET;
+    private static final int GREEN_COMPONENT_MASK   = COMPONENT_MASK << GREEN_COMPONENT_OFFSET;
+    private static final int BLUE_COMPONENT_MASK    = COMPONENT_MASK << BLUE_COMPONENT_OFFSET;
+    private static final int ALPHA_COMPONENT_MASK   = COMPONENT_MASK << ALPHA_COMPONENT_OFFSET;
 
     /**
      * Packs the specified color components into ABGR format. The alpha component is fully opaque.
@@ -97,5 +104,52 @@ public class ColorABGR implements ColorU8 {
      */
     public static int unpackAlpha(int color) {
         return (color >> ALPHA_COMPONENT_OFFSET) & COMPONENT_MASK;
+    }
+
+    /**
+     * Multiplies the RGB components of the color with the provided factor. The alpha component is not modified.
+     * 
+     * @param color The packed 32-bit ABGR color to be multiplied
+     * @param factor The darkening factor (in the range of 0..255) to multiply with
+     */
+    public static int mulRGB(int color, int factor) {
+        return (ColorMixer.mul(color, factor) & ~ALPHA_COMPONENT_MASK) | (color & ALPHA_COMPONENT_MASK);
+    }
+
+    /**
+     * See {@link #mulRGB(int, int)}. This function is identical, but it accepts a float in [0.0, 1.0] instead, which
+     * is then mapped to [0, 255].
+     *
+     * @param color The packed 32-bit ABGR color to be multiplied
+     * @param factor The darkening factor (in the range of 0.0..1.0) to multiply with
+     */
+    public static int mulRGB(int color, float factor) {
+        return mulRGB(color, ColorU8.normalizedFloatToByte(factor));
+    }
+
+    private static final boolean BIG_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+
+    /**
+     * Shuffles the ordering of the ABGR color so that it can then be written out to memory in the platform's native
+     * byte ordering. This should be used when writing the packed color to memory (in native-order) as a 32-bit word.
+     */
+    public static int fromNativeByteOrder(int color) {
+        if (BIG_ENDIAN) {
+            return Integer.reverseBytes(color);
+        } else {
+            return color;
+        }
+    }
+
+    /**
+     * Shuffles the ordering of the ABGR color from the platform's native byte ordering. This should be used when reading
+     * the packed color from memory (in native-order) as a 32-bit word.
+     */
+    public static int toNativeByteOrder(int color) {
+        if (BIG_ENDIAN) {
+            return Integer.reverseBytes(color);
+        } else {
+            return color;
+        }
     }
 }
