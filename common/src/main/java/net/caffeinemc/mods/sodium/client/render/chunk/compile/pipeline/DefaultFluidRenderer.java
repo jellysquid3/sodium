@@ -65,7 +65,7 @@ public class DefaultFluidRenderer {
         this.lighters = lighters;
     }
 
-    private boolean isFluidOccluded(BlockAndTintGetter world, int x, int y, int z, Direction dir, BlockState blockState, Fluid fluid) {
+    private boolean isFluidOccluded(BlockAndTintGetter world, int x, int y, int z, Direction dir, BlockState blockState, FluidState fluid) {
         //Test own block state first, this prevents waterlogged blocks from having hidden internal geometry
         // which can result in z-fighting
         var pos = this.scratchPos.set(x, y, z);
@@ -76,7 +76,7 @@ public class DefaultFluidRenderer {
         //Test neighboring block state
         var adjPos = this.scratchPos.set(x + dir.getStepX(), y + dir.getStepY(), z + dir.getStepZ());
         BlockState adjBlockState = world.getBlockState(adjPos);
-        if (adjBlockState.getFluidState().getType().isSame(fluid)) {
+        if (PlatformBlockAccess.getInstance().shouldOccludeFluid(dir.getOpposite(), adjBlockState, fluid)) {
             return true;
         }
         return adjBlockState.canOcclude() && dir != Direction.UP && adjBlockState.isFaceSturdy(world, adjPos, dir.getOpposite(), SupportType.FULL);
@@ -109,13 +109,13 @@ public class DefaultFluidRenderer {
 
         Fluid fluid = fluidState.getType();
 
-        boolean sfUp = this.isFluidOccluded(level, posX, posY, posZ, Direction.UP, blockState, fluid);
-        boolean sfDown = this.isFluidOccluded(level, posX, posY, posZ, Direction.DOWN, blockState, fluid) ||
+        boolean sfUp = this.isFluidOccluded(level, posX, posY, posZ, Direction.UP, blockState, fluidState);
+        boolean sfDown = this.isFluidOccluded(level, posX, posY, posZ, Direction.DOWN, blockState, fluidState) ||
                 !this.isSideExposed(level, posX, posY, posZ, Direction.DOWN, 0.8888889F);
-        boolean sfNorth = this.isFluidOccluded(level, posX, posY, posZ, Direction.NORTH, blockState, fluid);
-        boolean sfSouth = this.isFluidOccluded(level, posX, posY, posZ, Direction.SOUTH, blockState, fluid);
-        boolean sfWest = this.isFluidOccluded(level, posX, posY, posZ, Direction.WEST, blockState, fluid);
-        boolean sfEast = this.isFluidOccluded(level, posX, posY, posZ, Direction.EAST, blockState, fluid);
+        boolean sfNorth = this.isFluidOccluded(level, posX, posY, posZ, Direction.NORTH, blockState, fluidState);
+        boolean sfSouth = this.isFluidOccluded(level, posX, posY, posZ, Direction.SOUTH, blockState, fluidState);
+        boolean sfWest = this.isFluidOccluded(level, posX, posY, posZ, Direction.WEST, blockState, fluidState);
+        boolean sfEast = this.isFluidOccluded(level, posX, posY, posZ, Direction.EAST, blockState, fluidState);
 
         if (sfUp && sfDown && sfEast && sfWest && sfNorth && sfSouth) {
             return;

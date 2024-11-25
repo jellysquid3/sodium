@@ -58,4 +58,9 @@ public class NeoForgeBlockAccess implements PlatformBlockAccess {
     public boolean shouldBlockEntityGlow(BlockEntity blockEntity, LocalPlayer player) {
         return blockEntity.hasCustomOutlineRendering(player);
     }
+
+    @Override
+    public boolean shouldOccludeFluid(Direction adjDirection, BlockState adjBlockState, FluidState fluid) {
+        return adjBlockState.shouldHideAdjacentFluidFace(adjDirection, fluid);
+    }
 }
