@@ -102,4 +102,7 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, Na
         graphics.fill(x1, y1, x1 + 1, y2, color);
         graphics.fill(x2 - 1, y1, x2, y2, color);
     }
+
+    @Override
+    public abstract boolean isMouseOver(double x, double y);
 }

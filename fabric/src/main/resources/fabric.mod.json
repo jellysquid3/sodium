@@ -71,7 +71,7 @@
     "sodium-fabric.mixins.json"
   ],
   "depends" : {
-    "minecraft": ["1.21.2", "1.21.3"],
+    "minecraft": ["1.21.4"],
     "fabricloader" : ">=0.16.0",
     "fabric-block-view-api-v2" : "*",
     "fabric-renderer-api-v1" : "*",

@@ -18,11 +18,11 @@ package net.caffeinemc.mods.sodium.client.render.frapi;
 
 import net.caffeinemc.mods.sodium.client.render.frapi.material.MaterialFinderImpl;
 import net.caffeinemc.mods.sodium.client.render.frapi.material.RenderMaterialImpl;
-import net.caffeinemc.mods.sodium.client.render.frapi.mesh.MeshBuilderImpl;
+import net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableMeshImpl;
 import net.fabricmc.fabric.api.renderer.v1.Renderer;
 import net.fabricmc.fabric.api.renderer.v1.material.MaterialFinder;
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
-import net.fabricmc.fabric.api.renderer.v1.mesh.MeshBuilder;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableMesh;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
@@ -36,7 +36,7 @@ public class SodiumRenderer implements Renderer {
     public static final RenderMaterial STANDARD_MATERIAL = INSTANCE.materialFinder().find();
 
     static {
-        INSTANCE.registerMaterial(RenderMaterial.MATERIAL_STANDARD, STANDARD_MATERIAL);
+        INSTANCE.registerMaterial(RenderMaterial.STANDARD_ID, STANDARD_MATERIAL);
     }
 
     private final HashMap<ResourceLocation, RenderMaterial> materialMap = new HashMap<>();
@@ -44,8 +44,8 @@ public class SodiumRenderer implements Renderer {
     private SodiumRenderer() { }
 
     @Override
-    public MeshBuilder meshBuilder() {
-        return new MeshBuilderImpl();
+    public MutableMesh mutableMesh() {
+        return new MutableMeshImpl();
     }
 
     @Override

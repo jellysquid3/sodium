@@ -256,8 +256,8 @@ public class QuadViewImpl implements QuadView, ModelQuadView {
     }
 
     @Override
-    public final int colorIndex() {
-        return data[baseIndex + HEADER_COLOR_INDEX];
+    public final int tintIndex() {
+        return data[baseIndex + HEADER_TINT_INDEX];
     }
 
     @Override
@@ -328,8 +328,8 @@ public class QuadViewImpl implements QuadView, ModelQuadView {
     }
 
     @Override
-    public int getColorIndex() {
-        return material().disableColorIndex() ? -1 : colorIndex();
+    public int getTintIndex() {
+        return tintIndex();
     }
 
     @Override

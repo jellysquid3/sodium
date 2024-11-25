@@ -44,7 +44,7 @@ public class SpriteContentsTickerMixin {
         if (onDemand && !parent.sodium$isActive()) {
             this.subFrame++;
             List<SpriteContents.FrameInfo> frames = ((AnimatedTextureAccessor)this.animationInfo).getFrames();
-            if (this.subFrame >= ((SpriteContentsFrameInfoAccessor)frames.get(this.frame)).getTime()) {
+            if (this.subFrame >= ((SpriteContentsFrameInfoAccessor) (Object) frames.get(this.frame)).getTime()) {
                 this.frame = (this.frame + 1) % frames.size();
                 this.subFrame = 0;
             }

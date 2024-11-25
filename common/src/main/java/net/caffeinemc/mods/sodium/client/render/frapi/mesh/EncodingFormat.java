@@ -21,6 +21,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFlags;
+import net.caffeinemc.mods.sodium.client.render.frapi.SodiumRenderer;
 import net.caffeinemc.mods.sodium.client.render.frapi.material.RenderMaterialImpl;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadView;
 import net.fabricmc.fabric.api.renderer.v1.model.ModelHelper;
@@ -37,7 +38,7 @@ public abstract class EncodingFormat {
 
     static final int HEADER_BITS = 0;
     static final int HEADER_FACE_NORMAL = 1;
-    static final int HEADER_COLOR_INDEX = 2;
+    static final int HEADER_TINT_INDEX = 2;
     static final int HEADER_TAG = 3;
     public static final int HEADER_STRIDE = 4;
 

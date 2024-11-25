@@ -16,6 +16,7 @@
 
 package net.caffeinemc.mods.sodium.client.render.frapi.mesh;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.caffeinemc.mods.sodium.client.model.quad.BakedQuadView;
 import net.caffeinemc.mods.sodium.client.render.frapi.SodiumRenderer;
@@ -24,6 +25,7 @@ import net.caffeinemc.mods.sodium.client.render.frapi.helper.TextureHelper;
 import net.caffeinemc.mods.sodium.client.render.frapi.material.RenderMaterialImpl;
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadTransform;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadView;
 import net.fabricmc.fabric.api.renderer.v1.model.SpriteFinder;
 import net.minecraft.client.renderer.LightTexture;
@@ -49,6 +51,42 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
     @Nullable
     private TextureAtlasSprite cachedSprite;
 
+    protected static final QuadTransform NO_TRANSFORM = q -> true;
+
+    protected QuadTransform activeTransform = NO_TRANSFORM;
+    private final ObjectArrayList<QuadTransform> transformStack = new ObjectArrayList<>();
+    private final QuadTransform stackTransform = q -> {
+        int i = transformStack.size() - 1;
+
+        while (i >= 0) {
+            if (!transformStack.get(i--).transform(q)) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    /** Used for quick clearing of quad buffers. Implicitly has invalid geometry. */
+    static final int[] DEFAULT = EMPTY.clone();
+
+    static {
+        MutableQuadViewImpl quad = new MutableQuadViewImpl() {
+            @Override
+            protected void emitDirectly() {
+                // This quad won't be emitted. It's only used to configure the default quad data.
+            }
+        };
+
+        // Start with all zeroes
+        quad.data = DEFAULT;
+        // Apply non-zero defaults
+        quad.color(-1, -1, -1, -1);
+        quad.cullFace(null);
+        quad.material(SodiumRenderer.STANDARD_MATERIAL);
+        quad.tintIndex(-1);
+    }
+
     @Nullable
     public TextureAtlasSprite cachedSprite() {
         return cachedSprite;
@@ -69,14 +107,9 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
     }
 
     public void clear() {
-        System.arraycopy(EMPTY, 0, data, baseIndex, EncodingFormat.TOTAL_STRIDE);
+        System.arraycopy(DEFAULT, 0, data, baseIndex, EncodingFormat.TOTAL_STRIDE);
         isGeometryInvalid = true;
         nominalFace = null;
-        normalFlags(0);
-        tag(0);
-        colorIndex(-1);
-        cullFace(null);
-        material(SodiumRenderer.STANDARD_MATERIAL);
         cachedSprite(null);
     }
 
@@ -135,6 +168,32 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
         return this;
     }
 
+    @Override
+    public void pushTransform(QuadTransform transform) {
+        if (transform == null) {
+            throw new NullPointerException("QuadTransform cannot be null!");
+        }
+
+        transformStack.push(transform);
+
+        if (transformStack.size() == 1) {
+            activeTransform = transform;
+        } else if (transformStack.size() == 2) {
+            activeTransform = stackTransform;
+        }
+    }
+
+    @Override
+    public void popTransform() {
+        transformStack.pop();
+
+        if (transformStack.isEmpty()) {
+            activeTransform = NO_TRANSFORM;
+        } else if (transformStack.size() == 1) {
+            activeTransform = transformStack.getFirst();
+        }
+    }
+
     /**
      * Internal helper method. Copies face normals to vertex normals lacking one.
      */
@@ -169,17 +228,13 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
 
     @Override
     public final MutableQuadViewImpl material(RenderMaterial material) {
-        if (material == null) {
-            material = SodiumRenderer.STANDARD_MATERIAL;
-        }
-
         data[baseIndex + HEADER_BITS] = EncodingFormat.material(data[baseIndex + HEADER_BITS], (RenderMaterialImpl) material);
         return this;
     }
 
     @Override
-    public final MutableQuadViewImpl colorIndex(int colorIndex) {
-        data[baseIndex + HEADER_COLOR_INDEX] = colorIndex;
+    public final MutableQuadViewImpl tintIndex(int tintIndex) {
+        data[baseIndex + HEADER_TINT_INDEX] = tintIndex;
         return this;
     }
 
@@ -192,12 +247,15 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
     @Override
     public MutableQuadViewImpl copyFrom(QuadView quad) {
         final QuadViewImpl q = (QuadViewImpl) quad;
-        q.computeGeometry();
 
         System.arraycopy(q.data, q.baseIndex, data, baseIndex, EncodingFormat.TOTAL_STRIDE);
-        faceNormal.set(q.faceNormal);
         nominalFace = q.nominalFace;
-        isGeometryInvalid = false;
+
+        isGeometryInvalid = q.isGeometryInvalid;
+
+        if (!isGeometryInvalid) {
+            faceNormal.set(q.faceNormal);
+        }
 
         if (quad instanceof MutableQuadViewImpl mutableQuad) {
             cachedSprite(mutableQuad.cachedSprite());
@@ -237,7 +295,7 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
         fromVanillaInternal(quad.getVertices(), 0);
         data[baseIndex + HEADER_BITS] = EncodingFormat.cullFace(0, cullFace);
         nominalFace(quad.getDirection());
-        colorIndex(quad.getTintIndex());
+        tintIndex(quad.getTintIndex());
 
         // TODO: Is this the same as hasShade?
         if (!((BakedQuadView) quad).hasShade()) {
@@ -276,11 +334,20 @@ public abstract class MutableQuadViewImpl extends QuadViewImpl implements QuadEm
      * Emit the quad without clearing the underlying data.
      * Geometry is not guaranteed to be valid when called, but can be computed by calling {@link #computeGeometry()}.
      */
-    public abstract void emitDirectly();
+    protected abstract void emitDirectly();
+
+    /**
+     * Apply transforms and then if transforms return true, emit the quad without clearing the underlying data.
+     */
+    public final void transformAndEmit() {
+        if (activeTransform.transform(this)) {
+            emitDirectly();
+        }
+    }
 
     @Override
     public final MutableQuadViewImpl emit() {
-        emitDirectly();
+        transformAndEmit();
         clear();
         return this;
     }

@@ -16,9 +16,11 @@
 
 package net.caffeinemc.mods.sodium.client.render.frapi.mesh;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadView;
+import org.jetbrains.annotations.Range;
 
 import java.util.function.Consumer;
 
@@ -28,17 +30,38 @@ import java.util.function.Consumer;
  */
 public class MeshImpl implements Mesh {
     /** Used to satisfy external calls to {@link #forEach(Consumer)}. */
-    private final ThreadLocal<QuadViewImpl> cursorPool = ThreadLocal.withInitial(QuadViewImpl::new);
+    private static final ThreadLocal<ObjectArrayList<QuadViewImpl>> CURSOR_POOLS = ThreadLocal.withInitial(ObjectArrayList::new);
 
-    final int[] data;
+    int[] data;
+    int limit;
 
     MeshImpl(int[] data) {
         this.data = data;
+        limit = data.length;
+    }
+
+    MeshImpl() {}
+
+    @Override
+    @Range(from = 0, to = Integer.MAX_VALUE)
+    public int size() {
+        return limit / EncodingFormat.TOTAL_STRIDE;
     }
 
     @Override
-    public void forEach(Consumer<QuadView> consumer) {
-        forEach(consumer, cursorPool.get());
+    public void forEach(Consumer<? super QuadView> action) {
+        ObjectArrayList<QuadViewImpl> pool = CURSOR_POOLS.get();
+        QuadViewImpl cursor;
+
+        if (pool.isEmpty()) {
+            cursor = new QuadViewImpl();
+        } else {
+            cursor = pool.pop();
+        }
+
+        forEach(action, cursor);
+
+        pool.push(cursor);
     }
 
     /**
@@ -46,30 +69,34 @@ public class MeshImpl implements Mesh {
      * to avoid the performance hit of a thread-local lookup.
      * Also means renderer can hold final references to quad buffers.
      */
-    void forEach(Consumer<QuadView> consumer, QuadViewImpl cursor) {
-        final int limit = data.length;
+    <C extends QuadViewImpl> void forEach(Consumer<? super C> action, C cursor) {
+        final int limit = this.limit;
         int index = 0;
         cursor.data = this.data;
 
         while (index < limit) {
             cursor.baseIndex = index;
             cursor.load();
-            consumer.accept(cursor);
+            action.accept(cursor);
             index += EncodingFormat.TOTAL_STRIDE;
         }
+
+        cursor.data = null;
     }
 
+    // TODO: This could be optimized by checking if the emitter is that of a MutableMeshImpl and if
+    //  it has no transforms, in which case the entire data array can be copied in bulk.
     @Override
     public void outputTo(QuadEmitter emitter) {
         MutableQuadViewImpl e = (MutableQuadViewImpl) emitter;
         final int[] data = this.data;
-        final int limit = data.length;
+        final int limit = this.limit;
         int index = 0;
 
         while (index < limit) {
             System.arraycopy(data, index, e.data, e.baseIndex, EncodingFormat.TOTAL_STRIDE);
             e.load();
-            e.emitDirectly();
+            e.transformAndEmit();
             index += EncodingFormat.TOTAL_STRIDE;
         }
 

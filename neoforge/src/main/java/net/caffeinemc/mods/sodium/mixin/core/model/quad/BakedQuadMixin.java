@@ -111,7 +111,7 @@ public abstract class BakedQuadMixin implements BakedQuadView {
     }
 
     @Override
-    public int getColorIndex() {
+    public int getTintIndex() {
         return this.tintIndex;
     }
 

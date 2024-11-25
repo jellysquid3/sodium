@@ -14,7 +14,6 @@
     "core.WindowMixin",
     "core.gui.LevelLoadStatusManagerMixin",
     "core.model.colors.BlockColorsMixin",
-    "core.model.colors.ItemColorsMixin",
     "core.model.TextureAtlasSpriteMixin",
     "core.render.BlockEntityTypeMixin",
     "core.render.TextureAtlasMixin",

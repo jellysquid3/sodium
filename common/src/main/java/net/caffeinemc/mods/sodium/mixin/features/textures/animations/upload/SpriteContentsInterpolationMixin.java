@@ -43,10 +43,10 @@ public class SpriteContentsInterpolationMixin {
         SpriteContentsAnimatedTextureAccessor animation2 = (SpriteContentsAnimatedTextureAccessor) ((SpriteContentsTickerAccessor) arg).getAnimationInfo();
         List<SpriteContents.FrameInfo> frames = ((SpriteContentsAnimatedTextureAccessor) animation).getFrames();
         SpriteContentsTickerAccessor accessor = (SpriteContentsTickerAccessor) arg;
-        SpriteContentsFrameInfoAccessor animationFrame = (SpriteContentsFrameInfoAccessor) frames.get(accessor.getFrameIndex());
+        SpriteContentsFrameInfoAccessor animationFrame = (SpriteContentsFrameInfoAccessor) (Object) frames.get(accessor.getFrameIndex());
 
         int curIndex = animationFrame.getIndex();
-        int nextIndex = ((SpriteContentsFrameInfoAccessor) animation2.getFrames().get((accessor.getFrameIndex() + 1) % frames.size())).getIndex();
+        int nextIndex = ((SpriteContentsFrameInfoAccessor) (Object) animation2.getFrames().get((accessor.getFrameIndex() + 1) % frames.size())).getIndex();
 
         if (curIndex == nextIndex) {
             return;

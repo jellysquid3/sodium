@@ -7,7 +7,7 @@ import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
+
 import java.util.Arrays;
 
 public class DefaultColorProviders {
@@ -50,7 +50,7 @@ public class DefaultColorProviders {
 
         @Override
         public void getColors(LevelSlice slice, BlockPos pos, BlockPos.MutableBlockPos scratchPos, BlockState state, ModelQuadView quad, int[] output) {
-            Arrays.fill(output, 0xFF000000 | this.color.getColor(state, slice, pos, quad.getColorIndex()));
+            Arrays.fill(output, 0xFF000000 | this.color.getColor(state, slice, pos, quad.getTintIndex()));
         }
     }
 }

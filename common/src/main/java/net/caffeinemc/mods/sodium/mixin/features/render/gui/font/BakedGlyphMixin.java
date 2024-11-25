@@ -52,8 +52,8 @@ public class BakedGlyphMixin {
      * @reason Use intrinsics
      * @author JellySquid
      */
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void drawFast(boolean italic, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, int c, int light, CallbackInfo ci) {
+    @Inject(method = "render(ZFFFLorg/joml/Matrix4f;Lcom/mojang/blaze3d/vertex/VertexConsumer;IZI)V", at = @At("HEAD"), cancellable = true)
+    private void drawFast(boolean italic, float x, float y, float z, Matrix4f matrix, VertexConsumer vertexConsumer, int c, boolean bl2, int light, CallbackInfo ci) {
         var writer = VertexConsumerUtils.convertOrLog(vertexConsumer);
 
         if (writer == null) {
@@ -68,6 +68,7 @@ public class BakedGlyphMixin {
         float h2 = y + this.down;
         float w1 = italic ? 1.0F - 0.25F * this.up : 0.0F;
         float w2 = italic ? 1.0F - 0.25F * this.down : 0.0F;
+        float offset = bl2 ? 0.1F : 0.0F;
 
         int color = ColorARGB.toABGR(c);
 
@@ -75,16 +76,58 @@ public class BakedGlyphMixin {
             long buffer = stack.nmalloc(4 * GlyphVertex.STRIDE);
             long ptr = buffer;
 
-            write(ptr, matrix, x1 + w1, h1, 0.0F, color, this.u0, this.v0, light);
+            write(ptr, matrix, x1 + w1 - offset, h1 - offset, z, color, this.u0, this.v0, light);
             ptr += GlyphVertex.STRIDE;
 
-            write(ptr, matrix, x1 + w2, h2, 0.0F, color, this.u0, this.v1, light);
+            write(ptr, matrix, x1 + w2 - offset, h2 + offset, z, color, this.u0, this.v1, light);
             ptr += GlyphVertex.STRIDE;
 
-            write(ptr, matrix, x2 + w2, h2, 0.0F, color, this.u1, this.v1, light);
+            write(ptr, matrix, x2 + w2 + offset, h2 + offset, z, color, this.u1, this.v1, light);
             ptr += GlyphVertex.STRIDE;
 
-            write(ptr, matrix, x2 + w1, h1, 0.0F, color, this.u1, this.v0, light);
+            write(ptr, matrix, x2 + w1 + offset, h1 - offset, z, color, this.u1, this.v0, light);
+            ptr += GlyphVertex.STRIDE;
+
+            writer.push(stack, buffer, 4, GlyphVertex.FORMAT);
+        }
+    }
+
+    /**
+     * @reason Use intrinsics
+     * @author JellySquid
+     */
+    @Inject(method = "buildEffect", at = @At("HEAD"), cancellable = true)
+    private void drawEffectFast(BakedGlyph.Effect effect, float offset, float depthOffset, int c, VertexConsumer vertexConsumer, int light, Matrix4f matrix, CallbackInfo ci) {
+        var writer = VertexConsumerUtils.convertOrLog(vertexConsumer);
+
+        if (writer == null) {
+            return;
+        }
+
+        ci.cancel();
+
+        float x1 = effect.x0();
+        float x2 = effect.x1();
+        float h1 = effect.y0();
+        float h2 = effect.y1();
+        float z = effect.depth() + depthOffset;
+
+        int color = ColorARGB.toABGR(c);
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            long buffer = stack.nmalloc(4 * GlyphVertex.STRIDE);
+            long ptr = buffer;
+
+            write(ptr, matrix, x1 + offset, h1 + offset, z, color, this.u0, this.v0, light);
+            ptr += GlyphVertex.STRIDE;
+
+            write(ptr, matrix, x1 + offset, h2 + offset, z, color, this.u0, this.v1, light);
+            ptr += GlyphVertex.STRIDE;
+
+            write(ptr, matrix, x2 + offset, h2 + offset, z, color, this.u1, this.v1, light);
+            ptr += GlyphVertex.STRIDE;
+
+            write(ptr, matrix, x2 + offset, h1 + offset, z, color, this.u1, this.v0, light);
             ptr += GlyphVertex.STRIDE;
 
             writer.push(stack, buffer, 4, GlyphVertex.FORMAT);

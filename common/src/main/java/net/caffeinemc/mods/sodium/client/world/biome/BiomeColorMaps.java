@@ -19,7 +19,7 @@ public class BiomeColorMaps {
 
     public static int getFoliageColor(int index) {
         if (index == INVALID_INDEX || index >= FoliageColor.pixels.length) {
-            return FoliageColor.getDefaultColor();
+            return FoliageColor.FOLIAGE_DEFAULT;
         }
 
         return FoliageColor.pixels[index];

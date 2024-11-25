@@ -15,7 +15,7 @@ public class ModelQuad implements ModelQuadViewMutable {
     private TextureAtlasSprite sprite;
     private Direction direction;
 
-    private int colorIdx;
+    private int tintIdx;
     private int faceNormal;
 
     @Override
@@ -74,8 +74,8 @@ public class ModelQuad implements ModelQuadViewMutable {
     }
 
     @Override
-    public void setColorIndex(int index) {
-        this.colorIdx = index;
+    public void setTintIndex(int index) {
+        this.tintIdx = index;
     }
 
     @Override
@@ -84,8 +84,8 @@ public class ModelQuad implements ModelQuadViewMutable {
     }
 
     @Override
-    public int getColorIndex() {
-        return this.colorIdx;
+    public int getTintIndex() {
+        return this.tintIdx;
     }
 
     @Override

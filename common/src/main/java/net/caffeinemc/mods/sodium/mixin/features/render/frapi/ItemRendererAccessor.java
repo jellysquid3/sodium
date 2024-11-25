@@ -16,15 +16,18 @@
 
 package net.caffeinemc.mods.sodium.mixin.features.render.frapi;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(ItemRenderer.class)
 public interface ItemRendererAccessor {
-    @Invoker("hasAnimatedTexture")
-    static boolean sodium$hasAnimatedTexture(ItemStack stack) {
+    @Invoker("getCompassFoilBuffer")
+    static VertexConsumer sodium$getCompassFoilBuffer(MultiBufferSource provider, RenderType layer, PoseStack.Pose entry) {
         throw new AssertionError();
     }
 }

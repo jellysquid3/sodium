@@ -65,8 +65,6 @@ dependencies {
     addDependentFabricModule("fabric-renderer-api-v1")
     addDependentFabricModule("fabric-rendering-data-attachment-v1")
 
-    modCompileOnly("net.fabricmc.fabric-api:fabric-renderer-api-v1:3.2.9+1172e897d7")
-
     // We need to be careful during pre-launch that we don't touch any Minecraft classes, since other mods
     // will not yet have an opportunity to apply transformations.
     configurationPreLaunch("org.lwjgl:lwjgl:3.3.3")

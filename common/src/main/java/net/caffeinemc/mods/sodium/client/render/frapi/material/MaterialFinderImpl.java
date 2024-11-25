@@ -27,7 +27,6 @@ public class MaterialFinderImpl extends MaterialViewImpl implements MaterialFind
     static {
         MaterialFinderImpl finder = new MaterialFinderImpl();
         finder.ambientOcclusion(TriState.DEFAULT);
-        finder.glint(TriState.DEFAULT);
         finder.shadeMode(ShadeMode.ENHANCED);
         defaultBits = finder.bits;
 
@@ -45,12 +44,6 @@ public class MaterialFinderImpl extends MaterialViewImpl implements MaterialFind
         Objects.requireNonNull(blendMode, "BlendMode may not be null");
 
         bits = (bits & ~BLEND_MODE_MASK) | (blendMode.ordinal() << BLEND_MODE_BIT_OFFSET);
-        return this;
-    }
-
-    @Override
-    public MaterialFinder disableColorIndex(boolean disable) {
-        bits = disable ? (bits | COLOR_DISABLE_FLAG) : (bits & ~COLOR_DISABLE_FLAG);
         return this;
     }
 
@@ -75,10 +68,10 @@ public class MaterialFinderImpl extends MaterialViewImpl implements MaterialFind
     }
 
     @Override
-    public MaterialFinder glint(TriState mode) {
-        Objects.requireNonNull(mode, "glint TriState may not be null");
+    public MaterialFinder glintMode(GlintMode mode) {
+        Objects.requireNonNull(mode, "GlintMode may not be null");
 
-        bits = (bits & ~GLINT_MASK) | (mode.ordinal() << GLINT_BIT_OFFSET);
+        bits = (bits & ~GLINT_MODE_MASK) | (mode.ordinal() << GLINT_MODE_BIT_OFFSET);
         return this;
     }
 
