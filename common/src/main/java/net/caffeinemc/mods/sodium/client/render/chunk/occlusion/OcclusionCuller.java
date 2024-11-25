@@ -1,6 +1,8 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.occlusion;
 
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
+import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
@@ -17,6 +19,8 @@ public class OcclusionCuller {
     private final Level level;
 
     private final DoubleBufferedQueue<RenderSection> queue = new DoubleBufferedQueue<>();
+    private LongArrayFIFOQueue initQueue;
+    private LongOpenHashSet initVisited;
 
     public OcclusionCuller(Long2ReferenceMap<RenderSection> sections, Level level) {
         this.sections = sections;
@@ -180,10 +184,14 @@ public class OcclusionCuller {
     }
 
     private static boolean isWithinRenderDistance(CameraTransform camera, RenderSection section, float maxDistance) {
+        return isWithinRenderDistance(camera, section.getOriginX(), section.getOriginY(), section.getOriginZ(), maxDistance);
+    }
+
+    private static boolean isWithinRenderDistance(CameraTransform camera, int originX, int originY, int originZ, float maxDistance) {
         // origin point of the chunk's bounding box (in view space)
-        int ox = section.getOriginX() - camera.intX;
-        int oy = section.getOriginY() - camera.intY;
-        int oz = section.getOriginZ() - camera.intZ;
+        int ox = originX - camera.intX;
+        int oy = originY - camera.intY;
+        int oz = originZ - camera.intZ;
 
         // coordinates of the point to compare (in view space)
         // this is the closest point within the bounding box to the center (0, 0, 0)
@@ -237,7 +245,7 @@ public class OcclusionCuller {
             if (originSection != null) {
                 this.initAtExistingSection(visitor, queue, originSection, useOcclusionCulling, frame);
             } else {
-                this.initAtNonExistingSection(visitor, queue, viewport, useOcclusionCulling, searchDistance, frame);
+                this.initAtNonExistingSection(queue, viewport, searchDistance, frame);
             }
         }
     }
@@ -262,64 +270,77 @@ public class OcclusionCuller {
         visitNeighbors(queue, section, outgoing, frame);
     }
 
-    private void initAtNonExistingSection(Visitor visitor, WriteQueue<RenderSection> queue, Viewport viewport, boolean useOcclusionCulling, float searchDistance, int frame) {
+    private void initAtNonExistingSection(WriteQueue<RenderSection> queue, Viewport viewport, float searchDistance, int frame) {
+        var transform = viewport.getTransform();
+
         var origin = viewport.getChunkCoord();
+        if (this.initQueue == null) {
+            this.initQueue = new LongArrayFIFOQueue(200);
+        } else {
+            this.initQueue.clear();
+        }
+        if (this.initVisited == null) {
+            this.initVisited = new LongOpenHashSet(200);
+        } else {
+            this.initVisited.clear();
+        }
+
+        var originPos = origin.asLong();
+        this.initQueue.enqueue(originPos);
+        this.initVisited.add(originPos);
+
         var minY = this.level.getMinSectionY();
         var maxY = this.level.getMaxSectionY();
         var originX = origin.getX();
         var originY = origin.getY();
         var originZ = origin.getZ();
 
-        // iterate shells until one is found with a loaded and visible section
-        var foundAny = false;
-        var radius = 1;
-        while (!foundAny) {
-            // iterate a shell around the origin
-            var bigStep = radius * 2;
-            for (var dy = -radius; dy <= radius; dy++) {
-                var y = originY + dy;
-                // skip layers outside the world's y range
-                if (y < minY || y > maxY) {
-                    continue;
-                }
+        while (!this.initQueue.isEmpty()) {
+            var current = this.initQueue.dequeueLong();
 
-                // iterate only the perimeter with the current radius
-                var notYFace = !(dy == -radius || dy == radius);
-                for (var dx = -radius; dx <= radius; dx++) {
-                    var zStep = notYFace && (dx == -radius || dx == radius) ? bigStep : 1;
-                    for (var dz = -radius; dz <= radius; dz += zStep) {
-                        var x = originX + dx;
-                        var z = originZ + dz;
+            var x = SectionPos.x(current);
+            var y = SectionPos.y(current);
+            var z = SectionPos.z(current);
 
-                        // visit loaded visible sections and queue their neighbors
-                        var section = this.getRenderSection(x, y, z);
-                        if (section != null && isSectionVisible(section, viewport, searchDistance)) {
-                            foundAny = true;
-
-                            // use all directions as incoming, using just some yields a broken result
-                            var incoming = GraphDirectionSet.ALL;
-                            section.setIncomingDirections(incoming);
-                            section.setLastVisibleFrame(frame);
-
-                            visitor.visit(section);
-
-                            // reduce set of neighbors to visit based on visibility connections
-                            int connections = getOutwardDirections(origin, section);
-                            if (useOcclusionCulling) {
-                                connections &= VisibilityEncoding.getConnections(section.getVisibilityData(), incoming);
-                            }
-
-                            visitNeighbors(queue, section, connections, frame);
-                        }
-                    }
-                }
+            // visit neighbors and add them to the init queue and/or the main graph traversal queue
+            if (x <= originX) {
+                visitEmptyNeighbor(queue, frame, transform, searchDistance, x - 1, y, z, GraphDirection.WEST);
             }
+            if (x >= originX) {
+                visitEmptyNeighbor(queue, frame, transform, searchDistance, x + 1, y, z, GraphDirection.EAST);
+            }
+            if (y <= originY && y > minY) {
+                visitEmptyNeighbor(queue, frame, transform, searchDistance, x, y - 1, z, GraphDirection.DOWN);
+            }
+            if (y >= originY && y < maxY) {
+                visitEmptyNeighbor(queue, frame, transform, searchDistance, x, y + 1, z, GraphDirection.UP);
+            }
+            if (z <= originZ) {
+                visitEmptyNeighbor(queue, frame, transform, searchDistance, x, y, z - 1, GraphDirection.NORTH);
+            }
+            if (z >= originZ) {
+                visitEmptyNeighbor(queue, frame, transform, searchDistance, x, y, z + 1, GraphDirection.SOUTH);
+            }
+        }
+    }
 
-            radius++;
+    private void visitEmptyNeighbor(WriteQueue<RenderSection> queue, int frame, CameraTransform transform, float searchDistance, int x, int y, int z, int incoming) {
+        if (!isWithinRenderDistance(transform, x << 4, y << 4, z << 4, searchDistance)) {
+            return;
+        }
 
-            // don't exceed the search distance with the init search
-            if (radius << 4 > searchDistance) {
-                break;
+        var pos = SectionPos.asLong(x, y, z);
+        var section = this.sections.get(pos);
+
+        // sections that exist get queued
+        if (section != null) {
+            visitNode(queue, section, incoming, frame);
+        }
+
+        // sections that don't exist or are empty are further traversed in the init process
+        if (section == null || section.getFlags() == 0) {
+            if (this.initVisited.add(pos)) {
+                this.initQueue.enqueue(pos);
             }
         }
     }
