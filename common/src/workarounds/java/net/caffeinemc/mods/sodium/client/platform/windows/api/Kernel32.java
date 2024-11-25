@@ -46,6 +46,24 @@ public class Kernel32 {
         }
     }
 
+
+    public static void setEnvironmentVariable(String name, short @Nullable [] value) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            ByteBuffer lpNameBuf = stack.malloc(16, MemoryUtil.memLengthUTF16(name, true));
+            MemoryUtil.memUTF16(name, true, lpNameBuf);
+
+            ByteBuffer lpValueBuf = null;
+
+            if (value != null) {
+                lpValueBuf = stack.malloc(16, (value.length + 1) << 1);
+                lpValueBuf.asShortBuffer()
+                        .put(value);
+            }
+
+            JNI.callPPI(MemoryUtil.memAddress0(lpNameBuf), MemoryUtil.memAddressSafe(lpValueBuf), PFN_SetEnvironmentVariableW);
+        }
+    }
+
     public static long getCommandLine() {
         return JNI.callP(PFN_GetCommandLineW);
     }

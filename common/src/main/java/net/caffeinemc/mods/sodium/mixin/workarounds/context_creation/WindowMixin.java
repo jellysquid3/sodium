@@ -85,7 +85,6 @@ public class WindowMixin {
             this.wglPrevContext = MemoryUtil.NULL;
         }
 
-        NvidiaWorkarounds.applyContextChanges(driver);
         PostLaunchChecks.onContextInitialized();
         ModuleScanner.checkModules((NativeWindowHandle) this);
     }
