@@ -208,7 +208,7 @@ public class SodiumWorldRenderer {
         this.lastCameraYaw = yaw;
 
         if (cameraLocationChanged || cameraAngleChanged || cameraProjectionChanged) {
-            this.renderSectionManager.markGraphDirty();
+            this.renderSectionManager.markFrustumDirty();
         }
 
         this.lastFogDistance = fogDistance;
@@ -225,10 +225,10 @@ public class SodiumWorldRenderer {
         int maxChunkUpdates = updateChunksImmediately ? this.renderDistance : 1;
 
         for (int i = 0; i < maxChunkUpdates; i++) {
-            if (this.renderSectionManager.needsUpdate()) {
+            if (this.renderSectionManager.needsAnyUpdate()) {
                 profiler.popPush("chunk_render_lists");
 
-                this.renderSectionManager.update(camera, viewport, spectator);
+                this.renderSectionManager.updateRenderLists(camera, viewport, spectator);
             }
 
             profiler.popPush("chunk_update");
@@ -240,7 +240,7 @@ public class SodiumWorldRenderer {
 
             this.renderSectionManager.uploadChunks();
 
-            if (!this.renderSectionManager.needsUpdate()) {
+            if (!this.renderSectionManager.needsAnyUpdate()) {
                 break;
             }
         }
@@ -345,9 +345,8 @@ public class SodiumWorldRenderer {
 
             while (renderSectionIterator.hasNext()) {
                 var renderSectionId = renderSectionIterator.nextByteAsInt();
-                var renderSection = renderRegion.getSection(renderSectionId);
 
-                var blockEntities = renderSection.getCulledBlockEntities();
+                var blockEntities = renderRegion.getCulledBlockEntities(renderSectionId);
 
                 if (blockEntities == null) {
                     continue;
@@ -372,7 +371,7 @@ public class SodiumWorldRenderer {
                                            LocalPlayer player,
                                            LocalBooleanRef isGlowing) {
         for (var renderSection : this.renderSectionManager.getSectionsWithGlobalEntities()) {
-            var blockEntities = renderSection.getGlobalBlockEntities();
+            var blockEntities = renderSection.getRegion().getGlobalBlockEntities(renderSection.getSectionIndex());
 
             if (blockEntities == null) {
                 continue;
@@ -446,9 +445,7 @@ public class SodiumWorldRenderer {
 
             while (renderSectionIterator.hasNext()) {
                 var renderSectionId = renderSectionIterator.nextByteAsInt();
-                var renderSection = renderRegion.getSection(renderSectionId);
-
-                var blockEntities = renderSection.getCulledBlockEntities();
+                var blockEntities = renderRegion.getCulledBlockEntities(renderSectionId);
 
                 if (blockEntities == null) {
                     continue;
@@ -461,7 +458,7 @@ public class SodiumWorldRenderer {
         }
 
         for (var renderSection : this.renderSectionManager.getSectionsWithGlobalEntities()) {
-            var blockEntities = renderSection.getGlobalBlockEntities();
+            var blockEntities = renderSection.getRegion().getGlobalBlockEntities(renderSection.getSectionIndex());
 
             if (blockEntities == null) {
                 continue;

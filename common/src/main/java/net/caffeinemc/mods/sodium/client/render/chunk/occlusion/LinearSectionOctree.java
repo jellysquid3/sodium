@@ -1,37 +1,65 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.occlusion;
 
-import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
+import net.caffeinemc.mods.sodium.client.render.chunk.lists.PendingTaskCollector;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
-import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
+import org.joml.FrustumIntersection;
 
-class LinearOctreeSectionCollector extends TreeSectionCollector {
-    private final Long2ReferenceMap<RenderSection> sections;
+/**
+ * TODO: do distance test here? what happens when the camera moves but the bfs doesn't know that? expand the distance limit?
+ * ideas to prevent one frame of wrong display when BFS is recalculated but not ready yet:
+ * - preemptively do the bfs from the next section the camera is going to be in, and maybe pad the render distance by how far the player can move before we need to recalculate. (if there's padding, then I guess the distance check would need to also be put in the traversal's test)
+ * - a more experimental idea would be to allow the BFS to go both left and right (as it currently does in sections that are aligned with the origin section) in the sections aligned with the origin section's neighbors. This would mean we can safely use the bfs result in all neighbors, but could slightly increase the number of false positives (which is a problem already...)
+ */
+public class LinearSectionOctree extends PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
     final Tree mainTree;
     Tree secondaryTree;
     final int baseOffsetX, baseOffsetY, baseOffsetZ;
+    final int buildSectionCenterX, buildSectionCenterY, buildSectionCenterZ;
 
-    OcclusionCuller.Visitor visitor;
+    VisibleSectionVisitor visitor;
     Viewport viewport;
 
-    LinearOctreeSectionCollector(Long2ReferenceMap<RenderSection> sections, Viewport viewport, float searchDistance) {
-        this.sections = sections;
+    // offset is shifted by 1 to encompass all sections towards the negative
+    // TODO: is this the correct way of calculating the minimum possible section index?
+    private static final int TREE_OFFSET = 1;
+    private static final int REUSE_MAX_DISTANCE = 8;
 
-        // offset is shifted by 1 to encompass all sections towards the negative
-        // + 1 to block position approximate fractional part of camera position (correct?)
-        // TODO: is this the correct way of calculating the minimum possible section index?
+    public interface VisibleSectionVisitor {
+        void visit(int x, int y, int z);
+    }
+
+    public LinearSectionOctree(Viewport viewport, float searchDistance) {
+
         var transform = viewport.getTransform();
-        int offsetDistance = Mth.floor(searchDistance / 16.0f) + 1;
-        this.baseOffsetX = ((transform.intX + 1) >> 4) - offsetDistance;
-        this.baseOffsetY = ((transform.intY + 1) >> 4) - offsetDistance;
-        this.baseOffsetZ = ((transform.intZ + 1) >> 4) - offsetDistance;
+        int offsetDistance = Mth.floor(searchDistance / 16.0f) + TREE_OFFSET;
+        this.buildSectionCenterX = (transform.intX & ~0b1111) + 8;
+        this.buildSectionCenterY = (transform.intY & ~0b1111) + 8;
+        this.buildSectionCenterZ = (transform.intZ & ~0b1111) + 8;
+        this.baseOffsetX = (transform.intX >> 4) - offsetDistance;
+        this.baseOffsetY = (transform.intY >> 4) - offsetDistance;
+        this.baseOffsetZ = (transform.intZ >> 4) - offsetDistance;
 
         this.mainTree = new Tree(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ);
     }
 
+    public boolean isAcceptableFor(Viewport viewport) {
+        var transform = viewport.getTransform();
+        return Math.abs(transform.intX - this.buildSectionCenterX) <= REUSE_MAX_DISTANCE
+                && Math.abs(transform.intY - this.buildSectionCenterY) <= REUSE_MAX_DISTANCE
+                && Math.abs(transform.intZ - this.buildSectionCenterZ) <= REUSE_MAX_DISTANCE;
+    }
+
     @Override
-    void add(RenderSection section) {
+    public boolean isWithinFrustum(Viewport viewport, RenderSection section) {
+        return true;
+    }
+
+    @Override
+    public void visit(RenderSection section) {
+        super.visit(section);
+
         int x = section.getChunkX();
         int y = section.getChunkY();
         int z = section.getChunkZ();
@@ -47,8 +75,7 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         }
     }
 
-    @Override
-    void traverseVisible(OcclusionCuller.Visitor visitor, Viewport viewport) {
+    public void traverseVisible(VisibleSectionVisitor visitor, Viewport viewport) {
         this.visitor = visitor;
         this.viewport = viewport;
 
@@ -65,8 +92,9 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         private final long[] tree = new long[64 * 64];
         private final long[] treeReduced = new long[64];
         private long treeDoubleReduced = 0L;
-        final int offsetX, offsetY, offsetZ;
-        int cameraOffsetX, cameraOffsetY, cameraOffsetZ;
+        private final int offsetX, offsetY, offsetZ;
+
+        private int cameraOffsetX, cameraOffsetY, cameraOffsetZ;
 
         Tree(int offsetX, int offsetY, int offsetZ) {
             this.offsetX = offsetX;
@@ -92,13 +120,12 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
             return false;
         }
 
-
         private static int interleave6x3(int x, int y, int z) {
             return interleave6(x) | interleave6(y) << 1 | interleave6(z) << 2;
         }
 
         private static int interleave6(int n) {
-            n &=               0b000000000000111111;
+            n &= 0b000000000000111111;
             n = (n | n << 8) & 0b000011000000001111;
             n = (n | n << 4) & 0b000011000011000011;
             n = (n | n << 2) & 0b001001001001001001;
@@ -106,8 +133,8 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         }
 
         private static int deinterleave6(int n) {
-            n &=                        0b001001001001001001;
-            n = (n | n >> 2) &          0b000011000011000011;
+            n &= 0b001001001001001001;
+            n = (n | n >> 2) & 0b000011000011000011;
             n = (n | n >> 4 | n >> 8) & 0b000000000000111111;
             return n;
         }
@@ -115,18 +142,17 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
         void traverse(Viewport viewport) {
             var transform = viewport.getTransform();
 
-            // + 1 to block position approximate fractional part of camera position
             // + 1 to section position to compensate for shifted global offset
-            this.cameraOffsetX = ((transform.intX + 1) >> 4) - this.offsetX + 1;
-            this.cameraOffsetY = ((transform.intY + 1) >> 4) - this.offsetY + 1;
-            this.cameraOffsetZ = ((transform.intZ + 1) >> 4) - this.offsetZ + 1;
+            this.cameraOffsetX = (transform.intX >> 4) - this.offsetX + 1;
+            this.cameraOffsetY = (transform.intY >> 4) - this.offsetY + 1;
+            this.cameraOffsetZ = (transform.intZ >> 4) - this.offsetZ + 1;
 
-            this.traverse(0, 0, 0, 0, 5);
+            this.traverse(0, 0, 0, 0, 5, false);
         }
 
-        void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level) {
+        void traverse(int nodeX, int nodeY, int nodeZ, int nodeOrigin, int level, boolean inside) {
             int childHalfDim = 1 << (level + 3); // * 16 / 2
-            int orderModulator = getNodeTraversalModulator(nodeX, nodeY, nodeZ, childHalfDim >> 3);
+            int orderModulator = getChildOrderModulator(nodeX, nodeY, nodeZ, childHalfDim >> 3);
             if ((level & 1) == 1) {
                 orderModulator <<= 3;
             }
@@ -148,16 +174,9 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                             int x = deinterleave6(sectionOrigin) + this.offsetX;
                             int y = deinterleave6(sectionOrigin >> 1) + this.offsetY;
                             int z = deinterleave6(sectionOrigin >> 2) + this.offsetZ;
-                            if (testNode(x, y, z, childHalfDim)) {
-                                // TODO: profile if it's faster to do a hashmap lookup to get the region
-                                // and then use the region's array to get the render section
-                                // TODO: also profile if it's worth it to store an array of all render sections
-                                // for each node to accelerate "fully inside frustum" situations,
-                                // otherwise also optimize "fully inside" situations with a different traversal type
-                                // NOTE: such an array would need to be traversed in the correct front-to-back order
-                                // for this the sections should be in it in x, y, z order and then front-to-back iteration is easy
-                                var section = LinearOctreeSectionCollector.this.sections.get(SectionPos.asLong(x, y, z));
-                                LinearOctreeSectionCollector.this.visitor.visit(section, true);
+
+                            if (inside || testNode(x, y, z, childHalfDim)) {
+                                LinearSectionOctree.this.visitor.visit(x, y, z);
                             }
                         }
                     }
@@ -165,7 +184,7 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                     for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
                         int childIndex = bitIndex ^ orderModulator;
                         if ((map & (mask << childIndex)) != 0) {
-                            this.testChild(childOriginBase | childIndex, childHalfDim, level);
+                            this.testChild(childOriginBase | childIndex, childHalfDim, level, inside);
                         }
                     }
                 }
@@ -181,7 +200,7 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                 for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
                     int childIndex = bitIndex ^ orderModulator;
                     if ((map & (mask << childIndex)) != 0) {
-                        this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level);
+                        this.testChild(childOriginBase | (childIndex << 6), childHalfDim, level, inside);
                     }
                 }
             } else {
@@ -194,23 +213,31 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                 for (int bitIndex = startBit; bitIndex < endBit; bitIndex += bitStep) {
                     int childIndex = bitIndex ^ orderModulator;
                     if ((this.treeDoubleReduced & (mask << childIndex)) != 0) {
-                        this.testChild(childIndex << 12, childHalfDim, level);
+                        this.testChild(childIndex << 12, childHalfDim, level, inside);
                     }
                 }
             }
         }
 
-        void testChild(int childOrigin, int childDim, int level) {
+        void testChild(int childOrigin, int childDim, int level, boolean inside) {
             int x = deinterleave6(childOrigin);
             int y = deinterleave6(childOrigin >> 1);
             int z = deinterleave6(childOrigin >> 2);
-            if (testNode(x + this.offsetX, y + this.offsetY, z + this.offsetZ, childDim)) {
-                this.traverse(x, y, z, childOrigin, level - 1);
+
+            int result = 0;
+            int cacheWriteTarget = -1;
+            if (!inside) {
+                result = intersectNode(x + this.offsetX, y + this.offsetY, z + this.offsetZ, childDim);
+                inside = result == FrustumIntersection.INSIDE;
+            }
+
+            if (inside || result == FrustumIntersection.INTERSECT) {
+                this.traverse(x, y, z, childOrigin, level - 1, inside);
             }
         }
 
         boolean testNode(int x, int y, int z, int childDim) {
-            return LinearOctreeSectionCollector.this.viewport.isBoxVisible(
+            return LinearSectionOctree.this.viewport.isBoxVisible(
                     (x << 4) + childDim,
                     (y << 4) + childDim,
                     (z << 4) + childDim,
@@ -219,10 +246,21 @@ class LinearOctreeSectionCollector extends TreeSectionCollector {
                     childDim + OcclusionCuller.CHUNK_SECTION_SIZE);
         }
 
-        int getNodeTraversalModulator(int x, int y, int z, int childSections) {
-            return (x + childSections - this.cameraOffsetX) >>> 31
-                    | ((y + childSections - this.cameraOffsetY) >>> 31) << 1
-                    | ((z + childSections - this.cameraOffsetZ) >>> 31) << 2;
+        int intersectNode(int x, int y, int z, int childDim) {
+            return LinearSectionOctree.this.viewport.getBoxIntersection(
+                    (x << 4) + childDim,
+                    (y << 4) + childDim,
+                    (z << 4) + childDim,
+                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
+                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE,
+                    childDim + OcclusionCuller.CHUNK_SECTION_SIZE);
+        }
+
+        int getChildOrderModulator(int x, int y, int z, int childSectionDim) {
+            return (x + childSectionDim - this.cameraOffsetX) >>> 31
+                    | ((y + childSectionDim - this.cameraOffsetY) >>> 31) << 1
+                    | ((z + childSectionDim - this.cameraOffsetZ) >>> 31) << 2;
         }
     }
+
 }

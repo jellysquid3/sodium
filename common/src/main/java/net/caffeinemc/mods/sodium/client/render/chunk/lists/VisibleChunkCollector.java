@@ -1,11 +1,12 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
 import it.unimi.dsi.fastutil.ints.IntArrays;
+import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.caffeinemc.mods.sodium.client.render.chunk.ChunkUpdateType;
-import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
-import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
+import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
+import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.LinearSectionOctree;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegionManager;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 
 import java.util.ArrayDeque;
@@ -17,58 +18,44 @@ import java.util.Queue;
  * The visible chunk collector is passed to the occlusion graph search culler to
  * collect the visible chunks.
  */
-public class VisibleChunkCollector implements OcclusionCuller.Visitor {
+public class VisibleChunkCollector implements LinearSectionOctree.VisibleSectionVisitor {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
-    private final EnumMap<ChunkUpdateType, ArrayDeque<RenderSection>> sortedRebuildLists;
+
+    private final RenderRegionManager regions;
 
     private final int frame;
 
-    public VisibleChunkCollector(int frame) {
+    public VisibleChunkCollector(RenderRegionManager regions, int frame) {
+        this.regions = regions;
         this.frame = frame;
 
         this.sortedRenderLists = new ObjectArrayList<>();
-        this.sortedRebuildLists = new EnumMap<>(ChunkUpdateType.class);
-
-        for (var type : ChunkUpdateType.values()) {
-            this.sortedRebuildLists.put(type, new ArrayDeque<>());
-        }
     }
 
     @Override
-    public void visit(RenderSection section) {
-        // only process section (and associated render list) if it has content that needs rendering
-        if (section.getFlags() != 0) {
-            RenderRegion region = section.getRegion();
-            ChunkRenderList renderList = region.getRenderList();
+    public void visit(int x, int y, int z) {
+        var region = this.regions.getForChunk(x, y, z);
+        int rX = x & (RenderRegion.REGION_WIDTH - 1);
+        int rY = y & (RenderRegion.REGION_HEIGHT - 1);
+        int rZ = z & (RenderRegion.REGION_LENGTH - 1);
+        var sectionIndex = LocalSectionIndex.pack(rX, rY, rZ);
+
+        ChunkRenderList renderList = region.getRenderList();
 
             if (renderList.getLastVisibleFrame() != this.frame) {
-                renderList.reset(this.frame);
+            renderList.reset(this.frame);
 
                 this.sortedRenderLists.add(renderList);
             }
 
-            renderList.add(section);
-        }
-
-        // always add to rebuild lists though, because it might just not be built yet
-        this.addToRebuildLists(section);
-    }
-
-    private void addToRebuildLists(RenderSection section) {
-        ChunkUpdateType type = section.getPendingUpdate();
-
-        if (type != null && section.getTaskCancellationToken() == null) {
-            Queue<RenderSection> queue = this.sortedRebuildLists.get(type);
-
-            if (queue.size() < type.getMaximumQueueSize()) {
-                queue.add(section);
-            }
+        if (region.getSectionFlags(sectionIndex) != 0) {
+            renderList.add(sectionIndex);
         }
     }
 
     private static int[] sortItems = new int[RenderRegion.REGION_SIZE];
 
-    public SortedRenderLists createRenderLists(Viewport viewport) {
+    public SortedRenderLists createSortedRenderLists(Viewport viewport) {
         // sort the regions by distance to fix rare region ordering bugs
         var sectionPos = viewport.getChunkCoord();
         var cameraX = sectionPos.getX() >> RenderRegion.REGION_WIDTH_SH;
@@ -104,7 +91,7 @@ public class VisibleChunkCollector implements OcclusionCuller.Visitor {
         return new SortedRenderLists(sorted);
     }
 
-    public Map<ChunkUpdateType, ArrayDeque<RenderSection>> getRebuildLists() {
-        return this.sortedRebuildLists;
+    public SortedRenderLists createRenderLists() {
+        return new SortedRenderLists(this.sortedRenderLists);
     }
 }

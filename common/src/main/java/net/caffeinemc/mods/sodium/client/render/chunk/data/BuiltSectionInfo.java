@@ -41,15 +41,15 @@ public class BuiltSectionInfo {
         int flags = 0;
 
         if (!blockRenderPasses.isEmpty()) {
-            flags |= 1 << RenderSectionFlags.HAS_BLOCK_GEOMETRY;
+            flags |= RenderSectionFlags.MASK_HAS_BLOCK_GEOMETRY;
         }
 
         if (!culledBlockEntities.isEmpty()) {
-            flags |= 1 << RenderSectionFlags.HAS_BLOCK_ENTITIES;
+            flags |= RenderSectionFlags.MASK_HAS_BLOCK_ENTITIES;
         }
 
         if (!animatedSprites.isEmpty()) {
-            flags |= 1 << RenderSectionFlags.HAS_ANIMATED_SPRITES;
+            flags |= RenderSectionFlags.MASK_HAS_ANIMATED_SPRITES;
         }
 
         this.flags = flags;
