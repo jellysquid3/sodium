@@ -1,8 +1,9 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
-import com.google.common.collect.ImmutableList;
 import net.caffeinemc.mods.sodium.api.config.structure.OptionBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.OptionGroupBuilder;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.Validate;
 

@@ -1,7 +1,9 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
 import net.caffeinemc.mods.sodium.api.config.structure.OptionBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.OptionOverrideBuilder;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.OptionOverride;
 import net.minecraft.resources.ResourceLocation;
 import org.apache.commons.lang3.Validate;
 

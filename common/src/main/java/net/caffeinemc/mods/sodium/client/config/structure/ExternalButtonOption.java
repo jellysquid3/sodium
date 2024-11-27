@@ -13,7 +13,7 @@ import java.util.function.Consumer;
 public class ExternalButtonOption extends StaticOption {
     final Consumer<Screen> currentScreenConsumer;
 
-    ExternalButtonOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, Component tooltip, Consumer<Screen> currentScreenConsumer) {
+    public ExternalButtonOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, Component tooltip, Consumer<Screen> currentScreenConsumer) {
         super(id, dependencies, name, enabled, tooltip);
         this.currentScreenConsumer = currentScreenConsumer;
     }

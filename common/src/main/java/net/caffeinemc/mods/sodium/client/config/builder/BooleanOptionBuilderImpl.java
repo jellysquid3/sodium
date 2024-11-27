@@ -1,10 +1,11 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
 import net.caffeinemc.mods.sodium.api.config.*;
 import net.caffeinemc.mods.sodium.api.config.structure.BooleanOptionBuilder;
 import net.caffeinemc.mods.sodium.api.config.option.OptionBinding;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
+import net.caffeinemc.mods.sodium.client.config.structure.BooleanOption;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 

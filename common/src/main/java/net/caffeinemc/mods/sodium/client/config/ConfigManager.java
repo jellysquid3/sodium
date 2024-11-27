@@ -8,7 +8,7 @@ import net.caffeinemc.mods.sodium.api.config.structure.ConfigBuilder;
 import net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.config.structure.Config;
-import net.caffeinemc.mods.sodium.client.config.structure.ConfigBuilderImpl;
+import net.caffeinemc.mods.sodium.client.config.builder.ConfigBuilderImpl;
 import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
 import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;

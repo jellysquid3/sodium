@@ -17,7 +17,7 @@ public class IntegerOption extends StatefulOption<Integer> {
     private final DependentValue<Range> range;
     private final ControlValueFormatter valueFormatter;
 
-    IntegerOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, StorageEventHandler storage, Function<Integer, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<Integer> defaultValue, OptionBinding<Integer> binding, DependentValue<Range> range, ControlValueFormatter valueFormatter) {
+    public IntegerOption(ResourceLocation id, Collection<ResourceLocation> dependencies, Component name, DependentValue<Boolean> enabled, StorageEventHandler storage, Function<Integer, Component> tooltipProvider, OptionImpact impact, EnumSet<OptionFlag> flags, DependentValue<Integer> defaultValue, OptionBinding<Integer> binding, DependentValue<Range> range, ControlValueFormatter valueFormatter) {
         super(id, dependencies, name, enabled, storage, tooltipProvider, impact, flags, defaultValue, binding);
         this.range = range;
         this.valueFormatter = valueFormatter;

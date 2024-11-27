@@ -1,10 +1,13 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
 import com.google.common.collect.ImmutableList;
 import net.caffeinemc.mods.sodium.api.config.structure.ColorThemeBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.ModOptionsBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.OptionOverrideBuilder;
 import net.caffeinemc.mods.sodium.api.config.structure.PageBuilder;
+import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
+import net.caffeinemc.mods.sodium.client.config.structure.OptionOverride;
+import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import org.apache.commons.lang3.Validate;
 
@@ -34,6 +37,7 @@ class ModOptionsBuilderImpl implements ModOptionsBuilder {
             throw new IllegalStateException("At least one page or option override must be added");
         }
 
+        // if no theme is specified, pick one pseudo-randomly based on the namespace
         if (this.theme == null) {
             this.theme = ColorTheme.PRESETS[Math.abs(this.namespace.hashCode()) % ColorTheme.PRESETS.length];
         }

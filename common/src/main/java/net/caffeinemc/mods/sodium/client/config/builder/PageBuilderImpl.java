@@ -1,5 +1,6 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
+import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.Validate;
 

@@ -1,6 +1,7 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
 import net.caffeinemc.mods.sodium.api.config.structure.ExternalPageBuilder;
+import net.caffeinemc.mods.sodium.client.config.structure.ExternalPage;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.Validate;

@@ -1,7 +1,9 @@
-package net.caffeinemc.mods.sodium.client.config.structure;
+package net.caffeinemc.mods.sodium.client.config.builder;
 
 import net.caffeinemc.mods.sodium.api.config.ConfigState;
 import net.caffeinemc.mods.sodium.api.config.structure.ExternalButtonOptionBuilder;
+import net.caffeinemc.mods.sodium.client.config.structure.ExternalButtonOption;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
