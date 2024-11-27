@@ -175,6 +175,7 @@ public class CloudRenderer {
             RenderSystem.disableCull();
         }
 
+        RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL32C.GL_LESS);
 
         // Draw
@@ -184,6 +185,7 @@ public class CloudRenderer {
 
         // State teardown
         RenderSystem.depthFunc(GL32C.GL_LEQUAL);
+        RenderSystem.disableDepthTest();
 
         if (flat) {
             RenderSystem.enableCull();
