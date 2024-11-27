@@ -144,10 +144,6 @@ public class RenderSectionManager {
         this.cameraPosition = cameraPosition;
     }
 
-    // TODO: schedule only as many tasks as fit within the frame time (measure how long the last frame took and how long the tasks took, though both of these will change over time)
-
-    // TODO idea: increase and decrease chunk builder thread budget based on if the upload buffer was filled if the entire budget was used up. if the fallback way of uploading buffers is used, just doing 3 * the budget actually slows down frames while things are getting uploaded. For this it should limit how much (or how often?) things are uploaded. In the case of the mapped upload, just making sure we don't exceed its size is probably enough.
-
     public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator, boolean updateImmediately) {
         var now = System.nanoTime();
         this.lastFrameDuration = now - this.lastFrameAtTime;
