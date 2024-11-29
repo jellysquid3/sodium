@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class PageListWidget extends AbstractParentWidget {
     public static final int PAGE_LIST_WIDTH = 125;
+    private static final int PAGE_LIST_TOP_PADDING = 3;
 
     private final VideoSettingsScreen parent;
     private CenteredFlatWidget selected;
@@ -36,14 +37,15 @@ public class PageListWidget extends AbstractParentWidget {
         int height = this.getHeight();
 
         this.clearChildren();
-        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - Layout.SCROLLBAR_WIDTH, y, Layout.SCROLLBAR_WIDTH, height - Layout.BUTTON_SHORT_BOTTOM_Y)));
-        this.search = this.addChild(new FlatButtonWidget(new Dim2i(x, y + height - Layout.BUTTON_SHORT_BOTTOM_Y, width, Layout.BUTTON_SHORT), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), () -> {
+        this.search = this.addChild(new FlatButtonWidget(new Dim2i(x, y + Layout.INNER_MARGIN, width, Layout.BUTTON_SHORT), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), () -> {
             // TODO: implement search
         }, true, true));
+        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - Layout.SCROLLBAR_WIDTH, this.search.getLimitY(), Layout.SCROLLBAR_WIDTH, height - this.search.getLimitY())));
 
         int entryHeight = this.font.lineHeight * 2;
         var headerHeight = this.font.lineHeight * 3;
-        int listHeight = Layout.BUTTON_SHORT + Layout.INNER_MARGIN * 2 - headerHeight;
+        y = this.search.getLimitY();
+        int listHeight = Layout.BUTTON_SHORT + Layout.INNER_MARGIN + PAGE_LIST_TOP_PADDING - headerHeight;
         for (var modOptions : ConfigManager.CONFIG.getModOptions()) {
             if (modOptions.pages().isEmpty()) {
                 continue;
@@ -82,8 +84,7 @@ public class PageListWidget extends AbstractParentWidget {
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         graphics.fillGradient(this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), Colors.BACKGROUND_LIGHT, Colors.BACKGROUND_DEFAULT);
-        var scissorEnd = this.getLimitY() - Layout.BUTTON_SHORT_BOTTOM_Y;
-        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), scissorEnd);
+        graphics.enableScissor(this.getX(), this.search.getLimitY(), this.getLimitX(), this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
 

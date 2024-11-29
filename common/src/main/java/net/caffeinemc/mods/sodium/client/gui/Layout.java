@@ -5,7 +5,6 @@ public class Layout {
     public static final int BUTTON_LONG = 65;
     public static final int INNER_MARGIN = 5;
     public static final int BOTTOM_MARGIN = INNER_MARGIN + 1;
-    public static final int BUTTON_SHORT_BOTTOM_Y = BUTTON_SHORT + BOTTOM_MARGIN;
     public static final int SCROLLBAR_WIDTH = 5;
     public static final int TEXT_LEFT_PADDING = 8;
     public static final int TEXT_PARAGRAPH_SPACING = 8;

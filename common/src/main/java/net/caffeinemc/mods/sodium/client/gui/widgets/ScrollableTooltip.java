@@ -167,7 +167,7 @@ public class ScrollableTooltip {
     }
 
     public boolean mouseScrolled(double d, double e, double amount) {
-        if (this.visibleDim.containsCursor(d, e) && this.scrollbar != null) {
+        if (this.visibleDim != null && this.visibleDim.containsCursor(d, e) && this.scrollbar != null) {
             this.scrollbar.scroll((int) (-amount * 10));
             return true;
         }
