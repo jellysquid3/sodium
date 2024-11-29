@@ -16,6 +16,8 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
 public class PageListWidget extends AbstractParentWidget {
+    public static final int PAGE_LIST_WIDTH = 125;
+
     private final VideoSettingsScreen parent;
     private CenteredFlatWidget selected;
     private ScrollbarWidget scrollbar;

@@ -187,7 +187,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
 
         this.rebuildGUIOptions();
 
-        this.pageList = new PageListWidget(this, new Dim2i(0, 0, 125, this.height));
+        this.pageList = new PageListWidget(this, new Dim2i(0, 0, PageListWidget.PAGE_LIST_WIDTH, this.height));
 
         this.applyButton = new FlatButtonWidget(new Dim2i(this.pageList.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), ConfigManager.CONFIG::applyAllOptions, true, false);
         this.closeButton = new FlatButtonWidget(new Dim2i(this.applyButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
