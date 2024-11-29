@@ -2,6 +2,7 @@ package net.caffeinemc.mods.sodium.client.config.structure;
 
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
+import net.caffeinemc.mods.sodium.client.config.search.*;
 import net.caffeinemc.mods.sodium.client.config.value.DependentValue;
 import net.caffeinemc.mods.sodium.client.gui.options.control.Control;
 import net.minecraft.network.chat.Component;
@@ -11,7 +12,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.Consumer;
 
-public abstract class Option {
+public abstract class Option implements Searchable {
     final ResourceLocation id;
     final Collection<ResourceLocation> dependencies;
 
@@ -82,6 +83,30 @@ public abstract class Option {
 
     public Collection<OptionFlag> getFlags() {
         return EnumSet.noneOf(OptionFlag.class);
+    }
+
+    @Override
+    public void registerTextSources(SearchIndex index) {
+        index.register(new OptionNameSource());
+        // this.registerTooltipSources(index);
+    }
+
+    private class OptionNameSource extends TextSource {
+        @Override
+        protected String getTextFromSource() {
+            return Option.this.getName().getString();
+        }
+    }
+
+    protected void registerTooltipSources(SearchIndex index) {
+        index.register(new OptionTooltipSource());
+    }
+
+    protected class OptionTooltipSource extends TextSource {
+        @Override
+        protected String getTextFromSource() {
+            return Option.this.getTooltip().getString();
+        }
     }
 }
 

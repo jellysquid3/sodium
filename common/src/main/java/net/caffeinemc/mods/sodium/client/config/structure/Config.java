@@ -7,9 +7,12 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.caffeinemc.mods.sodium.api.config.ConfigState;
 import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
 import net.caffeinemc.mods.sodium.api.config.option.OptionFlag;
+import net.caffeinemc.mods.sodium.client.config.search.BigramSearchIndex;
+import net.caffeinemc.mods.sodium.client.config.search.SearchQuerySession;
 import net.caffeinemc.mods.sodium.client.config.value.DynamicValue;
 import net.caffeinemc.mods.sodium.client.console.Console;
 import net.caffeinemc.mods.sodium.client.console.message.MessageLevel;
+import net.caffeinemc.mods.sodium.client.config.search.SearchIndex;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 
@@ -21,6 +24,7 @@ public class Config implements ConfigState {
     private final Map<ResourceLocation, Option> options = new Object2ReferenceLinkedOpenHashMap<>();
     private final ObjectOpenHashSet<StorageEventHandler> pendingStorageHandlers = new ObjectOpenHashSet<>();
     private final ImmutableList<ModOptions> modOptions;
+    private final SearchIndex searchIndex = new BigramSearchIndex(this::registerSearchIndex);
 
     public Config(ImmutableList<ModOptions> modOptions) {
         this.modOptions = modOptions;
@@ -34,6 +38,16 @@ public class Config implements ConfigState {
             option.loadValueInitial();
         }
         resetAllOptions();
+    }
+
+    private void registerSearchIndex() {
+        for (var option : this.options.values()) {
+            option.registerTextSources(this.searchIndex);
+        }
+    }
+
+    public SearchQuerySession startSearchQuery() {
+        return this.searchIndex.startQuery();
     }
 
     private void collectOptions() {
