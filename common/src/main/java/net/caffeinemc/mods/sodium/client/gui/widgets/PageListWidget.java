@@ -16,17 +16,18 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
 public class PageListWidget extends AbstractParentWidget {
-    public static final int PAGE_LIST_WIDTH = 125;
     private static final int PAGE_LIST_TOP_PADDING = 3;
 
     private final VideoSettingsScreen parent;
+    private final Runnable startSearch;
     private CenteredFlatWidget selected;
     private ScrollbarWidget scrollbar;
     private FlatButtonWidget search;
 
-    public PageListWidget(VideoSettingsScreen parent, Dim2i dim) {
+    public PageListWidget(VideoSettingsScreen parent, Runnable startSearch, Dim2i dim) {
         super(dim);
         this.parent = parent;
+        this.startSearch = startSearch;
         this.rebuild();
     }
 
@@ -37,10 +38,8 @@ public class PageListWidget extends AbstractParentWidget {
         int height = this.getHeight();
 
         this.clearChildren();
-        this.search = this.addChild(new FlatButtonWidget(new Dim2i(x, y + Layout.INNER_MARGIN, width, Layout.BUTTON_SHORT), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), () -> {
-            // TODO: implement search
-        }, true, true));
-        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width - Layout.SCROLLBAR_WIDTH, this.search.getLimitY(), Layout.SCROLLBAR_WIDTH, height - this.search.getLimitY())));
+        this.search = this.addRenderableChild(new FlatButtonWidget(new Dim2i(x, y + Layout.INNER_MARGIN, width, Layout.BUTTON_SHORT), Component.literal("Search...").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY), this.startSearch, true, true));
+        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(this.getLimitX() - Layout.SCROLLBAR_WIDTH, this.search.getLimitY(), Layout.SCROLLBAR_WIDTH, height - this.search.getLimitY())));
 
         int entryHeight = this.font.lineHeight * 2;
         var headerHeight = this.font.lineHeight * 3;

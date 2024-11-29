@@ -5,28 +5,20 @@ import net.caffeinemc.mods.sodium.client.config.structure.OptionGroup;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Layout;
-import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
+import net.caffeinemc.mods.sodium.client.gui.options.control.AbstractOptionList;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class OptionListWidget extends AbstractParentWidget {
-    private static final int SCROLLBAR_OFFSET = 5;
-
+public class OptionListWidget extends AbstractOptionList {
     private final OptionPage page;
     private final ColorTheme theme;
-    private final List<ControlElement> controls;
-    private ScrollbarWidget scrollbar;
 
     public OptionListWidget(Screen screen, Dim2i dim, OptionPage page, ColorTheme theme) {
         super(dim);
         this.page = page;
         this.theme = theme;
-        this.controls = new ArrayList<>();
         this.rebuild(screen);
     }
 
@@ -39,7 +31,7 @@ public class OptionListWidget extends AbstractParentWidget {
         int maxWidth = 0;
 
         this.clearChildren();
-        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width + SCROLLBAR_OFFSET, y, Layout.SCROLLBAR_WIDTH, height)));
+        this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width + Layout.OPTION_LIST_SCROLLBAR_OFFSET, y, Layout.SCROLLBAR_WIDTH, height)));
 
         int entryHeight = 18;
         int listHeight = 0;
@@ -67,22 +59,8 @@ public class OptionListWidget extends AbstractParentWidget {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX() + SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.getLimitY());
+        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX() + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        this.scrollbar.scroll((int) (-verticalAmount * 10));
-        return true;
-    }
-
-    public List<ControlElement> getControls() {
-        return this.controls;
-    }
-
-    public int getScrollAmount() {
-        return this.scrollbar.getScrollAmount();
     }
 }

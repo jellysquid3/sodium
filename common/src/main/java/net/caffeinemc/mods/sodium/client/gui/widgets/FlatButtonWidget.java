@@ -13,12 +13,13 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 public class FlatButtonWidget extends AbstractWidget implements Renderable {
-    private static final ButtonTheme DEFAULT_THEME = new ButtonTheme(
+    public static final ButtonTheme DEFAULT_THEME = new ButtonTheme(
             Colors.FOREGROUND, Colors.FOREGROUND, Colors.FOREGROUND_DISABLED,
             Colors.BACKGROUND_HOVER, Colors.BACKGROUND_DEFAULT, Colors.BACKGROUND_LIGHT);
 
     private final Runnable action;
     private final boolean drawBackground;
+    private final boolean drawFrame;
     private final boolean leftAlign;
     private final ButtonTheme theme;
     private final Component label;
@@ -27,17 +28,26 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
     private boolean enabled = true;
     private boolean visible = true;
 
-    public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean leftAlign, ButtonTheme theme) {
+    public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean drawFrame, boolean leftAlign, ButtonTheme theme) {
         super(dim);
         this.label = label;
         this.action = action;
         this.drawBackground = drawBackground;
+        this.drawFrame = drawFrame;
         this.leftAlign = leftAlign;
         this.theme = theme;
     }
 
+    public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean leftAlign, ButtonTheme theme) {
+        this(dim, label, action, drawBackground, !drawBackground, leftAlign, theme);
+    }
+
     public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean leftAlign) {
         this(dim, label, action, drawBackground, leftAlign, DEFAULT_THEME);
+    }
+
+    public FlatButtonWidget(Dim2i dim, Component label, Runnable action, boolean drawBackground, boolean drawFrame, boolean leftAlign) {
+        this(dim, label, action, drawBackground, drawFrame, leftAlign, DEFAULT_THEME);
     }
 
     @Override
@@ -57,14 +67,14 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
 
         if (this.label != null) {
             int strWidth = this.font.width(this.label);
-            this.drawString(graphics, this.label, this.leftAlign ? this.getX() + Layout.TEXT_LEFT_PADDING : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - 4, textColor);
+            this.drawString(graphics, this.label, this.leftAlign ? this.getX() + Layout.TEXT_LEFT_PADDING : (this.getCenterX() - (strWidth / 2)), this.getCenterY() - this.font.lineHeight / 2, textColor);
         }
 
         if (this.enabled && this.selected) {
             this.drawRect(graphics, this.getX(), this.getLimitY() - 1, this.getLimitX(), this.getLimitY(), Colors.THEME);
         }
 
-        if (!this.drawBackground) {
+        if (this.drawFrame) {
             this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), Colors.BUTTON_BORDER);
         }
     }

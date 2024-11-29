@@ -101,6 +101,10 @@ public class BigramSearchIndex extends SourceStoringIndex {
         public Collection<SearchResult> getSearchResults(String query) {
             query = conditionText(query);
 
+            if (query.isEmpty()) {
+                return List.of();
+            }
+
             // count leading and inner bigrams, trailing bigram isn't useful
             var queryBigrams = new Object2IntLinkedOpenHashMap<String>(query.length());
             addLeadingBigram(query, queryBigrams);

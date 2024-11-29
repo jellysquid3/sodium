@@ -44,10 +44,10 @@ public class ScrollableTooltip {
     private Dim2i visibleDim;
     private boolean needsScrolling;
     private final List<FormattedCharSequence> content = new ArrayList<>();
-    private final VideoSettingsScreen screen;
+    private final VideoSettingsScreen parent;
 
-    public ScrollableTooltip(VideoSettingsScreen screen) {
-        this.screen = screen;
+    public ScrollableTooltip(VideoSettingsScreen parent) {
+        this.parent = parent;
     }
 
     public void onControlHover(ControlElement hovered, int mouseX, int mouseY) {
@@ -59,14 +59,14 @@ public class ScrollableTooltip {
             this.hoveredElement = hovered;
 
             if (this.scrollbar != null) {
-                this.screen.removeWidget(this.scrollbar);
+                this.parent.removeWidget(this.scrollbar);
                 this.scrollbar = null;
             }
 
             this.updateTooltip();
 
             if (this.needsScrolling) {
-                this.scrollbar = this.screen.addRenderableWidget(new ScrollbarWidget(new Dim2i(
+                this.scrollbar = this.parent.addRenderableWidget(new ScrollbarWidget(new Dim2i(
                         this.visibleDim.getLimitX() - Layout.SCROLLBAR_WIDTH,
                         this.visibleDim.y(),
                         Layout.SCROLLBAR_WIDTH,
@@ -84,7 +84,7 @@ public class ScrollableTooltip {
                 this.hoveredElement = null;
 
                 if (this.scrollbar != null) {
-                    this.screen.removeWidget(this.scrollbar);
+                    this.parent.removeWidget(this.scrollbar);
                     this.scrollbar = null;
                 }
             }
@@ -98,7 +98,7 @@ public class ScrollableTooltip {
     private void updateTooltip() {
         var option = this.hoveredElement.getOption();
 
-        int boxWidth = Mth.clamp(this.screen.width - this.hoveredElement.getLimitX() - INNER_BOX_MARGIN - OUTER_BOX_MARGIN,
+        int boxWidth = Mth.clamp(this.parent.width - this.hoveredElement.getLimitX() - INNER_BOX_MARGIN - OUTER_BOX_MARGIN,
                 MIN_TOOLTIP_WIDTH, MAX_TOOLTIP_WIDTH);
         var textWidth = boxWidth - TEXT_HORIZONTAL_PADDING * 2;
         int boxY = this.hoveredElement.getY();
@@ -115,7 +115,7 @@ public class ScrollableTooltip {
 
         int contentHeight = this.content.size() * this.getLineHeight() - Layout.TEXT_LINE_SPACING + TEXT_VERTICAL_PADDING * 2;
         int boxYLimit = boxY + contentHeight;
-        int boxYCutoff = this.screen.height - BOTTOM_BOX_MARGIN;
+        int boxYCutoff = this.parent.height - BOTTOM_BOX_MARGIN;
 
         // If the box is going to be cut off on the Y-axis, move it back up the difference
         if (boxYLimit > boxYCutoff) {
@@ -129,7 +129,7 @@ public class ScrollableTooltip {
 
         this.contentSize = new Vector2i(boxWidth, contentHeight);
 
-        var visibleMaxHeight = this.screen.height - UPPER_BOX_MARGIN - BOTTOM_BOX_MARGIN;
+        var visibleMaxHeight = this.parent.height - UPPER_BOX_MARGIN - BOTTOM_BOX_MARGIN;
         var visibleHeight = Math.min(contentHeight, visibleMaxHeight);
         this.visibleDim = new Dim2i(boxX, boxY, boxWidth, visibleHeight);
 

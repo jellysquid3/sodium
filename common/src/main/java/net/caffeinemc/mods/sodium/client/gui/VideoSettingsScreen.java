@@ -7,6 +7,7 @@ import net.caffeinemc.mods.sodium.client.config.structure.ModOptions;
 import net.caffeinemc.mods.sodium.client.config.structure.OptionPage;
 import net.caffeinemc.mods.sodium.client.config.structure.Page;
 import net.caffeinemc.mods.sodium.client.data.fingerprint.HashedFingerprint;
+import net.caffeinemc.mods.sodium.client.gui.options.control.AbstractOptionList;
 import net.caffeinemc.mods.sodium.client.gui.options.control.ControlElement;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPrompt;
 import net.caffeinemc.mods.sodium.client.gui.prompt.ScreenPromptable;
@@ -52,7 +53,10 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private OptionPage currentPage;
 
     private PageListWidget pageList;
+    private SearchWidget searchWidget;
     private OptionListWidget optionList;
+
+    private AbstractOptionList controlList;
 
     private FlatButtonWidget applyButton, closeButton, undoButton;
     private DonationButtonWidget donateButton;
@@ -140,7 +144,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.currentMod = modOptions;
         if (this.currentPage != page) {
             this.currentPage = page;
-            this.rebuildGUIOptions();
+            this.rebuildOptionList();
         }
     }
 
@@ -148,14 +152,14 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     protected void init() {
         super.init();
 
-        this.rebuildGUI();
+        this.rebuild();
 
         if (this.prompt != null) {
             this.prompt.init();
         }
     }
 
-    private void rebuildGUI() {
+    private void rebuild() {
         this.controls.clear();
 
         this.clearWidgets();
@@ -185,15 +189,15 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             }
         }
 
-        this.rebuildGUIOptions();
+        this.pageList = new PageListWidget(this, this::startSearch, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH, this.height));
 
-        this.pageList = new PageListWidget(this, new Dim2i(0, 0, PageListWidget.PAGE_LIST_WIDTH, this.height));
-
-        this.applyButton = new FlatButtonWidget(new Dim2i(this.pageList.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), ConfigManager.CONFIG::applyAllOptions, true, false);
+        this.applyButton = new FlatButtonWidget(new Dim2i(Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.apply"), ConfigManager.CONFIG::applyAllOptions, true, false);
         this.closeButton = new FlatButtonWidget(new Dim2i(this.applyButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
         this.undoButton = new FlatButtonWidget(new Dim2i(this.closeButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
 
         this.donateButton = new DonationButtonWidget(List.of(this.applyButton, this.closeButton, this.undoButton), this.width, this::openDonationPage, this::addRenderableWidget);
+
+        this.rebuildOptionList();
 
         this.addRenderableWidget(this.pageList);
         this.addRenderableWidget(this.undoButton);
@@ -201,13 +205,14 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.addRenderableWidget(this.closeButton);
     }
 
-    private void rebuildGUIOptions() {
+    private void rebuildOptionList() {
         this.removeWidget(this.optionList);
         this.optionList = this.addRenderableWidget(new OptionListWidget(this, new Dim2i(
-                130, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT,
-                210, this.height - (Layout.INNER_MARGIN * 2 + Layout.BOTTOM_MARGIN + Layout.BUTTON_SHORT)),
+                this.pageList.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT,
+                Layout.OPTION_WIDTH, this.height - (Layout.INNER_MARGIN * 2 + Layout.BOTTOM_MARGIN + Layout.BUTTON_SHORT)),
                 this.currentPage, this.currentMod.theme()
         ));
+        this.controlList = this.optionList;
     }
 
     @Override
@@ -252,7 +257,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private Stream<ControlElement> getActiveControls() {
-        return this.optionList.getControls().stream();
+        return this.controlList.getControls().stream();
     }
 
     private void undoChanges() {
@@ -267,6 +272,10 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.prompt != null && this.prompt.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+
+        if (this.searchWidget != null && this.searchWidget.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
 
@@ -369,6 +378,26 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     @Override
     public ScreenPrompt getPrompt() {
         return this.prompt;
+    }
+
+    private void startSearch() {
+        this.searchWidget = new SearchWidget(this::closeSearch, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN + Layout.OPTION_WIDTH + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.height));
+        this.addRenderableWidget(this.searchWidget);
+
+        this.removeWidget(this.pageList);
+        this.removeWidget(this.optionList);
+
+        this.controlList = this.searchWidget;
+    }
+
+    private void closeSearch() {
+        this.removeWidget(this.searchWidget);
+        this.searchWidget = null;
+
+        this.addRenderableWidget(this.pageList);
+        this.addRenderableWidget(this.optionList);
+
+        this.controlList = this.optionList;
     }
 
     @Override
