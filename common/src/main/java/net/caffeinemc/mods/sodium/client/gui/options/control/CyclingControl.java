@@ -29,7 +29,7 @@ public class CyclingControl<T extends Enum<T>> implements Control {
     }
 
     @Override
-    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, AbstractOptionList list, Dim2i dim, ColorTheme theme) {
         return new CyclingControlElement<>(list, this.option, dim);
     }
 
@@ -42,7 +42,7 @@ public class CyclingControl<T extends Enum<T>> implements Control {
         private final EnumOption<T> option;
         private final T[] baseValues;
 
-        public CyclingControlElement(OptionListWidget list, EnumOption<T> option, Dim2i dim) {
+        public CyclingControlElement(AbstractOptionList list, EnumOption<T> option, Dim2i dim) {
             super(list, dim);
 
             this.option = option;

@@ -31,7 +31,7 @@ public class ExternalButtonControl implements Control {
     }
 
     @Override
-    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, AbstractOptionList list, Dim2i dim, ColorTheme theme) {
         return new ExternalButtonControlElement(screen, list, dim, this.option, this.currentScreenConsumer, theme);
     }
 
@@ -46,7 +46,7 @@ public class ExternalButtonControl implements Control {
         private final Consumer<Screen> currentScreenConsumer;
         private final ColorTheme theme;
 
-        public ExternalButtonControlElement(Screen screen, OptionListWidget list, Dim2i dim, ExternalButtonOption option, Consumer<Screen> currentScreenConsumer, ColorTheme theme) {
+        public ExternalButtonControlElement(Screen screen, AbstractOptionList list, Dim2i dim, ExternalButtonOption option, Consumer<Screen> currentScreenConsumer, ColorTheme theme) {
             super(list, dim);
 
             this.screen = screen;

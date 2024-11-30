@@ -3,7 +3,6 @@ package net.caffeinemc.mods.sodium.client.gui.options.control;
 import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.AbstractWidget;
-import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ComponentPath;
@@ -15,9 +14,9 @@ import net.minecraft.network.chat.Style;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class ControlElement extends AbstractWidget {
-    protected final OptionListWidget list;
+    protected final AbstractOptionList list;
 
-    public ControlElement(OptionListWidget list, Dim2i dim) {
+    public ControlElement(AbstractOptionList list, Dim2i dim) {
         super(dim);
         this.list = list;
     }

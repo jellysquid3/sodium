@@ -19,7 +19,7 @@ public class TickBoxControl implements Control {
     }
 
     @Override
-    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, AbstractOptionList list, Dim2i dim, ColorTheme theme) {
         return new TickBoxControlElement(list, this.option, dim, theme);
     }
 
@@ -37,7 +37,7 @@ public class TickBoxControl implements Control {
         private final BooleanOption option;
         private final ColorTheme theme;
 
-        public TickBoxControlElement(OptionListWidget list, BooleanOption option, Dim2i dim, ColorTheme theme) {
+        public TickBoxControlElement(AbstractOptionList list, BooleanOption option, Dim2i dim, ColorTheme theme) {
             super(list, dim);
 
             this.option = option;

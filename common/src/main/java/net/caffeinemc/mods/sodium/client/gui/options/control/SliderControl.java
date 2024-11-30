@@ -6,7 +6,6 @@ import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.config.structure.StatefulOption;
 import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
-import net.caffeinemc.mods.sodium.client.gui.widgets.OptionListWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -25,7 +24,7 @@ public class SliderControl implements Control {
     }
 
     @Override
-    public ControlElement createElement(Screen screen, OptionListWidget list, Dim2i dim, ColorTheme theme) {
+    public ControlElement createElement(Screen screen, AbstractOptionList list, Dim2i dim, ColorTheme theme) {
         return new SliderControlElement(list, this.option, dim, theme);
     }
 
@@ -49,7 +48,7 @@ public class SliderControl implements Control {
         private boolean sliderHeld;
         private int contentWidth;
 
-        public SliderControlElement(OptionListWidget list, IntegerOption option, Dim2i dim, ColorTheme theme) {
+        public SliderControlElement(AbstractOptionList list, IntegerOption option, Dim2i dim, ColorTheme theme) {
             super(list, dim);
 
             this.option = option;
