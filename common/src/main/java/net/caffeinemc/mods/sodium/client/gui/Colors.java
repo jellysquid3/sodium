@@ -5,6 +5,7 @@ import net.minecraft.util.Mth;
 
 import java.awt.*;
 
+// colors in ARGB format
 public class Colors {
     public static final int THEME = 0xFF94E4D3;
     public static final int THEME_LIGHTER = 0xFFCCFDEE;
@@ -15,7 +16,7 @@ public class Colors {
     public static final int BACKGROUND_LIGHT = 0x40000000;
     public static final int BACKGROUND_HOVER = 0xE0000000;
     public static final int BACKGROUND_DEFAULT = 0x90000000;
-    public static final int BACKGROUND_HIGHLIGHT = 0x05FFFFFF;
+    public static final int BACKGROUND_HIGHLIGHT = 0x08FFFFFF;
 
     public static final int BUTTON_BORDER = 0x8000FFEE;
 
