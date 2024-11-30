@@ -9,9 +9,5 @@ public interface Page {
 
     ImmutableList<OptionGroup> groups();
 
-    default void registerTextSources(SearchIndex index, ModOptions modOptions) {
-        for (OptionGroup group : this.groups()) {
-            group.registerTextSources(index, modOptions, this);
-        }
-    }
+    void registerTextSources(SearchIndex index, ModOptions modOptions);
 }

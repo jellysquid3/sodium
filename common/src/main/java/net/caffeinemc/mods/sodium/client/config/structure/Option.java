@@ -85,16 +85,16 @@ public abstract class Option {
         return EnumSet.noneOf(OptionFlag.class);
     }
 
-    public void registerTextSources(SearchIndex index, ModOptions modOptions, Page page, OptionGroup optionGroup) {
+    public void registerTextSources(SearchIndex index, ModOptions modOptions, OptionPage page, OptionGroup optionGroup) {
         index.register(new OptionNameSource(modOptions, page, optionGroup));
     }
 
     public class OptionNameSource extends TextSource {
         private final ModOptions modOptions;
-        private final Page page;
+        private final OptionPage page;
         private final OptionGroup optionGroup;
 
-        OptionNameSource(ModOptions modOptions, Page page, OptionGroup optionGroup) {
+        OptionNameSource(ModOptions modOptions, OptionPage page, OptionGroup optionGroup) {
             this.modOptions = modOptions;
             this.page = page;
             this.optionGroup = optionGroup;
@@ -104,7 +104,7 @@ public abstract class Option {
             return this.modOptions;
         }
 
-        public Page getPage() {
+        public OptionPage getPage() {
             return this.page;
         }
 
