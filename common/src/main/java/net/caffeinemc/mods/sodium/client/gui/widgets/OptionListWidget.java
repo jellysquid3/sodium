@@ -33,7 +33,7 @@ public class OptionListWidget extends AbstractOptionList {
         this.clearChildren();
         this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(x + width + Layout.OPTION_LIST_SCROLLBAR_OFFSET, y, Layout.SCROLLBAR_WIDTH, height)));
 
-        int entryHeight = 18;
+        int entryHeight = this.font.lineHeight * 2;
         int listHeight = 0;
         for (OptionGroup group : this.page.groups()) {
             // Add each option's control element

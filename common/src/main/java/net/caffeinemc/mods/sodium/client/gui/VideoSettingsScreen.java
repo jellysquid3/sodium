@@ -45,8 +45,6 @@ import java.util.stream.Stream;
 // TODO: add button or some other way for user to reset a specific option, all options on a page, and all options of a mod to their default values (not just "reset" changes, but reset to default value)
 // TODO: make RD option respect Vanilla's >16 RD only allowed if memory >1GB constraint
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
-    private final List<ControlElement> controls = new ArrayList<>();
-
     private final Screen prevScreen;
 
     private ModOptions currentMod;
@@ -146,6 +144,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             this.currentPage = page;
             this.rebuildOptionList();
         }
+        this.pageList.switchSelected(modOptions, page);
     }
 
     @Override
@@ -160,8 +159,6 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void rebuild() {
-        this.controls.clear();
-
         this.clearWidgets();
 
         // find the first non-external page
@@ -203,6 +200,10 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.addRenderableWidget(this.undoButton);
         this.addRenderableWidget(this.applyButton);
         this.addRenderableWidget(this.closeButton);
+
+        if (this.searchWidget != null) {
+            this.startSearch(this.searchWidget);
+        }
     }
 
     private void rebuildOptionList() {
@@ -381,7 +382,11 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void startSearch() {
-        this.searchWidget = new SearchWidget(this::closeSearch, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN + Layout.OPTION_WIDTH + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.height));
+        this.startSearch(null);
+    }
+
+    private void startSearch(@Nullable SearchWidget old) {
+        this.searchWidget = new SearchWidget(this, this::closeSearch, old, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN + Layout.OPTION_WIDTH, this.height));
         this.addRenderableWidget(this.searchWidget);
 
         this.removeWidget(this.pageList);

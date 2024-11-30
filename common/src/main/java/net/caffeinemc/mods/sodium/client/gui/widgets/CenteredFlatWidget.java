@@ -61,9 +61,9 @@ public abstract class CenteredFlatWidget extends AbstractWidget implements Rende
         }
 
         if (this.subtitle == null) {
-            this.drawString(graphics, this.truncateToFitWidth(this.label), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(((y1 + (this.getHeight() - this.font.lineHeight) * 0.5f))), textColor);
+            this.drawString(graphics, this.truncateToFitWidth(this.label), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(((y1 + (this.getTextBoxHeight() - this.font.lineHeight) * 0.5f))), textColor);
         } else {
-            var center = y1 + this.getHeight() * 0.5f;
+            var center = y1 + this.getTextBoxHeight() * 0.5f;
             this.drawString(graphics, this.truncateToFitWidth(this.label), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center - (this.font.lineHeight + Layout.TEXT_LINE_SPACING * 0.5f)), textColor);
             this.drawString(graphics, this.truncateToFitWidth(this.subtitle), x1 + Layout.TEXT_LEFT_PADDING, (int) Math.ceil(center + Layout.TEXT_LINE_SPACING * 0.5f), textColor);
         }
@@ -71,6 +71,10 @@ public abstract class CenteredFlatWidget extends AbstractWidget implements Rende
         if (this.enabled && this.isFocused()) {
             this.drawBorder(graphics, x1, y1, x2, y2, Colors.BUTTON_BORDER);
         }
+    }
+
+    protected int getTextBoxHeight() {
+        return this.getHeight();
     }
 
     private String truncateToFitWidth(Component text) {

@@ -82,14 +82,16 @@ public class PageListWidget extends AbstractParentWidget {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fillGradient(this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), Colors.BACKGROUND_LIGHT, Colors.BACKGROUND_DEFAULT);
+        renderBackgroundGradient(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY());
         graphics.enableScissor(this.getX(), this.search.getLimitY(), this.getLimitX(), this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
 
-//        this.verticalScrollScissorGradient(graphics, scissorEnd);
-
         this.search.render(graphics, mouseX, mouseY, delta);
+    }
+
+    public static void renderBackgroundGradient(GuiGraphics graphics, int x1, int y1, int x2, int y2) {
+        graphics.fillGradient(x1, y1, x2, y2, Colors.BACKGROUND_LIGHT, Colors.BACKGROUND_DEFAULT);
     }
 
     @Override
@@ -104,6 +106,17 @@ public class PageListWidget extends AbstractParentWidget {
         }
         this.selected = widget;
         this.selected.setSelected(true);
+    }
+
+    public void switchSelected(ModOptions modOptions, Page page) {
+        for (var child : this.children()) {
+            if (child instanceof PageEntryWidget pageEntryWidget) {
+                if (pageEntryWidget.page == page && pageEntryWidget.modOptions == modOptions) {
+                    this.switchSelected(pageEntryWidget);
+                    return;
+                }
+            }
+        }
     }
 
     private class EntryWidget extends CenteredFlatWidget {
