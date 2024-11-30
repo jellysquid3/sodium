@@ -1,7 +1,7 @@
 package net.caffeinemc.mods.sodium.client.config.search;
 
-import java.util.Collection;
+import java.util.List;
 
 public interface SearchQuerySession {
-    Collection<TextSource> getSearchResults(String query);
+    List<? extends TextSource> getSearchResults(String query);
 }

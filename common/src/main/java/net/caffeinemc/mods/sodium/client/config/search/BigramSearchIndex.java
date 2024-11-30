@@ -3,7 +3,6 @@ package net.caffeinemc.mods.sodium.client.config.search;
 import it.unimi.dsi.fastutil.objects.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -98,7 +97,7 @@ public class BigramSearchIndex extends SourceStoringIndex {
 
     private class BigramSearchQuerySession implements SearchQuerySession {
         @Override
-        public Collection<TextSource> getSearchResults(String query) {
+        public List<? extends TextSource> getSearchResults(String query) {
             query = conditionText(query);
 
             if (query.isEmpty()) {

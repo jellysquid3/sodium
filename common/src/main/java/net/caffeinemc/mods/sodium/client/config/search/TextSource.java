@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.client.config.search;
 public abstract class TextSource {
     private String text;
     private float score;
+    private int resultIndex;
 
     protected abstract String getTextFromSource();
 
@@ -24,5 +25,13 @@ public abstract class TextSource {
 
     void setScore(float score) {
         this.score = score;
+    }
+
+    public int getResultIndex() {
+        return this.resultIndex;
+    }
+
+    public void setResultIndex(int resultIndex) {
+        this.resultIndex = resultIndex;
     }
 }
