@@ -41,8 +41,8 @@ public class Config implements ConfigState {
     }
 
     private void registerSearchIndex() {
-        for (var option : this.options.values()) {
-            option.registerTextSources(this.searchIndex);
+        for (var modConfig : this.modOptions) {
+            modConfig.registerTextSources(this.searchIndex);
         }
     }
 

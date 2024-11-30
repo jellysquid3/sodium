@@ -2,7 +2,8 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.client.config.ConfigManager;
 import net.caffeinemc.mods.sodium.client.config.search.SearchQuerySession;
-import net.caffeinemc.mods.sodium.client.config.search.SearchResult;
+import net.caffeinemc.mods.sodium.client.config.search.TextSource;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
 import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.options.control.AbstractOptionList;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
@@ -18,7 +19,7 @@ import java.util.List;
 public class SearchWidget extends AbstractOptionList {
     private final Runnable closeSearch;
     private final SearchQuerySession searchQuerySession;
-    private Collection<SearchResult> searchResults = List.of();
+    private Collection<TextSource> searchResults = List.of();
 
     private EditBox searchBox;
     private FlatButtonWidget closeButton;
@@ -62,7 +63,13 @@ public class SearchWidget extends AbstractOptionList {
         this.addRenderableChild(this.scrollbar);
 
         // present the search results
-        // TODO
+        for (var result : this.searchResults) {
+            if (!(result instanceof Option.OptionNameSource)) {
+                continue;
+            }
+
+            var optionSource = (Option.OptionNameSource) result;
+        }
     }
 
     private void search(String text) {

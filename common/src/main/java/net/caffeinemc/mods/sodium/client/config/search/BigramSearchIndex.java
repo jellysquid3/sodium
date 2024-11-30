@@ -98,7 +98,7 @@ public class BigramSearchIndex extends SourceStoringIndex {
 
     private class BigramSearchQuerySession implements SearchQuerySession {
         @Override
-        public Collection<SearchResult> getSearchResults(String query) {
+        public Collection<TextSource> getSearchResults(String query) {
             query = conditionText(query);
 
             if (query.isEmpty()) {
@@ -112,7 +112,7 @@ public class BigramSearchIndex extends SourceStoringIndex {
 
             var queryBigramTotalInv = 1.0f / (query.length() + 1);
 
-            var sourceScores = new Reference2FloatLinkedOpenHashMap<TextSource>();
+            var scoredSources = new ReferenceLinkedOpenHashSet<TextSource>();
             var maxScore = 0.0f;
 
             // score the sources that contain the bigrams in the query
@@ -131,7 +131,7 @@ public class BigramSearchIndex extends SourceStoringIndex {
                     var source = sourceBigramCount.source;
                     var sourceCount = sourceBigramCount.count;
 
-                    // TODO: is this a good score function?
+                    // score based on bigram density in the query, log of the bigram count in the source, and inverse overall prevalence (rare bigrams are more important)
                     var score = queryBigramDensity * ((float) Math.log(sourceCount) + 1) * prevalenceInv;
 
                     // reduce score if there are more of this bigram in the query than in the source
@@ -139,26 +139,28 @@ public class BigramSearchIndex extends SourceStoringIndex {
                         score *= (float) sourceCount / (sourceCount + 2 * (queryCount - sourceCount));
                     }
 
-                    var newScore = sourceScores.getFloat(source) + score;
-                    sourceScores.put(source, newScore);
-
-                    maxScore = Math.max(maxScore, newScore);
+                    if (scoredSources.add(source)) {
+                        source.setScore(score);
+                        maxScore = Math.max(maxScore, score);
+                    } else {
+                        var newScore = source.getScore() + score;
+                        source.setScore(newScore);
+                        maxScore = Math.max(maxScore, newScore);
+                    }
                 }
             }
 
             // sort by descending relevance and filter out irrelevant results
             var scoreCutoff = maxScore * 0.2f;
 
-            ObjectList<SearchResult> results = new ObjectArrayList<>(sourceScores.size());
-            for (var entry : sourceScores.reference2FloatEntrySet()) {
-                var score = entry.getFloatValue();
-
-                if (score >= scoreCutoff) {
-                    results.add(new SearchResult(entry.getKey(), score));
+            ObjectList<TextSource> results = new ObjectArrayList<>(scoredSources.size());
+            for (var source : scoredSources) {
+                if (source.getScore() >= scoreCutoff) {
+                    results.add(source);
                 }
             }
 
-            results.sort(Comparator.comparing(SearchResult::getScore).reversed());
+            results.sort(Comparator.comparing(TextSource::getScore).reversed());
 
             // show at most 10
             if (results.size() > 10) {

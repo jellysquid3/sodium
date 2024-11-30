@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.Consumer;
 
-public abstract class Option implements Searchable {
+public abstract class Option {
     final ResourceLocation id;
     final Collection<ResourceLocation> dependencies;
 
@@ -85,27 +85,40 @@ public abstract class Option implements Searchable {
         return EnumSet.noneOf(OptionFlag.class);
     }
 
-    @Override
-    public void registerTextSources(SearchIndex index) {
-        index.register(new OptionNameSource());
-        // this.registerTooltipSources(index);
+    public void registerTextSources(SearchIndex index, ModOptions modOptions, Page page, OptionGroup optionGroup) {
+        index.register(new OptionNameSource(modOptions, page, optionGroup));
     }
 
-    private class OptionNameSource extends TextSource {
+    public class OptionNameSource extends TextSource {
+        private final ModOptions modOptions;
+        private final Page page;
+        private final OptionGroup optionGroup;
+
+        OptionNameSource(ModOptions modOptions, Page page, OptionGroup optionGroup) {
+            this.modOptions = modOptions;
+            this.page = page;
+            this.optionGroup = optionGroup;
+        }
+
+        public ModOptions getModOptions() {
+            return this.modOptions;
+        }
+
+        public Page getPage() {
+            return this.page;
+        }
+
+        public OptionGroup getOptionGroup() {
+            return this.optionGroup;
+        }
+
+        public Option getOption() {
+            return Option.this;
+        }
+
         @Override
         protected String getTextFromSource() {
             return Option.this.getName().getString();
-        }
-    }
-
-    protected void registerTooltipSources(SearchIndex index) {
-        index.register(new OptionTooltipSource());
-    }
-
-    protected class OptionTooltipSource extends TextSource {
-        @Override
-        protected String getTextFromSource() {
-            return Option.this.getTooltip().getString();
         }
     }
 }
