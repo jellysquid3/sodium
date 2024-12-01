@@ -10,18 +10,33 @@ import org.jetbrains.annotations.ApiStatus;
 public class ColorMixer {
     /**
      * <p>Linearly interpolate between the {@param start} and {@param end} points, represented as packed unsigned 8-bit
-     * values within a 32-bit integer. The result is computed as <pre>(start * weight) + (end * (255 - weight))</pre>.</p>
+     * values within a 32-bit integer. The result is computed as <pre>(start * weight) + (end * (255 - weight))</pre>
+     * using fixed-point arithmetic and round-to-nearest behavior.</p>
      *
      * <p>The results are undefined if {@param weight} is not within the interval [0, 255].</p>
-
-     * @param start The start of the range to interpolate
-     * @param end The end of the range to interpolate
+     *
+     * <p>If {@param start} and {@param end} are the same value, the result of this function will always be that value,
+     * regardless of {@param weight}.</p>
+     *
+     * @param start The value at the start of the range to interpolate
+     * @param end The value at the end of the range to interpolate
      * @param weight The weight value used to interpolate between color values (in 0..255 range)
      * @return The color that was interpolated between the start and end points
      */
     public static int mix(int start, int end, int weight) {
-        // Overflow is not possible, so adding the values is fine.
-        return mul(start, weight) + mul(end, ColorU8.COMPONENT_MASK - weight);
+        // De-interleave the 8-bit component lanes into high and low halves for each point.
+        // Multiply the start point by alpha, and the end point by 1-alpha, to produce Q8.8 fixed-point intermediates.
+        // Add the Q8.8 fixed-point intermediaries together to obtain the mixed values.
+        final long hi = ((start & 0x00FF00FFL) * weight) + ((end & 0x00FF00FFL) * (ColorU8.COMPONENT_MASK - weight));
+        final long lo = ((start & 0xFF00FF00L) * weight) + ((end & 0xFF00FF00L) * (ColorU8.COMPONENT_MASK - weight));
+
+        // Round the fixed-point values to the nearest integer, and interleave the high and low halves to
+        // produce the final packed result.
+        final long result =
+                (((hi + 0x00FF00FFL) >>> 8) & 0x00FF00FFL) |
+                (((lo + 0xFF00FF00L) >>> 8) & 0xFF00FF00L);
+
+        return (int) result;
     }
 
     /**
@@ -104,10 +119,19 @@ public class ColorMixer {
      * @return The result of the multiplication
      */
     public static int mul(int color, int factor) {
-        final long result = (((((color & 0x00FF00FFL) * factor) + 0x00FF00FFL) >>> 8) & 0x00FF00FFL) |
-                            (((((color & 0xFF00FF00L) * factor) + 0xFF00FF00L) >>> 8) & 0xFF00FF00L);
+        // De-interleave the 8-bit component lanes into high and low halves.
+        // Perform 8-bit multiplication to produce Q8.8 fixed-point intermediaries.
+        final long hi = (color & 0x00FF00FFL) * factor;
+        final long lo = (color & 0xFF00FF00L) * factor;
+
+        // Round the Q8.8 fixed-point values to the nearest integer, and interleave the high and low halves to
+        // produce the packed result.
+        final long result =
+                (((hi + 0x00FF00FFL) >>> 8) & 0x00FF00FFL) |
+                (((lo + 0xFF00FF00L) >>> 8) & 0xFF00FF00L);
 
         return (int) result;
+
     }
 
     /**
