@@ -20,6 +20,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.MatrixUtil;
 import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
+import net.caffeinemc.mods.sodium.api.util.ColorMixer;
 import net.caffeinemc.mods.sodium.client.render.frapi.helper.ColorHelper;
 import net.caffeinemc.mods.sodium.client.render.frapi.mesh.EncodingFormat;
 import net.caffeinemc.mods.sodium.client.render.frapi.mesh.MutableQuadViewImpl;
@@ -203,7 +204,7 @@ public class ItemRenderContext extends AbstractRenderContext {
             final int itemColor = colorMap.getColor(itemStack, colorIndex);
 
             for (int i = 0; i < 4; i++) {
-                quad.color(i, ColorHelper.multiplyColor(itemColor, quad.color(i)));
+                quad.color(i, ColorMixer.mulComponentWise(itemColor, quad.color(i)));
             }
         }
     }

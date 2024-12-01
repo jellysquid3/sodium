@@ -56,7 +56,7 @@ public class LevelRendererMixin {
     @Inject(method = "onResourceManagerReload(Lnet/minecraft/server/packs/resources/ResourceManager;)V", at = @At("RETURN"))
     private void onReload(ResourceManager manager, CallbackInfo ci) {
         if (this.cloudRenderer != null) {
-            this.cloudRenderer.reloadTextures(manager);
+            this.cloudRenderer.reload(manager);
         }
     }
 

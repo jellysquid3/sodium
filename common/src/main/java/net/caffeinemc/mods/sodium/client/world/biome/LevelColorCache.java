@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
 import net.caffeinemc.mods.sodium.client.util.color.BoxBlur;
 import net.caffeinemc.mods.sodium.client.util.color.BoxBlur.ColorBuffer;
 import net.caffeinemc.mods.sodium.client.world.cloned.ChunkRenderContext;
-import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.biome.Biome;
@@ -39,35 +38,36 @@ public class LevelColorCache {
     }
 
     public void update(ChunkRenderContext context) {
-        this.minBlockX = (context.getOrigin().minBlockX() - NEIGHBOR_BLOCK_RADIUS) - this.blendRadius;
+        this.minBlockX = (context.getOrigin().minBlockX() - NEIGHBOR_BLOCK_RADIUS);
         this.minBlockY = (context.getOrigin().minBlockY() - NEIGHBOR_BLOCK_RADIUS);
-        this.minBlockZ = (context.getOrigin().minBlockZ() - NEIGHBOR_BLOCK_RADIUS) - this.blendRadius;
+        this.minBlockZ = (context.getOrigin().minBlockZ() - NEIGHBOR_BLOCK_RADIUS);
 
-        this.maxBlockX = (context.getOrigin().maxBlockX() + NEIGHBOR_BLOCK_RADIUS) + this.blendRadius;
+        this.maxBlockX = (context.getOrigin().maxBlockX() + NEIGHBOR_BLOCK_RADIUS);
         this.maxBlockY = (context.getOrigin().maxBlockY() + NEIGHBOR_BLOCK_RADIUS);
-        this.maxBlockZ = (context.getOrigin().maxBlockZ() + NEIGHBOR_BLOCK_RADIUS) + this.blendRadius;
+        this.maxBlockZ = (context.getOrigin().maxBlockZ() + NEIGHBOR_BLOCK_RADIUS);
 
         this.populateStamp++;
     }
 
     public int getColor(ColorResolver resolver, int blockX, int blockY, int blockZ) {
-        var relBlockX = Mth.clamp(blockX, this.minBlockX, this.maxBlockX) - this.minBlockX;
-        var relBlockY = Mth.clamp(blockY, this.minBlockY, this.maxBlockY) - this.minBlockY;
-        var relBlockZ = Mth.clamp(blockZ, this.minBlockZ, this.maxBlockZ) - this.minBlockZ;
+        // Clamp inputs
+        blockX = Mth.clamp(blockX, this.minBlockX, this.maxBlockX) - this.minBlockX;
+        blockY = Mth.clamp(blockY, this.minBlockY, this.maxBlockY) - this.minBlockY;
+        blockZ = Mth.clamp(blockZ, this.minBlockZ, this.maxBlockZ) - this.minBlockZ;
 
         if (!this.slices.containsKey(resolver)) {
             this.initializeSlices(resolver);
         }
 
-        var slice = this.slices.get(resolver)[relBlockY];
+        var slice = this.slices.get(resolver)[blockY];
 
         if (slice.lastPopulateStamp < this.populateStamp) {
-            this.updateColorBuffers(relBlockY, resolver, slice);
+            this.updateColorBuffers(blockY, resolver, slice);
         }
 
         var buffer = slice.getBuffer();
 
-        return buffer.get(relBlockX, relBlockZ);
+        return buffer.get(blockX + this.blendRadius, blockZ + this.blendRadius);
     }
 
     private void initializeSlices(ColorResolver resolver) {
@@ -83,19 +83,27 @@ public class LevelColorCache {
     private void updateColorBuffers(int relY, ColorResolver resolver, Slice slice) {
         int blockY = this.minBlockY + relY;
 
-        for (int blockZ = this.minBlockZ; blockZ <= this.maxBlockZ; blockZ++) {
-            for (int blockX = this.minBlockX; blockX <= this.maxBlockX; blockX++) {
+        int minBlockZ = this.minBlockZ - this.blendRadius;
+        int minBlockX = this.minBlockX - this.blendRadius;
+
+        int maxBlockZ = this.maxBlockZ + this.blendRadius;
+        int maxBlockX = this.maxBlockX + this.blendRadius;
+
+        ColorBuffer buffer = slice.buffer;
+
+        for (int blockZ = minBlockZ; blockZ <= maxBlockZ; blockZ++) {
+            for (int blockX = minBlockX; blockX <= maxBlockX; blockX++) {
                 Biome biome = this.biomeData.getBiome(blockX, blockY, blockZ).value();
 
-                int relBlockX = blockX - this.minBlockX;
-                int relBlockZ = blockZ - this.minBlockZ;
+                int relBlockX = blockX - minBlockX;
+                int relBlockZ = blockZ - minBlockZ;
 
-                slice.buffer.set(relBlockX, relBlockZ, resolver.getColor(biome, blockX, blockZ));
+                buffer.set(relBlockX, relBlockZ, resolver.getColor(biome, blockX, blockZ));
             }
         }
 
         if (this.blendRadius > 0) {
-            BoxBlur.blur(slice.buffer, this.tempColorBuffer, this.blendRadius);
+            BoxBlur.blur(buffer.data, this.tempColorBuffer.data, this.sizeXZ, this.sizeXZ, this.blendRadius);
         }
 
         slice.lastPopulateStamp = this.populateStamp;
