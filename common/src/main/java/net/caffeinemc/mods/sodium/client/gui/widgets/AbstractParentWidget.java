@@ -75,6 +75,14 @@ public abstract class AbstractParentWidget extends AbstractWidget implements Con
 
     @Override
     public void setFocused(@Nullable GuiEventListener guiEventListener) {
+        if (this.focusedElement != null) {
+            this.focusedElement.setFocused(false);
+        }
+
+        if (guiEventListener != null) {
+            guiEventListener.setFocused(true);
+        }
+
         this.focusedElement = guiEventListener;
     }
 

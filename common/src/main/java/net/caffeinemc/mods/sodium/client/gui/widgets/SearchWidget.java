@@ -67,7 +67,8 @@ public class SearchWidget extends AbstractOptionList {
         if (!this.searchBox.getValue().equals(this.query)) {
             this.searchBox.setValue(this.query);
         }
-        this.searchBox.setFocused(true);
+
+        this.setFocused(this.searchBox);
 
         var headerHeight = this.searchBox.getBottom() + Layout.INNER_MARGIN;
         if (this.scrollbar == null) {
@@ -103,8 +104,8 @@ public class SearchWidget extends AbstractOptionList {
             if (lastSource == null || lastSource.getPage() != page) {
                 if (lastSource != null && !trailingSpace) {
                     listHeight += Layout.INNER_MARGIN;
-                    trailingSpace = true;
                 }
+
                 pageListHeight = listHeight = Math.max(pageListHeight, listHeight);
 
                 if (lastSource == null || lastSource.getModOptions() != modOptions) {

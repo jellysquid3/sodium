@@ -32,7 +32,6 @@ import org.lwjgl.glfw.GLFW;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -300,6 +299,12 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         if (!clicked) {
             this.setFocused(null);
             return true;
+        }
+
+        // TODO: switching between the search and the regular mode breaks the keyboard focus
+        if (this.getFocused() == this.pageList && this.controlList == this.searchWidget ||
+                this.getFocused() == this.searchWidget && this.controlList == this.optionList) {
+            this.setFocused(this.controlList);
         }
 
         return true;

@@ -74,7 +74,7 @@ public class FlatButtonWidget extends AbstractWidget implements Renderable {
             this.drawRect(graphics, this.getX(), this.getLimitY() - 1, this.getLimitX(), this.getLimitY(), Colors.THEME);
         }
 
-        if (this.drawFrame) {
+        if (this.drawFrame || this.enabled && this.isFocused()) {
             this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), Colors.BUTTON_BORDER);
         }
     }

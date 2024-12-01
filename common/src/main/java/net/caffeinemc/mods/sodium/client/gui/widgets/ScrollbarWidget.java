@@ -2,11 +2,13 @@ package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
+import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-// TODO: override some methods to make it not focusable?
 public class ScrollbarWidget extends AbstractWidget {
     private static final int COLOR = ColorABGR.pack(50, 50, 50, 150);
     private static final int HIGHLIGHT_COLOR = ColorABGR.pack(100, 100, 100, 150);
@@ -140,5 +142,11 @@ public class ScrollbarWidget extends AbstractWidget {
 
     @Override
     public void updateNarration(NarrationElementOutput builder) {
+        // no narration
+    }
+
+    @Override
+    public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent event) {
+        return null;
     }
 }
