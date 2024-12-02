@@ -37,6 +37,8 @@ public class OcclusionCuller {
         while (queues.flip()) {
             processQueue(visitor, viewport, searchDistance, useOcclusionCulling, frame, queues.read(), queues.write());
         }
+
+        this.addNearbySections(visitor, viewport, searchDistance, frame);
     }
 
     private static void processQueue(Visitor visitor,
@@ -208,11 +210,52 @@ public class OcclusionCuller {
     // The bounding box of a chunk section must be large enough to contain all possible geometry within it. Block models
     // can extend outside a block volume by +/- 1.0 blocks on all axis. Additionally, we make use of a small epsilon
     // to deal with floating point imprecision during a frustum check (see GH#2132).
-    private static final float CHUNK_SECTION_SIZE = 8.0f /* chunk bounds */ + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
+    private static final float CHUNK_SECTION_RADIUS = 8.0f /* chunk bounds */;
+    private static final float CHUNK_SECTION_SIZE = CHUNK_SECTION_RADIUS + 1.0f /* maximum model extent */ + 0.125f /* epsilon */;
 
     public static boolean isWithinFrustum(Viewport viewport, RenderSection section) {
         return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
                 CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE, CHUNK_SECTION_SIZE);
+    }
+
+    // this bigger chunk section size is only used for frustum-testing nearby sections with large models
+    private static final float CHUNK_SECTION_SIZE_NEARBY = CHUNK_SECTION_RADIUS + 2.0f /* bigger model extent */ + 0.125f /* epsilon */;
+    
+    public static boolean isWithinNearbySectionFrustum(Viewport viewport, RenderSection section) {
+        return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
+                CHUNK_SECTION_SIZE_NEARBY, CHUNK_SECTION_SIZE_NEARBY, CHUNK_SECTION_SIZE_NEARBY);
+    }
+
+    // This method visits sections near the origin that are not in the path of the graph traversal
+    // but have bounding boxes that may intersect with the frustum. It does this additional check
+    // for all neighboring, even diagonally neighboring, sections around the origin to render them
+    // if their extended bounding box is visible, and they may render large models that extend
+    // outside the 16x16x16 base volume of the section.
+    private void addNearbySections(Visitor visitor, Viewport viewport, float searchDistance, int frame) {
+        var origin = viewport.getChunkCoord();
+        var originX = origin.getX();
+        var originY = origin.getY();
+        var originZ = origin.getZ();
+
+        for (var dx = -1; dx <= 1; dx++) {
+            for (var dy = -1; dy <= 1; dy++) {
+                for (var dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dy == 0 && dz == 0) {
+                        continue;
+                    }
+
+                    var section = this.getRenderSection(originX + dx, originY + dy, originZ + dz);
+
+                    // additionally render not yet visited but visible sections
+                    if (section != null && section.getLastVisibleFrame() != frame && isWithinNearbySectionFrustum(viewport, section)) {
+                        // reset state on first visit, but don't enqueue
+                        section.setLastVisibleFrame(frame);
+
+                        visitor.visit(section);
+                    }
+                }
+            }
+        }
     }
 
     private void init(Visitor visitor,
