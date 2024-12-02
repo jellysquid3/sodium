@@ -221,7 +221,7 @@ public class OcclusionCuller {
     // this bigger chunk section size is only used for frustum-testing nearby sections with large models
     private static final float CHUNK_SECTION_SIZE_NEARBY = CHUNK_SECTION_RADIUS + 2.0f /* bigger model extent */ + 0.125f /* epsilon */;
     
-    public static boolean isWithinNeighborFrustum(Viewport viewport, RenderSection section) {
+    public static boolean isWithinNearbySectionFrustum(Viewport viewport, RenderSection section) {
         return viewport.isBoxVisible(section.getCenterX(), section.getCenterY(), section.getCenterZ(),
                 CHUNK_SECTION_SIZE_NEARBY, CHUNK_SECTION_SIZE_NEARBY, CHUNK_SECTION_SIZE_NEARBY);
     }
@@ -247,7 +247,7 @@ public class OcclusionCuller {
                     var section = this.getRenderSection(originX + dx, originY + dy, originZ + dz);
 
                     // additionally render not yet visited but visible sections
-                    if (section != null && section.getLastVisibleFrame() != frame && isWithinNeighborFrustum(viewport, section)) {
+                    if (section != null && section.getLastVisibleFrame() != frame && isWithinNearbySectionFrustum(viewport, section)) {
                         // reset state on first visit, but don't enqueue
                         section.setLastVisibleFrame(frame);
 
