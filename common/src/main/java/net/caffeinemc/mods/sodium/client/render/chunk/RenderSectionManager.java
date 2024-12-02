@@ -209,6 +209,7 @@ public class RenderSectionManager {
 
         this.connectNeighborNodes(renderSection);
 
+        // force update to schedule build task
         this.needsGraphUpdate = true;
     }
 
@@ -235,6 +236,7 @@ public class RenderSectionManager {
 
         section.delete();
 
+        // force update to remove section from render lists
         this.needsGraphUpdate = true;
     }
 
@@ -301,7 +303,7 @@ public class RenderSectionManager {
         // (sort results never change the graph)
         // generally there's no sort results without a camera movement, which would also trigger
         // a graph update, but it can sometimes happen because of async task execution
-        this.needsGraphUpdate = this.needsGraphUpdate || this.processChunkBuildResults(results);
+        this.needsGraphUpdate |= this.processChunkBuildResults(results);
 
         for (var result : results) {
             result.destroy();
@@ -317,8 +319,7 @@ public class RenderSectionManager {
         for (var result : filtered) {
             TranslucentData oldData = result.render.getTranslucentData();
             if (result instanceof ChunkBuildOutput chunkBuildOutput) {
-                this.updateSectionInfo(result.render, chunkBuildOutput.info);
-                touchedSectionInfo = true;
+                touchedSectionInfo |= this.updateSectionInfo(result.render, chunkBuildOutput.info);
 
                 if (chunkBuildOutput.translucentData != null) {
                     this.sortTriggering.integrateTranslucentData(oldData, chunkBuildOutput.translucentData, this.cameraPosition, this::scheduleSort);
@@ -346,13 +347,13 @@ public class RenderSectionManager {
         return touchedSectionInfo;
     }
 
-    private void updateSectionInfo(RenderSection render, BuiltSectionInfo info) {
-        render.setInfo(info);
+    private boolean updateSectionInfo(RenderSection render, BuiltSectionInfo info) {
+        var infoChanged = render.setInfo(info);
 
         if (info == null || ArrayUtils.isEmpty(info.globalBlockEntities)) {
-            this.sectionsWithGlobalEntities.remove(render);
+            return this.sectionsWithGlobalEntities.remove(render) || infoChanged;
         } else {
-            this.sectionsWithGlobalEntities.add(render);
+            return this.sectionsWithGlobalEntities.add(render) || infoChanged;
         }
     }
 
@@ -609,6 +610,7 @@ public class RenderSectionManager {
             if (pendingUpdate != null) {
                 section.setPendingUpdate(pendingUpdate);
 
+                // force update to schedule rebuild task on this section
                 this.needsGraphUpdate = true;
             }
         }
