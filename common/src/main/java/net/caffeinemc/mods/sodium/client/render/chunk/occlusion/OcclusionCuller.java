@@ -251,7 +251,7 @@ public class OcclusionCuller {
                         // reset state on first visit, but don't enqueue
                         section.setLastVisibleFrame(frame);
 
-                        visitor.visit(section, true);
+                        visitor.visit(section);
                     }
                 }
             }
