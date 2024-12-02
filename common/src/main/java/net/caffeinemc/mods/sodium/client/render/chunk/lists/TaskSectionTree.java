@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 
 public class TaskSectionTree extends RayOcclusionSectionTree {
     private final TraversableForest taskTree;
+    private boolean taskTreeFinalized = false;
 
     public TaskSectionTree(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
         super(viewport, buildDistance, frame, cullType, level);
@@ -17,20 +18,24 @@ public class TaskSectionTree extends RayOcclusionSectionTree {
         this.taskTree = TraversableForest.createTraversableForest(this.baseOffsetX, this.baseOffsetY, this.baseOffsetZ, buildDistance, level);
     }
 
+    public void markSectionTask(RenderSection section) {
+        this.taskTree.add(section.getChunkX(), section.getChunkY(), section.getChunkZ());
+        this.taskTreeFinalized = false;
+    }
+
     @Override
     protected void addPendingSection(RenderSection section, ChunkUpdateType type) {
         super.addPendingSection(section, type);
 
-        this.taskTree.add(section.getChunkX(), section.getChunkY(), section.getChunkZ());
-    }
-
-    @Override
-    public void finalizeTrees() {
-        super.finalizeTrees();
-        this.taskTree.calculateReduced();
+        this.markSectionTask(section);
     }
 
     public void traverseVisiblePendingTasks(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
+        if (!this.taskTreeFinalized) {
+            this.taskTree.calculateReduced();
+            this.taskTreeFinalized = true;
+        }
+
         this.taskTree.traverse(visitor, viewport, distanceLimit);
     }
 }

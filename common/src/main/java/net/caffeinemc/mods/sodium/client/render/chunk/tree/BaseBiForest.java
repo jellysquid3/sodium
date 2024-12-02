@@ -24,14 +24,14 @@ public abstract class BaseBiForest<T extends Tree> extends BaseForest<T> {
 
     @Override
     public void add(int x, int y, int z) {
-        if (!this.mainTree.add(x, y, z)) {
-            if (this.secondaryTree == null) {
-                this.secondaryTree = this.makeSecondaryTree();
-            }
-            if (!this.secondaryTree.add(x, y, z)) {
-                throw new IllegalStateException("Failed to add section to trees");
-            }
+        if (this.mainTree.add(x, y, z)) {
+            return;
         }
+
+        if (this.secondaryTree == null) {
+            this.secondaryTree = this.makeSecondaryTree();
+        }
+        this.secondaryTree.add(x, y, z);
     }
 
     @Override

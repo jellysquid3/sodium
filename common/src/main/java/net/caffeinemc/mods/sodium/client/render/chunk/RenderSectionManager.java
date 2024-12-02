@@ -110,11 +110,7 @@ public class RenderSectionManager {
     private @Nullable BlockPos cameraBlockPos;
     private @Nullable Vector3dc cameraPosition;
 
-    private final ExecutorService asyncCullExecutor = Executors.newSingleThreadExecutor(runnable -> {
-        Thread thread = new Thread(runnable);
-        thread.setName("Sodium Async Cull Thread");
-        return thread;
-    });
+    private final ExecutorService asyncCullExecutor = Executors.newSingleThreadExecutor(RenderSectionManager::makeAsyncCullThread);
     private final ObjectArrayList<AsyncRenderTask<?>> pendingTasks = new ObjectArrayList<>();
     private SectionTree renderTree = null;
     private TaskSectionTree globalTaskTree = null;
@@ -275,6 +271,12 @@ public class RenderSectionManager {
         }
 
         return latestTree;
+    }
+
+    private static Thread makeAsyncCullThread(Runnable runnable) {
+        Thread thread = new Thread(runnable);
+        thread.setName("Sodium Async Cull Thread");
+        return thread;
     }
 
     private void scheduleAsyncWork(Camera camera, Viewport viewport, boolean spectator) {
@@ -902,6 +904,24 @@ public class RenderSectionManager {
         return sections;
     }
 
+    // TODO: this fixes very delayed tasks, but it still regresses on same-frame tasks that don't get to run in time because the frustum task collection task takes at least one (and usually only one) frame to run
+    // maybe intercept tasks that are scheduled in zero- or one-frame defer mode?
+    // collect and prioritize regardless of visibility if it's an important defer mode?
+    // TODO: vertical sorting seems to be broken?
+    private ChunkUpdateType upgradePendingUpdate(RenderSection section, ChunkUpdateType type) {
+        var current = section.getPendingUpdate();
+        type = ChunkUpdateType.getPromotionUpdateType(current, type);
+
+        section.setPendingUpdate(type, this.lastFrameAtTime);
+
+        // if the section received a new task, mark in the task tree so an update can happen before a global cull task runs
+        if (this.globalTaskTree != null && type != null && current == null) {
+            this.globalTaskTree.markSectionTask(section);
+        }
+
+        return type;
+    }
+
     public void scheduleSort(long sectionPos, boolean isDirectTrigger) {
         RenderSection section = this.sectionByPosition.get(sectionPos);
 
@@ -912,9 +932,8 @@ public class RenderSectionManager {
                     || priorityMode == PriorityMode.NEARBY && this.shouldPrioritizeTask(section, NEARBY_SORT_DISTANCE)) {
                 pendingUpdate = ChunkUpdateType.IMPORTANT_SORT;
             }
-            pendingUpdate = ChunkUpdateType.getPromotionUpdateType(section.getPendingUpdate(), pendingUpdate);
-            if (pendingUpdate != null) {
-                section.setPendingUpdate(pendingUpdate, this.lastFrameAtTime);
+
+            if (this.upgradePendingUpdate(section, pendingUpdate) != null) {
                 section.prepareTrigger(isDirectTrigger);
             }
         }
