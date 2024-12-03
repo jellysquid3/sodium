@@ -145,6 +145,7 @@ public class ItemRenderContext extends AbstractRenderContext {
     }
 
     private void computeOutputInfo() {
+        isDefaultTranslucent = ItemBlockRenderTypes.getRenderType(this.itemStack) == Sheets.translucentItemSheet();
         isDefaultGlint = itemStack.hasFoil();
         isGlintDynamicDisplay = ItemRendererAccessor.sodium$hasAnimatedTexture(itemStack);
 
