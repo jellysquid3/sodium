@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "*"
+loaderVersion = "[4,)"
 license = "Polyform-Shield-1.0.0"
 
 [[mods]]
@@ -26,7 +26,14 @@ provides = ["indium"]
 [[dependencies.sodium]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21,1.21.1]"
+versionRange = "1.21.1"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.sodium]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.82,)"
 ordering = "NONE"
 side = "CLIENT"
 
