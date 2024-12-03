@@ -71,7 +71,7 @@
     "sodium-fabric.mixins.json"
   ],
   "depends" : {
-    "fabricloader" : ">=0.12.0",
+    "fabricloader" : ">=0.16.0",
     "fabric-block-view-api-v2" : "*",
     "fabric-renderer-api-v1" : "*",
     "fabric-rendering-data-attachment-v1" : "*",
@@ -92,7 +92,7 @@
     "custom_hud" : "<3.4.2",
     "farsight" : "<=1.21-4.3",
     "iceberg" : "<1.2.4",
-    "iris" : "<=1.7.3",
+    "iris" : "<=1.8.0",
     "movingelevators" : "<=1.4.7",
     "notenoughcrashes" : "<4.4.8",
     "noxesium" : "<2.1.4",
