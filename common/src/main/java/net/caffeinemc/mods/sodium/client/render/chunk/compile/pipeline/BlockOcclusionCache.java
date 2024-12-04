@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -31,9 +32,9 @@ public class BlockOcclusionCache {
 
     /**
      * @param selfBlockState The state of the block in the level
-     * @param view The block view for this render context
-     * @param selfPos The position of the block
-     * @param facing The facing direction of the side to check
+     * @param view           The block view for this render context
+     * @param selfPos        The position of the block
+     * @param facing         The facing direction of the side to check
      * @return True if the block side facing {@param dir} is not occluded, otherwise false
      */
     public boolean shouldDrawSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing) {
@@ -86,6 +87,75 @@ public class BlockOcclusionCache {
 
     private static boolean isEmptyShape(VoxelShape voxelShape) {
         return voxelShape == Shapes.empty() || voxelShape.isEmpty();
+    }
+
+    /**
+     * Checks if a face of a fluid block should be rendered. It takes into account both occluding fluid face against its own waterlogged block state and the neighboring block state. This is an approximation that doesn't check voxel for shapes between the fluid and the neighboring block since that is handled by the fluid renderer separately and more accurately using actual fluid heights. It only uses voxel shape comparison for checking self-occlusion with the waterlogged block state.
+     *
+     * @param selfBlockState  The state of the block in the level
+     * @param view            The block view for this render context
+     * @param selfPos         The position of the fluid
+     * @param facing          The facing direction of the side to check
+     * @param fluid           The fluid state
+     * @param fluidShape      The non-empty shape of the fluid
+     * @return True if the fluid side facing {@param dir} is not occluded, otherwise false
+     */
+    public boolean shouldDrawFullBlockFluidSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing, FluidState fluid, VoxelShape fluidShape) {
+        var fluidShapeIsBlock = fluidShape == Shapes.block();
+
+        // only perform self-occlusion if the own block state can't occlude
+        if (selfBlockState.canOcclude()) {
+            var selfShape = selfBlockState.getFaceOcclusionShape(facing);
+
+            // only a non-empty self-shape can occlude anything
+            if (!isEmptyShape(selfShape)) {
+                // a full self-shape occludes everything
+                if (isFullShape(selfShape) && fluidShapeIsBlock) {
+                    return false;
+                }
+
+                // perform occlusion of the fluid by the block it's contained in
+                if (!this.lookup(fluidShape, selfShape)) {
+                    return false;
+                }
+            }
+        }
+
+        // perform occlusion against the neighboring block
+        BlockPos.MutableBlockPos otherPos = this.cachedPositionObject;
+        otherPos.set(selfPos.getX() + facing.getStepX(), selfPos.getY() + facing.getStepY(), selfPos.getZ() + facing.getStepZ());
+        BlockState otherState = view.getBlockState(otherPos);
+
+        // don't render anything if the other blocks is the same fluid
+        if (otherState.getFluidState() == fluid) {
+            return false;
+        }
+
+        // check for special fluid occlusion behavior
+        if (PlatformBlockAccess.getInstance().shouldOccludeFluid(facing.getOpposite(), otherState, fluid)) {
+            return false;
+        }
+
+        // the up direction doesn't do occlusion with other block shapes
+        if (facing == Direction.UP) {
+            return true;
+        }
+
+        // only occlude against blocks that can potentially occlude in the first place
+        if (!otherState.canOcclude()) {
+            return true;
+        }
+
+        var otherShape = otherState.getFaceOcclusionShape(facing.getOpposite());
+
+        // If the other block has an empty cull shape, then it cannot hide any geometry
+        if (isEmptyShape(otherShape)) {
+            return true;
+        }
+
+        // If both blocks use a full-cube cull shape, then they will always hide the faces between each other.
+        // No voxel shape comparison is done after this point because it's redundant with the later more accurate check.
+        return !isFullShape(otherShape) || !fluidShapeIsBlock;
     }
 
     private boolean lookup(VoxelShape self, VoxelShape other) {
