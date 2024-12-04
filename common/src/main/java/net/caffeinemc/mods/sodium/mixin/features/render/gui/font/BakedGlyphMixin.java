@@ -121,13 +121,13 @@ public class BakedGlyphMixin {
             write(ptr, matrix, x1 + offset, h1 + offset, z, color, this.u0, this.v0, light);
             ptr += GlyphVertex.STRIDE;
 
-            write(ptr, matrix, x1 + offset, h2 + offset, z, color, this.u0, this.v1, light);
+            write(ptr, matrix, x2 + offset, h1 + offset, z, color, this.u0, this.v1, light);
             ptr += GlyphVertex.STRIDE;
 
             write(ptr, matrix, x2 + offset, h2 + offset, z, color, this.u1, this.v1, light);
             ptr += GlyphVertex.STRIDE;
 
-            write(ptr, matrix, x2 + offset, h1 + offset, z, color, this.u1, this.v0, light);
+            write(ptr, matrix, x1 + offset, h2 + offset, z, color, this.u1, this.v0, light);
             ptr += GlyphVertex.STRIDE;
 
             writer.push(stack, buffer, 4, GlyphVertex.FORMAT);
