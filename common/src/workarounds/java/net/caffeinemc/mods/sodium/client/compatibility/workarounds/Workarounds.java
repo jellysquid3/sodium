@@ -37,7 +37,7 @@ public class Workarounds {
         var workarounds = EnumSet.noneOf(Reference.class);
         var operatingSystem = OsUtils.getOs();
 
-        if (NvidiaWorkarounds.isUsingNvidiaGraphicsCard()) {
+        if (NvidiaWorkarounds.isNvidiaGraphicsCardPresent()) {
             workarounds.add(Reference.NVIDIA_THREADED_OPTIMIZATIONS_BROKEN);
         }
 

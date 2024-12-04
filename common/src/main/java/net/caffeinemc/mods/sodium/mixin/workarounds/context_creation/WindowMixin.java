@@ -73,10 +73,10 @@ public class WindowMixin {
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL;createCapabilities()Lorg/lwjgl/opengl/GLCapabilities;", shift = At.Shift.AFTER))
     private void postContextReady(WindowEventHandler eventHandler, ScreenManager monitorTracker, DisplayData settings, String videoMode, String title, CallbackInfo ci) {
-        GlContextInfo driver = GlContextInfo.create();
-        LOGGER.info("OpenGL Vendor: {}", driver.vendor());
-        LOGGER.info("OpenGL Renderer: {}", driver.renderer());
-        LOGGER.info("OpenGL Version: {}", driver.version());
+        GlContextInfo context = GlContextInfo.create();
+        LOGGER.info("OpenGL Vendor: {}", context.vendor());
+        LOGGER.info("OpenGL Renderer: {}", context.renderer());
+        LOGGER.info("OpenGL Version: {}", context.version());
 
         // Capture the current WGL context so that we can detect it being replaced later.
         if (Util.getPlatform() == Util.OS.WINDOWS) {
@@ -85,8 +85,7 @@ public class WindowMixin {
             this.wglPrevContext = MemoryUtil.NULL;
         }
 
-        NvidiaWorkarounds.applyContextChanges(driver);
-        PostLaunchChecks.onContextInitialized();
+        PostLaunchChecks.onContextInitialized((NativeWindowHandle) this, context);
         ModuleScanner.checkModules((NativeWindowHandle) this);
     }
 
