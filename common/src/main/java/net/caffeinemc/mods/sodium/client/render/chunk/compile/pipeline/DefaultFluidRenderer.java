@@ -112,7 +112,7 @@ public class DefaultFluidRenderer {
 
         boolean isWater = fluidState.is(FluidTags.WATER);
 
-        float fluidHeight = this.fluidHeight(level, fluid, blockPos, Direction.UP);
+        float fluidHeight = this.fluidHeight(level, fluid, blockPos);
         float northWestHeight, southWestHeight, southEastHeight, northEastHeight;
         if (fluidHeight >= 1.0f) {
             northWestHeight = 1.0f;
@@ -121,10 +121,10 @@ public class DefaultFluidRenderer {
             northEastHeight = 1.0f;
         } else {
             var scratchPos = new BlockPos.MutableBlockPos();
-            float heightNorth = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.NORTH), Direction.NORTH);
-            float heightSouth = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.SOUTH), Direction.SOUTH);
-            float heightEast = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.EAST), Direction.EAST);
-            float heightWest = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.WEST), Direction.WEST);
+            float heightNorth = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.NORTH));
+            float heightSouth = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.SOUTH));
+            float heightEast = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.EAST));
+            float heightWest = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.WEST));
             northWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightWest, scratchPos.set(blockPos)
                     .move(Direction.NORTH)
                     .move(Direction.WEST));
@@ -445,7 +445,7 @@ public class DefaultFluidRenderer {
         }
 
         if (fluidHeightY > 0.0f || fluidHeightX > 0.0f) {
-            float height = this.fluidHeight(world, fluid, blockPos, Direction.UP);
+            float height = this.fluidHeight(world, fluid, blockPos);
 
             if (height >= 1.0f) {
                 return 1.0f;
@@ -475,7 +475,7 @@ public class DefaultFluidRenderer {
         }
     }
 
-    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos, Direction direction) {
+    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos) {
         BlockState blockState = world.getBlockState(blockPos);
         FluidState fluidState = blockState.getFluidState();
 
