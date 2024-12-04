@@ -126,13 +126,14 @@ public class BlockOcclusionCache {
         otherPos.set(selfPos.getX() + facing.getStepX(), selfPos.getY() + facing.getStepY(), selfPos.getZ() + facing.getStepZ());
         BlockState otherState = view.getBlockState(otherPos);
 
-        // don't render anything if the other blocks is the same fluid
-        if (otherState.getFluidState() == fluid) {
+        // check for special fluid occlusion behavior
+        if (PlatformBlockAccess.getInstance().shouldOccludeFluid(facing.getOpposite(), otherState, fluid)) {
             return false;
         }
 
-        // check for special fluid occlusion behavior
-        if (PlatformBlockAccess.getInstance().shouldOccludeFluid(facing.getOpposite(), otherState, fluid)) {
+        // don't render anything if the other blocks is the same fluid
+        // NOTE: this check is already included in the default implementation of the above shouldOccludeFluid
+        if (otherState.getFluidState().getType().isSame(fluid.getType())) {
             return false;
         }
 
