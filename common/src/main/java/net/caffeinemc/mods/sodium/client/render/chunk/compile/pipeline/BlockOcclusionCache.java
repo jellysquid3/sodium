@@ -108,9 +108,9 @@ public class BlockOcclusionCache {
             var selfShape = selfBlockState.getFaceOcclusionShape(facing);
 
             // only a non-empty self-shape can occlude anything
-            if (!selfShape.isEmpty()) {
+            if (!isEmptyShape(selfShape)) {
                 // a full self-shape occludes everything
-                if (selfShape == Shapes.block() && fluidShapeIsBlock) {
+                if (isFullShape(selfShape) && fluidShapeIsBlock) {
                     return false;
                 }
 
@@ -149,13 +149,13 @@ public class BlockOcclusionCache {
         var otherShape = otherState.getFaceOcclusionShape(facing.getOpposite());
 
         // If the other block has an empty cull shape, then it cannot hide any geometry
-        if (otherShape.isEmpty()) {
+        if (isEmptyShape(otherShape)) {
             return true;
         }
 
         // If both blocks use a full-cube cull shape, then they will always hide the faces between each other.
         // No voxel shape comparison is done after this point because it's redundant with the later more accurate check.
-        return otherShape != Shapes.block() || !fluidShapeIsBlock;
+        return !isFullShape(otherShape) || !fluidShapeIsBlock;
     }
 
     private boolean lookup(VoxelShape self, VoxelShape other) {
