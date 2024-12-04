@@ -1,7 +1,9 @@
 package net.caffeinemc.mods.sodium.client.compatibility.environment.probe;
 
+import net.caffeinemc.mods.sodium.client.compatibility.environment.GlContextInfo;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public enum GraphicsAdapterVendor {
@@ -41,6 +43,7 @@ public enum GraphicsAdapterVendor {
         return UNKNOWN;
     }
 
+    @NotNull
     public static GraphicsAdapterVendor fromIcdName(String name) {
         if (matchesPattern(INTEL_ICD_PATTERN, name)) {
             return INTEL;
@@ -51,6 +54,19 @@ public enum GraphicsAdapterVendor {
         } else {
             return UNKNOWN;
         }
+    }
+
+    @NotNull
+    public static GraphicsAdapterVendor fromContext(GlContextInfo context) {
+        var vendor = context.vendor();
+
+        return switch (vendor) {
+            case "NVIDIA Corporation" -> NVIDIA;
+            case "Intel", "Intel Open Source Technology Center" -> INTEL;
+            case "AMD", "ATI Technologies Inc." -> AMD;
+            default -> UNKNOWN;
+        };
+
     }
 
     private static boolean matchesPattern(Pattern pattern, String name) {
