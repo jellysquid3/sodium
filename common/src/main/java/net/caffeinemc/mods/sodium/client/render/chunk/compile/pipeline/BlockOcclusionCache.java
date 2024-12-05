@@ -35,7 +35,7 @@ public class BlockOcclusionCache {
      * @param view           The block view for this render context
      * @param selfPos        The position of the block
      * @param facing         The facing direction of the side to check
-     * @return True if the block side facing {@param dir} is not occluded, otherwise false
+     * @return True if the block side facing {@param facing} is not occluded, otherwise false
      */
     public boolean shouldDrawSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing) {
         BlockPos.MutableBlockPos neighborPos = this.cachedPositionObject;
@@ -92,13 +92,13 @@ public class BlockOcclusionCache {
     /**
      * Checks if a face of a fluid block should be rendered. It takes into account both occluding fluid face against its own waterlogged block state and the neighboring block state. This is an approximation that doesn't check voxel for shapes between the fluid and the neighboring block since that is handled by the fluid renderer separately and more accurately using actual fluid heights. It only uses voxel shape comparison for checking self-occlusion with the waterlogged block state.
      *
-     * @param selfBlockState  The state of the block in the level
-     * @param view            The block view for this render context
-     * @param selfPos         The position of the fluid
-     * @param facing          The facing direction of the side to check
-     * @param fluid           The fluid state
-     * @param fluidShape      The non-empty shape of the fluid
-     * @return True if the fluid side facing {@param dir} is not occluded, otherwise false
+     * @param selfBlockState The state of the block in the level
+     * @param view           The block view for this render context
+     * @param selfPos        The position of the fluid
+     * @param facing         The facing direction of the side to check
+     * @param fluid          The fluid state
+     * @param fluidShape     The non-empty shape of the fluid
+     * @return True if the fluid side facing {@param facing} is not occluded, otherwise false
      */
     public boolean shouldDrawFullBlockFluidSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing, FluidState fluid, VoxelShape fluidShape) {
         var fluidShapeIsBlock = fluidShape == Shapes.block();
