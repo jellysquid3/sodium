@@ -161,21 +161,20 @@ public class DefaultFluidRenderer {
             southEastHeight = 1.0f;
             northEastHeight = 1.0f;
         } else {
-            var scratchPos = new BlockPos.MutableBlockPos();
-            float heightNorth = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.NORTH));
-            float heightSouth = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.SOUTH));
-            float heightEast = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.EAST));
-            float heightWest = this.fluidHeight(level, fluid, scratchPos.setWithOffset(blockPos, Direction.WEST));
-            northWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightWest, scratchPos.set(blockPos)
+            float heightNorth = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.NORTH));
+            float heightSouth = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.SOUTH));
+            float heightEast = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.EAST));
+            float heightWest = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.WEST));
+            northWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightWest, this.scratchPos.set(blockPos)
                     .move(Direction.NORTH)
                     .move(Direction.WEST));
-            southWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightWest, scratchPos.set(blockPos)
+            southWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightWest, this.scratchPos.set(blockPos)
                     .move(Direction.SOUTH)
                     .move(Direction.WEST));
-            southEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightEast, scratchPos.set(blockPos)
+            southEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightEast, this.scratchPos.set(blockPos)
                     .move(Direction.SOUTH)
                     .move(Direction.EAST));
-            northEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightEast, scratchPos.set(blockPos)
+            northEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightEast, this.scratchPos.set(blockPos)
                     .move(Direction.NORTH)
                     .move(Direction.EAST));
         }
@@ -417,7 +416,7 @@ public class DefaultFluidRenderer {
 
         lighter.calculate(quad, pos, light, null, dir, false, false);
 
-        colorProvider.getColors(level, pos, scratchPos, fluidState, quad, this.quadColors);
+        colorProvider.getColors(level, pos, this.scratchPos, fluidState, quad, this.quadColors);
 
         // multiply the per-vertex color against the combined brightness
         // the combined brightness is the per-vertex brightness multiplied by the block's brightness
