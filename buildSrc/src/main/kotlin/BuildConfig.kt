@@ -2,7 +2,7 @@
 
 object BuildConfig {
     val MINECRAFT_VERSION: String = "1.21.4"
-    val NEOFORGE_VERSION: String = "21.4.0-beta"
+    val NEOFORGE_VERSION: String = "21.4.3-beta"
     val FABRIC_LOADER_VERSION: String = "0.16.9"
     val FABRIC_API_VERSION: String = "0.110.5+1.21.4"
 
