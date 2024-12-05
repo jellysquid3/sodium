@@ -186,7 +186,8 @@ public class DefaultFluidRenderer {
 
         quad.setFlags(0);
 
-        if (!cullUp && this.isSideExposedOffset(level, blockPos, Direction.UP, Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight)))) {
+        float totalMinHeight = Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight));
+        if (!cullUp && this.isSideExposedOffset(level, blockPos, Direction.UP, totalMinHeight)) {
             northWestHeight -= EPSILON;
             southWestHeight -= EPSILON;
             southEastHeight -= EPSILON;

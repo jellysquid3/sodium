@@ -101,24 +101,8 @@ public class BlockOcclusionCache {
      * @return True if the fluid side facing {@param facing} is not occluded, otherwise false
      */
     public boolean shouldDrawFullBlockFluidSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing, FluidState fluid, VoxelShape fluidShape) {
-        var fluidShapeIsBlock = fluidShape == Shapes.block();
-
-        // only perform self-occlusion if the own block state can't occlude
-        if (selfBlockState.canOcclude()) {
-            var selfShape = selfBlockState.getFaceOcclusionShape(facing);
-
-            // only a non-empty self-shape can occlude anything
-            if (!isEmptyShape(selfShape)) {
-                // a full self-shape occludes everything
-                if (isFullShape(selfShape) && fluidShapeIsBlock) {
-                    return false;
-                }
-
-                // perform occlusion of the fluid by the block it's contained in
-                if (!this.lookup(fluidShape, selfShape)) {
-                    return false;
-                }
-            }
+        if (isFluidSelfOccluded(selfBlockState, facing, fluidShape)) {
+            return false;
         }
 
         // perform occlusion against the neighboring block
@@ -154,7 +138,29 @@ public class BlockOcclusionCache {
 
         // If both blocks use a full-cube cull shape, then they will always hide the faces between each other.
         // No voxel shape comparison is done after this point because it's redundant with the later more accurate check.
-        return !isFullShape(otherShape) || !fluidShapeIsBlock;
+        return !isFullShape(otherShape) || !isFullShape(fluidShape);
+    }
+
+    public boolean isFluidSelfOccluded(BlockState selfBlockState, Direction facing, VoxelShape fluidShape) {
+        // only perform self-occlusion if the own block state can't occlude
+        if (selfBlockState.canOcclude()) {
+            var selfShape = selfBlockState.getFaceOcclusionShape(facing);
+
+            // only a non-empty self-shape can occlude anything
+            if (!isEmptyShape(selfShape)) {
+                // a full self-shape occludes everything
+                if (isFullShape(selfShape) && isFullShape(fluidShape)) {
+                    return true;
+                }
+
+                // perform occlusion of the fluid by the block it's contained in
+                if (!this.lookup(fluidShape, selfShape)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     // TODO: do we want all of these shapes to end up in the cache?
@@ -189,7 +195,12 @@ public class BlockOcclusionCache {
             return false;
         }
 
-        VoxelShape fluidShape = Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, height, 1.0D);
+        VoxelShape fluidShape;
+        if (height >= 1.0F) {
+            fluidShape = Shapes.block();
+        } else {
+            fluidShape = Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, height, 1.0D);
+        }
 
         return this.lookup(fluidShape, neighborShape);
     }
