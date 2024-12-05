@@ -159,6 +159,43 @@ public class BlockOcclusionCache {
         return !isFullShape(otherShape) || !fluidShapeIsBlock;
     }
 
+    // TODO: do we want all of these shapes to end up in the cache?
+    /**
+     * Checks if a face of a fluid block with a specific height should be rendered based on the neighboring block state.
+     *
+     * @param neighborBlockState The state of the neighboring block
+     * @param facing             The facing direction of the side to check
+     * @param height             The height of the fluid
+     * @return True if the fluid side facing {@param facing} is not occluded, otherwise false
+     */
+    public boolean shouldDrawAccurateFluidSide(BlockState neighborBlockState, Direction facing, float height) {
+        // zero-height fluids don't render anything anyway
+        if (height <= 0.0F) {
+            return false;
+        }
+
+        // only perform occlusion against blocks that can potentially occlude
+        if (!neighborBlockState.canOcclude()) {
+            return true;
+        }
+
+        VoxelShape neighborShape = neighborBlockState.getFaceOcclusionShape(facing);
+
+        // empty neighbor occlusion shape can't occlude anything
+        if (isEmptyShape(neighborShape)) {
+            return true;
+        }
+
+        // full neighbor occlusion shape occludes everything
+        if (isFullShape(neighborShape)) {
+            return false;
+        }
+
+        VoxelShape fluidShape = Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, height, 1.0D);
+
+        return this.lookup(fluidShape, neighborShape);
+    }
+
     private boolean lookup(VoxelShape self, VoxelShape other) {
         ShapeComparison comparison = this.cachedComparisonObject;
         comparison.self = self;

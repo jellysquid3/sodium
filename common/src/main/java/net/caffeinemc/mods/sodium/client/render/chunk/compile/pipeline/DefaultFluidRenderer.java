@@ -32,7 +32,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -72,22 +71,64 @@ public class DefaultFluidRenderer {
 
     private boolean isSideExposed(BlockAndTintGetter world, int x, int y, int z, Direction dir, float height) {
         BlockPos pos = this.scratchPos.set(x + dir.getStepX(), y + dir.getStepY(), z + dir.getStepZ());
-        BlockState blockState = world.getBlockState(pos);
+        return this.occlusionCache.shouldDrawAccurateFluidSide(world.getBlockState(pos), dir, height);
+    }
 
-        if (blockState.canOcclude()) {
-            VoxelShape shape = blockState.getOcclusionShape();
-
-            // Hoist these checks to avoid allocating the shape below
-            if (shape.isEmpty()) {
-                return true;
-            }
-
-            VoxelShape threshold = Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, height, 1.0D);
-
-            return !Shapes.blockOccudes(threshold, shape, dir);
+    private float fluidCornerHeight(BlockAndTintGetter world, Fluid fluid, float fluidHeight, float fluidHeightX, float fluidHeightY, BlockPos blockPos) {
+        if (fluidHeightY >= 1.0f || fluidHeightX >= 1.0f) {
+            return 1.0f;
         }
 
-        return true;
+        if (fluidHeightY > 0.0f || fluidHeightX > 0.0f) {
+            float height = this.fluidHeight(world, fluid, blockPos);
+
+            if (height >= 1.0f) {
+                return 1.0f;
+            }
+
+            this.modifyHeight(this.scratchHeight, this.scratchSamples, height);
+        }
+
+        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeight);
+        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightY);
+        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightX);
+
+        float result = this.scratchHeight.floatValue() / this.scratchSamples.intValue();
+        this.scratchHeight.setValue(0);
+        this.scratchSamples.setValue(0);
+
+        return result;
+    }
+
+    private static final float DISCARD_SAMPLE = -1.0f;
+
+    private void modifyHeight(MutableFloat totalHeight, MutableInt samples, float sample) {
+        if (sample >= 0.8f) {
+            totalHeight.add(sample * 10.0f);
+            samples.add(10);
+        } else if (sample >= 0.0f) {
+            totalHeight.add(sample);
+            samples.increment();
+        }
+
+        // else -> sample == DISCARD_SAMPLE
+    }
+
+    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos) {
+        BlockState blockState = world.getBlockState(blockPos);
+        FluidState fluidState = blockState.getFluidState();
+
+        if (fluid.isSame(fluidState.getType())) {
+            FluidState fluidStateUp = world.getFluidState(blockPos.above());
+
+            if (fluid.isSame(fluidStateUp.getType())) {
+                return 1.0f;
+            } else {
+                return fluidState.getOwnHeight();
+            }
+        }
+
+        return blockState.isSolid() ? DISCARD_SAMPLE : 0.0f;
     }
 
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
@@ -352,7 +393,6 @@ public class DefaultFluidRenderer {
                 if (!isOverlay) {
                     this.writeQuad(meshBuilder, collector, material, offset, quad, facing.getOpposite(), true);
                 }
-
             }
         }
     }
@@ -437,60 +477,5 @@ public class DefaultFluidRenderer {
         quad.setZ(i, z);
         quad.setTexU(i, u);
         quad.setTexV(i, v);
-    }
-
-    private float fluidCornerHeight(BlockAndTintGetter world, Fluid fluid, float fluidHeight, float fluidHeightX, float fluidHeightY, BlockPos blockPos) {
-        if (fluidHeightY >= 1.0f || fluidHeightX >= 1.0f) {
-            return 1.0f;
-        }
-
-        if (fluidHeightY > 0.0f || fluidHeightX > 0.0f) {
-            float height = this.fluidHeight(world, fluid, blockPos);
-
-            if (height >= 1.0f) {
-                return 1.0f;
-            }
-
-            this.modifyHeight(this.scratchHeight, this.scratchSamples, height);
-        }
-
-        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeight);
-        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightY);
-        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightX);
-
-        float result = this.scratchHeight.floatValue() / this.scratchSamples.intValue();
-        this.scratchHeight.setValue(0);
-        this.scratchSamples.setValue(0);
-
-        return result;
-    }
-
-    private void modifyHeight(MutableFloat totalHeight, MutableInt samples, float target) {
-        if (target >= 0.8f) {
-            totalHeight.add(target * 10.0f);
-            samples.add(10);
-        } else if (target >= 0.0f) {
-            totalHeight.add(target);
-            samples.increment();
-        }
-    }
-
-    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos) {
-        BlockState blockState = world.getBlockState(blockPos);
-        FluidState fluidState = blockState.getFluidState();
-
-        if (fluid.isSame(fluidState.getType())) {
-            FluidState fluidStateUp = world.getFluidState(blockPos.above());
-
-            if (fluid.isSame(fluidStateUp.getType())) {
-                return 1.0f;
-            } else {
-                return fluidState.getOwnHeight();
-            }
-        }
-        if (!blockState.isSolid()) {
-            return 0.0f;
-        }
-        return -1.0f;
     }
 }
