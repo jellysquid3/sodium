@@ -63,10 +63,18 @@ public class DefaultFluidRenderer {
         this.lighters = lighters;
     }
 
+    private boolean isFullBlockFluidSelfOccluded(BlockState blockState, Direction dir) {
+        return this.occlusionCache.isFluidSelfOccluded(blockState, dir, Shapes.block());
+    }
+
+    private boolean isFullBlockFluidNeighborOccluded(BlockAndTintGetter world, BlockPos pos, Direction dir, BlockState blockState, FluidState fluid) {
+        return !this.occlusionCache.shouldDrawFullBlockFluidSide(blockState, world, pos, dir, fluid, Shapes.block());
+    }
+
     private boolean isFullBlockFluidOccluded(BlockAndTintGetter world, BlockPos pos, Direction dir, BlockState blockState, FluidState fluid) {
         // check if this face of the fluid, assuming a full-block cull shape, is occluded by the block it's in or a neighboring block.
         // it doesn't do a voxel shape comparison with the neighboring blocks since that is already done by isSideExposed
-        return !this.occlusionCache.shouldDrawFullBlockFluidSide(blockState, world, pos, dir, fluid, Shapes.block());
+        return this.isFullBlockFluidSelfOccluded(blockState, dir) || this.isFullBlockFluidNeighborOccluded(world, pos, dir, blockState, fluid);
     }
 
     private boolean isSideExposed(BlockAndTintGetter world, BlockPos pos, Direction dir, float height) {
@@ -77,24 +85,34 @@ public class DefaultFluidRenderer {
         return this.isSideExposed(world, this.scratchPos.setWithOffset(originPos, dir), dir, height);
     }
 
-    private float fluidCornerHeight(BlockAndTintGetter world, Fluid fluid, float fluidHeight, float fluidHeightX, float fluidHeightY, BlockPos blockPos) {
-        if (fluidHeightY >= 1.0f || fluidHeightX >= 1.0f) {
+    private float fluidCornerHeight(BlockAndTintGetter world, Fluid fluid, float fluidHeight, float fluidHeightA, float fluidHeightB, BlockPos origin, Direction dirA, Direction dirB, boolean aExposed, boolean bExposed) {
+        if (fluidHeightB >= 1.0f || fluidHeightA >= 1.0f) {
             return 1.0f;
         }
 
-        if (fluidHeightY > 0.0f || fluidHeightX > 0.0f) {
-            float height = this.fluidHeight(world, fluid, blockPos);
+        if (fluidHeightB > 0.0f || fluidHeightA > 0.0f) {
+            // check that there's an accessible path to the diagonal
+            var aNeighbor = this.scratchPos.setWithOffset(origin, dirA);
+            var exposedAToAB = !this.isFullBlockFluidSelfOccluded(world.getBlockState(aNeighbor), dirB) && this.isSideExposedOffset(world, aNeighbor, dirB, 1.0f);
+            var bNeighbor = this.scratchPos.setWithOffset(origin, dirB);
+            var exposedBToAB = !this.isFullBlockFluidSelfOccluded(world.getBlockState(bNeighbor), dirA) && this.isSideExposedOffset(world, bNeighbor, dirA, 1.0f);
 
-            if (height >= 1.0f) {
-                return 1.0f;
+            if (aExposed && exposedAToAB || bExposed && exposedBToAB) {
+                // diagonal block's fluid height
+                var abNeighbor = this.scratchPos.set(origin).move(dirA).move(dirB);
+                float height = this.fluidHeight(world, fluid, abNeighbor);
+
+                if (height >= 1.0f) {
+                    return 1.0f;
+                }
+
+                this.modifyHeight(this.scratchHeight, this.scratchSamples, height);
             }
-
-            this.modifyHeight(this.scratchHeight, this.scratchSamples, height);
         }
 
         this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeight);
-        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightY);
-        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightX);
+        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightB);
+        this.modifyHeight(this.scratchHeight, this.scratchSamples, fluidHeightA);
 
         float result = this.scratchHeight.floatValue() / this.scratchSamples.intValue();
         this.scratchHeight.setValue(0);
@@ -131,7 +149,15 @@ public class DefaultFluidRenderer {
             }
         }
 
-        return blockState.isSolid() ? DISCARD_SAMPLE : 0.0f;
+        return 0.0f;
+    }
+
+    private float fluidHeightDiscardOccluded(BlockAndTintGetter world, Fluid fluid, BlockPos origin, Direction offset, boolean keepSample) {
+        if (!keepSample) {
+            return DISCARD_SAMPLE;
+        }
+
+        return this.fluidHeight(world, fluid, this.scratchPos.setWithOffset(origin, offset));
     }
 
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
@@ -140,10 +166,15 @@ public class DefaultFluidRenderer {
         boolean cullUp = this.isFullBlockFluidOccluded(level, blockPos, Direction.UP, blockState, fluidState);
         boolean cullDown = this.isFullBlockFluidOccluded(level, blockPos, Direction.DOWN, blockState, fluidState) ||
                 !this.isSideExposedOffset(level, blockPos, Direction.DOWN, 0.8888889F);
-        boolean cullNorth = this.isFullBlockFluidOccluded(level, blockPos, Direction.NORTH, blockState, fluidState);
-        boolean cullSouth = this.isFullBlockFluidOccluded(level, blockPos, Direction.SOUTH, blockState, fluidState);
-        boolean cullWest = this.isFullBlockFluidOccluded(level, blockPos, Direction.WEST, blockState, fluidState);
-        boolean cullEast = this.isFullBlockFluidOccluded(level, blockPos, Direction.EAST, blockState, fluidState);
+
+        boolean northSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.NORTH);
+        boolean southSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.SOUTH);
+        boolean westSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.WEST);
+        boolean eastSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.EAST);
+        boolean cullNorth = northSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.NORTH, blockState, fluidState);
+        boolean cullSouth = southSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.SOUTH, blockState, fluidState);
+        boolean cullWest = westSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.WEST, blockState, fluidState);
+        boolean cullEast = eastSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.EAST, blockState, fluidState);
 
         // stop rendering if all faces of the fluid are occluded
         if (cullUp && cullDown && cullEast && cullWest && cullNorth && cullSouth) {
@@ -153,29 +184,31 @@ public class DefaultFluidRenderer {
         boolean isWater = fluidState.is(FluidTags.WATER);
 
         float fluidHeight = this.fluidHeight(level, fluid, blockPos);
+        boolean fullFluidBlock = fluidHeight >= 1.0f;
         float northWestHeight, southWestHeight, southEastHeight, northEastHeight;
-        if (fluidHeight >= 1.0f) {
+        boolean northExposed = !northSelfOcclusion;
+        boolean southExposed = !southSelfOcclusion;
+        boolean westExposed = !westSelfOcclusion;
+        boolean eastExposed = !eastSelfOcclusion;
+        if (fullFluidBlock) {
             northWestHeight = 1.0f;
             southWestHeight = 1.0f;
             southEastHeight = 1.0f;
             northEastHeight = 1.0f;
         } else {
-            float heightNorth = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.NORTH));
-            float heightSouth = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.SOUTH));
-            float heightEast = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.EAST));
-            float heightWest = this.fluidHeight(level, fluid, this.scratchPos.setWithOffset(blockPos, Direction.WEST));
-            northWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightWest, this.scratchPos.set(blockPos)
-                    .move(Direction.NORTH)
-                    .move(Direction.WEST));
-            southWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightWest, this.scratchPos.set(blockPos)
-                    .move(Direction.SOUTH)
-                    .move(Direction.WEST));
-            southEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightEast, this.scratchPos.set(blockPos)
-                    .move(Direction.SOUTH)
-                    .move(Direction.EAST));
-            northEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightEast, this.scratchPos.set(blockPos)
-                    .move(Direction.NORTH)
-                    .move(Direction.EAST));
+            northExposed = northExposed && this.isSideExposedOffset(level, blockPos, Direction.NORTH, 1.0f);
+            southExposed = southExposed && this.isSideExposedOffset(level, blockPos, Direction.SOUTH, 1.0f);
+            westExposed = westExposed && this.isSideExposedOffset(level, blockPos, Direction.WEST, 1.0f);
+            eastExposed = eastExposed && this.isSideExposedOffset(level, blockPos, Direction.EAST, 1.0f);
+
+            float heightNorth = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.NORTH, northExposed);
+            float heightSouth = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.SOUTH, southExposed);
+            float heightEast = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.EAST, eastExposed);
+            float heightWest = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.WEST, westExposed);
+            northWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightWest, blockPos, Direction.NORTH, Direction.WEST, northExposed, westExposed);
+            southWestHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightWest, blockPos, Direction.SOUTH, Direction.WEST, southExposed, westExposed);
+            southEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightSouth, heightEast, blockPos, Direction.SOUTH, Direction.EAST, southExposed, eastExposed);
+            northEastHeight = this.fluidCornerHeight(level, fluid, fluidHeight, heightNorth, heightEast, blockPos, Direction.NORTH, Direction.EAST, northExposed, eastExposed);
         }
         float yOffset = cullDown ? 0.0F : EPSILON;
 
@@ -350,8 +383,12 @@ public class DefaultFluidRenderer {
                 }
             }
 
+            var sideFluidHeight = Math.max(c1, c2);
             this.scratchPos.setWithOffset(blockPos, dir);
-            if (this.isSideExposed(level, this.scratchPos, dir, Math.max(c1, c2))) {
+
+            // allow skipping the side exposed check if it's not a full block, which would have skipped the early exposure check, and the fluid height is 1 meaning the side exposure was already checked earlier
+            // (!fullFluidBlock && sideFluidHeight == 1.0f) ||
+            if (this.isSideExposed(level, this.scratchPos, dir, sideFluidHeight)) {
                 int adjX = this.scratchPos.getX();
                 int adjY = this.scratchPos.getY();
                 int adjZ = this.scratchPos.getZ();
