@@ -122,9 +122,7 @@ public class BlockOcclusionCache {
         }
 
         // perform occlusion against the neighboring block
-        BlockPos.MutableBlockPos otherPos = this.cachedPositionObject;
-        otherPos.set(selfPos.getX() + facing.getStepX(), selfPos.getY() + facing.getStepY(), selfPos.getZ() + facing.getStepZ());
-        BlockState otherState = view.getBlockState(otherPos);
+        BlockState otherState = view.getBlockState(this.cachedPositionObject.setWithOffset(selfPos, facing));
 
         // check for special fluid occlusion behavior
         if (PlatformBlockAccess.getInstance().shouldOccludeFluid(facing.getOpposite(), otherState, fluid)) {
@@ -147,7 +145,7 @@ public class BlockOcclusionCache {
             return true;
         }
 
-        var otherShape = otherState.getFaceOcclusionShape(facing.getOpposite());
+        var otherShape = otherState.getFaceOcclusionShape(DirectionUtil.getOpposite(facing));
 
         // If the other block has an empty cull shape, then it cannot hide any geometry
         if (isEmptyShape(otherShape)) {
@@ -179,7 +177,7 @@ public class BlockOcclusionCache {
             return true;
         }
 
-        VoxelShape neighborShape = neighborBlockState.getFaceOcclusionShape(facing);
+        VoxelShape neighborShape = neighborBlockState.getFaceOcclusionShape(DirectionUtil.getOpposite(facing));
 
         // empty neighbor occlusion shape can't occlude anything
         if (isEmptyShape(neighborShape)) {

@@ -69,9 +69,12 @@ public class DefaultFluidRenderer {
         return !this.occlusionCache.shouldDrawFullBlockFluidSide(blockState, world, pos, dir, fluid, Shapes.block());
     }
 
-    private boolean isSideExposed(BlockAndTintGetter world, int x, int y, int z, Direction dir, float height) {
-        BlockPos pos = this.scratchPos.set(x + dir.getStepX(), y + dir.getStepY(), z + dir.getStepZ());
+    private boolean isSideExposed(BlockAndTintGetter world, BlockPos pos, Direction dir, float height) {
         return this.occlusionCache.shouldDrawAccurateFluidSide(world.getBlockState(pos), dir, height);
+    }
+
+    private boolean isSideExposedOffset(BlockAndTintGetter world, BlockPos originPos, Direction dir, float height) {
+        return this.isSideExposed(world, this.scratchPos.setWithOffset(originPos, dir), dir, height);
     }
 
     private float fluidCornerHeight(BlockAndTintGetter world, Fluid fluid, float fluidHeight, float fluidHeightX, float fluidHeightY, BlockPos blockPos) {
@@ -132,15 +135,11 @@ public class DefaultFluidRenderer {
     }
 
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
-        int posX = blockPos.getX();
-        int posY = blockPos.getY();
-        int posZ = blockPos.getZ();
-
         Fluid fluid = fluidState.getType();
 
         boolean cullUp = this.isFullBlockFluidOccluded(level, blockPos, Direction.UP, blockState, fluidState);
         boolean cullDown = this.isFullBlockFluidOccluded(level, blockPos, Direction.DOWN, blockState, fluidState) ||
-                !this.isSideExposed(level, posX, posY, posZ, Direction.DOWN, 0.8888889F);
+                !this.isSideExposedOffset(level, blockPos, Direction.DOWN, 0.8888889F);
         boolean cullNorth = this.isFullBlockFluidOccluded(level, blockPos, Direction.NORTH, blockState, fluidState);
         boolean cullSouth = this.isFullBlockFluidOccluded(level, blockPos, Direction.SOUTH, blockState, fluidState);
         boolean cullWest = this.isFullBlockFluidOccluded(level, blockPos, Direction.WEST, blockState, fluidState);
@@ -187,7 +186,7 @@ public class DefaultFluidRenderer {
 
         quad.setFlags(0);
 
-        if (!cullUp && this.isSideExposed(level, posX, posY, posZ, Direction.UP, Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight)))) {
+        if (!cullUp && this.isSideExposedOffset(level, blockPos, Direction.UP, Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight)))) {
             northWestHeight -= EPSILON;
             southWestHeight -= EPSILON;
             southEastHeight -= EPSILON;
@@ -266,7 +265,7 @@ public class DefaultFluidRenderer {
             this.updateQuad(quad, level, blockPos, lighter, Direction.UP, ModelQuadFacing.POS_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.POS_Y : ModelQuadFacing.UNASSIGNED, false);
 
-            if (fluidState.shouldRenderBackwardUpFace(level, this.scratchPos.set(posX, posY + 1, posZ))) {
+            if (fluidState.shouldRenderBackwardUpFace(level, this.scratchPos.setWithOffset(blockPos, Direction.UP))) {
                 this.writeQuad(meshBuilder, collector, material, offset, quad,
                         aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
             }
@@ -350,10 +349,11 @@ public class DefaultFluidRenderer {
                 }
             }
 
-            if (this.isSideExposed(level, posX, posY, posZ, dir, Math.max(c1, c2))) {
-                int adjX = posX + dir.getStepX();
-                int adjY = posY + dir.getStepY();
-                int adjZ = posZ + dir.getStepZ();
+            this.scratchPos.setWithOffset(blockPos, dir);
+            if (this.isSideExposed(level, this.scratchPos, dir, Math.max(c1, c2))) {
+                int adjX = this.scratchPos.getX();
+                int adjY = this.scratchPos.getY();
+                int adjZ = this.scratchPos.getZ();
 
                 TextureAtlasSprite sprite = sprites[1];
 
