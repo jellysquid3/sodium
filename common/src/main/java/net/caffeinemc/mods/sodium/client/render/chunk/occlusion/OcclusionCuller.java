@@ -96,7 +96,7 @@ public class OcclusionCuller {
             processQueue(this.queue.read(), this.queue.write());
         }
 
-        this.addNearbySections(visitor, viewport, searchDistance, frame);
+        this.addNearbySections(visitor, viewport);
 
         this.visitor = null;
         this.viewport = null;
@@ -266,7 +266,7 @@ public class OcclusionCuller {
     // for all neighboring, even diagonally neighboring, sections around the origin to render them
     // if their extended bounding box is visible, and they may render large models that extend
     // outside the 16x16x16 base volume of the section.
-    private void addNearbySections(Visitor visitor, Viewport viewport, float searchDistance, int frame) {
+    private void addNearbySections(GraphOcclusionVisitor visitor, Viewport viewport) {
         var origin = viewport.getChunkCoord();
         var originX = origin.getX();
         var originY = origin.getY();
@@ -282,9 +282,9 @@ public class OcclusionCuller {
                     var section = this.getRenderSection(originX + dx, originY + dy, originZ + dz);
 
                     // additionally render not yet visited but visible sections
-                    if (section != null && section.getLastVisibleFrame() != frame && isWithinNearbySectionFrustum(viewport, section)) {
+                    if (section != null && section.getLastVisibleSearchToken() != this.token && isWithinNearbySectionFrustum(viewport, section)) {
                         // reset state on first visit, but don't enqueue
-                        section.setLastVisibleFrame(frame);
+                        section.setLastVisibleSearchToken(this.token);
 
                         visitor.visit(section);
                     }

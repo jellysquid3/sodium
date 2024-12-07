@@ -223,7 +223,7 @@ public class RenderSectionManager {
         this.trees.put(CullType.FRUSTUM, tree);
         this.renderTree = tree;
 
-        this.renderLists = tree.createRenderLists();
+        this.renderLists = tree.createRenderLists(viewport);
 
         // remove the other trees, they're very wrong by now
         this.trees.remove(CullType.WIDE);
