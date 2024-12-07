@@ -4,10 +4,10 @@ import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
-import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.util.iterator.ByteArrayIterator;
 import net.caffeinemc.mods.sodium.client.util.iterator.ByteIterator;
 import net.caffeinemc.mods.sodium.client.util.iterator.ReversibleByteArrayIterator;
+import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,10 +43,10 @@ public class ChunkRenderList {
     // clamping the relative camera position to the region bounds means there can only be very few different distances
     private static final int SORTING_HISTOGRAM_SIZE = RenderRegion.REGION_WIDTH + RenderRegion.REGION_HEIGHT + RenderRegion.REGION_LENGTH - 2;
 
-    public void sortSections(CameraTransform transform, int[] sortItems) {
-        var cameraX = Mth.clamp((transform.intX >> 4) - this.region.getChunkX(), 0, RenderRegion.REGION_WIDTH - 1);
-        var cameraY = Mth.clamp((transform.intY >> 4) - this.region.getChunkY(), 0, RenderRegion.REGION_HEIGHT - 1);
-        var cameraZ = Mth.clamp((transform.intZ >> 4) - this.region.getChunkZ(), 0, RenderRegion.REGION_LENGTH - 1);
+    public void sortSections(SectionPos cameraPos, int[] sortItems) {
+        var cameraX = Mth.clamp(cameraPos.getX() - this.region.getChunkX(), 0, RenderRegion.REGION_WIDTH - 1);
+        var cameraY = Mth.clamp(cameraPos.getY() - this.region.getChunkY(), 0, RenderRegion.REGION_HEIGHT - 1);
+        var cameraZ = Mth.clamp(cameraPos.getZ() - this.region.getChunkZ(), 0, RenderRegion.REGION_LENGTH - 1);
 
         int[] histogram = new int[SORTING_HISTOGRAM_SIZE];
 
