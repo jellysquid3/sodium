@@ -41,12 +41,11 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         this.isFrustumTested = frustumTested;
         var offsetDistance = Mth.ceil(buildDistance / 16.0f) + 1;
 
-        var transform = viewport.getTransform();
-
         // the offset applied to section coordinates to encode their position in the octree
-        var cameraSectionX = transform.intX >> 4;
-        var cameraSectionY = transform.intY >> 4;
-        var cameraSectionZ = transform.intZ >> 4;
+        var sectionPos = viewport.getChunkCoord();
+        var cameraSectionX = sectionPos.getX();
+        var cameraSectionY = sectionPos.getY();
+        var cameraSectionZ = sectionPos.getZ();
         this.baseOffsetX = cameraSectionX - offsetDistance;
         this.baseOffsetY = cameraSectionY - offsetDistance;
         this.baseOffsetZ = cameraSectionZ - offsetDistance;
@@ -54,9 +53,10 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         this.invMaxDistance = PROXIMITY_FACTOR / buildDistance;
 
         if (frustumTested) {
-            this.cameraX = transform.intX;
-            this.cameraY = transform.intY;
-            this.cameraZ = transform.intZ;
+            var blockPos = viewport.getBlockCoord();
+            this.cameraX = blockPos.getX();
+            this.cameraY = blockPos.getY();
+            this.cameraZ = blockPos.getZ();
         } else {
             this.cameraX = (cameraSectionX << 4);
             this.cameraY = (cameraSectionY << 4);

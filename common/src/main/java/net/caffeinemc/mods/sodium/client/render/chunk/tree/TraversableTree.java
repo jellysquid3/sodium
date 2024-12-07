@@ -61,13 +61,12 @@ public class TraversableTree extends Tree {
         this.viewport = viewport;
         this.distanceLimit = distanceLimit;
 
-        var transform = viewport.getTransform();
-
         // + 1 to offset section position to compensate for shifted global offset
         // adjust camera block position to account for fractional part of camera position
-        this.cameraOffsetX = ((transform.intX + (int) Math.signum(transform.fracX)) >> 4) - this.offsetX + 1;
-        this.cameraOffsetY = ((transform.intY + (int) Math.signum(transform.fracY)) >> 4) - this.offsetY + 1;
-        this.cameraOffsetZ = ((transform.intZ + (int) Math.signum(transform.fracZ)) >> 4) - this.offsetZ + 1;
+        var sectionPos = viewport.getChunkCoord();
+        this.cameraOffsetX = sectionPos.getX() - this.offsetX + 1;
+        this.cameraOffsetY = sectionPos.getY() - this.offsetY + 1;
+        this.cameraOffsetZ = sectionPos.getZ() - this.offsetZ + 1;
 
         // everything is already inside the distance limit if the build distance is smaller
         var initialInside = this.distanceLimit >= buildDistance ? INSIDE_DISTANCE : 0;

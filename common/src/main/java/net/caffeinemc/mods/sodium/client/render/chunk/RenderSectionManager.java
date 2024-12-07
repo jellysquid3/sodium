@@ -106,6 +106,7 @@ public class RenderSectionManager {
     private boolean needsGraphUpdate = true;
     private boolean needsRenderListUpdate = true;
     private boolean cameraChanged = false;
+    private boolean needsFrustumTaskListUpdate = true;
 
     private @Nullable BlockPos cameraBlockPos;
     private @Nullable Vector3dc cameraPosition;
@@ -154,6 +155,7 @@ public class RenderSectionManager {
 
         this.frame += 1;
         this.needsRenderListUpdate |= this.cameraChanged;
+        this.needsFrustumTaskListUpdate |= this.needsRenderListUpdate;
 
         // do sync bfs based on update immediately (flawless frames) or if the camera moved too much
         var shouldRenderSync = this.cameraTimingControl.getShouldRenderSync(camera);
@@ -186,11 +188,15 @@ public class RenderSectionManager {
 
         this.scheduleAsyncWork(camera, viewport, spectator);
 
+        if (this.needsFrustumTaskListUpdate) {
+            this.updateFrustumTaskList(viewport);
+        }
         if (this.needsRenderListUpdate) {
             processRenderListUpdate(viewport);
         }
 
         this.needsRenderListUpdate = false;
+        this.needsFrustumTaskListUpdate = false;
         this.needsGraphUpdate = false;
         this.cameraChanged = false;
     }
@@ -341,7 +347,7 @@ public class RenderSectionManager {
 
     private static final LongArrayList timings = new LongArrayList();
 
-    private void processRenderListUpdate(Viewport viewport) {
+    private void updateFrustumTaskList(Viewport viewport) {
         // schedule generating a frustum task list if there's no frustum tree task running
         if (this.globalTaskTree != null) {
             var frustumTaskListPending = false;
@@ -359,7 +365,9 @@ public class RenderSectionManager {
                 this.pendingTasks.add(task);
             }
         }
+    }
 
+    private void processRenderListUpdate(Viewport viewport) {
         // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
         SectionTree bestTree = null;
         boolean bestTreeValid = false;
@@ -907,7 +915,6 @@ public class RenderSectionManager {
     // TODO: this fixes very delayed tasks, but it still regresses on same-frame tasks that don't get to run in time because the frustum task collection task takes at least one (and usually only one) frame to run
     // maybe intercept tasks that are scheduled in zero- or one-frame defer mode?
     // collect and prioritize regardless of visibility if it's an important defer mode?
-    // TODO: vertical sorting seems to be broken?
     private ChunkUpdateType upgradePendingUpdate(RenderSection section, ChunkUpdateType type) {
         var current = section.getPendingUpdate();
         type = ChunkUpdateType.getPromotionUpdateType(current, type);
@@ -917,6 +924,7 @@ public class RenderSectionManager {
         // if the section received a new task, mark in the task tree so an update can happen before a global cull task runs
         if (this.globalTaskTree != null && type != null && current == null) {
             this.globalTaskTree.markSectionTask(section);
+            this.needsFrustumTaskListUpdate = true;
         }
 
         return type;
@@ -955,13 +963,7 @@ public class RenderSectionManager {
                 pendingUpdate = ChunkUpdateType.REBUILD;
             }
 
-            pendingUpdate = ChunkUpdateType.getPromotionUpdateType(section.getPendingUpdate(), pendingUpdate);
-            if (pendingUpdate != null) {
-                section.setPendingUpdate(pendingUpdate, this.lastFrameAtTime);
-
-                // force update to schedule rebuild task on this section
-                this.markGraphDirty();
-            }
+            this.upgradePendingUpdate(section, pendingUpdate);
         }
     }
 

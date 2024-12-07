@@ -20,10 +20,10 @@ public abstract class AbstractTraversableMultiForest<T extends TraversableTree> 
 
     @Override
     public void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
-        var transform = viewport.getTransform();
-        var cameraSectionX = transform.intX >> 4;
-        var cameraSectionY = transform.intY >> 4;
-        var cameraSectionZ = transform.intZ >> 4;
+        var cameraPos = viewport.getChunkCoord();
+        var cameraSectionX = cameraPos.getX();
+        var cameraSectionY = cameraPos.getY();
+        var cameraSectionZ = cameraPos.getZ();
 
         // sort the trees by distance from the camera by sorting a packed index array.
         var items = new int[this.trees.length];
