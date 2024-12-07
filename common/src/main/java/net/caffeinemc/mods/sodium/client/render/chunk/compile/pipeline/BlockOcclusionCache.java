@@ -183,6 +183,11 @@ public class BlockOcclusionCache {
             return true;
         }
 
+        // if it's an up-fluid and the height is not 1, it can't be occluded
+        if (facing == Direction.UP && height < 1.0F) {
+            return true;
+        }
+
         VoxelShape neighborShape = neighborBlockState.getFaceOcclusionShape(DirectionUtil.getOpposite(facing));
 
         // empty neighbor occlusion shape can't occlude anything
