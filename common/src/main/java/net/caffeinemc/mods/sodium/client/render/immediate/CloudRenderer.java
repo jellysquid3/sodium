@@ -242,19 +242,24 @@ public class CloudRenderer {
             }
         }
 
-        MeshData builtBuffer = bufferBuilder.build();
+        @Nullable MeshData meshData = bufferBuilder.build();
+        @Nullable VertexBuffer vertexBuffer = null;
 
-        VertexBuffer vertexBuffer = null;
+        if (existingGeometry != null) {
+            vertexBuffer = existingGeometry.vertexBuffer();
+        }
 
-        if (builtBuffer != null) {
-            if (existingGeometry != null) {
-                vertexBuffer = existingGeometry.vertexBuffer();
-            }
+        if (meshData != null) {
             if (vertexBuffer == null) {
                 vertexBuffer = new VertexBuffer(VertexBuffer.Usage.DYNAMIC);
             }
 
-            uploadToVertexBuffer(vertexBuffer, builtBuffer);
+            uploadToVertexBuffer(vertexBuffer, meshData);
+        } else {
+            if (vertexBuffer != null) {
+                vertexBuffer.close();
+                vertexBuffer = null;
+            }
         }
 
         Tesselator.getInstance().clear();
@@ -521,7 +526,10 @@ public class CloudRenderer {
 
         if (this.builtGeometry != null) {
             var vertexBuffer = this.builtGeometry.vertexBuffer();
-            vertexBuffer.close();
+
+            if (vertexBuffer != null) {
+                vertexBuffer.close();
+            }
 
             this.builtGeometry = null;
         }
@@ -746,7 +754,7 @@ public class CloudRenderer {
         }
     }
 
-    public record CloudGeometry(VertexBuffer vertexBuffer, CloudGeometryParameters params) {
+    public record CloudGeometry(@Nullable VertexBuffer vertexBuffer, CloudGeometryParameters params) {
 
     }
 
