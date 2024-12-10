@@ -35,6 +35,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+// TODO: fix perfectly joining stairs from being water-transmitting and making weird fluid shapes, use shape operation BooleanOp.AND (extend cache to support it)
 public class DefaultFluidRenderer {
     // TODO: allow this to be changed by vertex format, WARNING: make sure TranslucentGeometryCollector knows about EPSILON
     // TODO: move fluid rendering to a separate render pass and control glPolygonOffset and glDepthFunc to fix this properly
@@ -65,21 +66,15 @@ public class DefaultFluidRenderer {
     }
 
     /**
-     * Checks if a face of a fluid block should be rendered. It takes into account both occluding fluid face against its own waterlogged block state and the neighboring block state. This is an approximation that doesn't check voxel for shapes between the fluid and the neighboring block since that is handled by the fluid renderer separately and more accurately using actual fluid heights. It only uses voxel shape comparison for checking self-occlusion with the waterlogged block state.
+     * Checks if a face of a fluid block, assumed to be a full block for now, should be considered for rendering based on the neighboring block state, but not the voxel shapes (that test is done later).
      *
-     * @param selfBlockState The state of the block in the level
-     * @param view           The block view for this render context
-     * @param selfPos        The position of the fluid
-     * @param facing         The facing direction of the side to check
-     * @param fluid          The fluid state
-     * @param fluidShape     The non-empty shape of the fluid
+     * @param view    The block view for this render context
+     * @param selfPos The position of the fluid
+     * @param facing  The facing direction of the side to check
+     * @param fluid   The fluid state
      * @return True if the fluid side facing {@param facing} is not occluded, otherwise false
      */
-    public boolean shouldDrawFullBlockFluidSide(BlockState selfBlockState, BlockGetter view, BlockPos selfPos, Direction facing, FluidState fluid, VoxelShape fluidShape) {
-        if (isFluidSelfOccluded(selfBlockState, facing, fluidShape)) {
-            return false;
-        }
-
+    public boolean isFullBlockFluidSideVisible(BlockGetter view, BlockPos selfPos, Direction facing, FluidState fluid) {
         // perform occlusion against the neighboring block
         BlockState otherState = view.getBlockState(this.occlusionScratchPos.setWithOffset(selfPos, facing));
 
@@ -113,7 +108,7 @@ public class DefaultFluidRenderer {
 
         // If both blocks use a full-cube cull shape, then they will always hide the faces between each other.
         // No voxel shape comparison is done after this point because it's redundant with the later more accurate check.
-        return !ShapeComparisonCache.isFullShape(otherShape) || !ShapeComparisonCache.isFullShape(fluidShape);
+        return !ShapeComparisonCache.isFullShape(otherShape);
     }
 
     /**
@@ -124,7 +119,7 @@ public class DefaultFluidRenderer {
      * @param fluidShape     The shape of the fluid
      * @return True if the fluid side facing {@param facing} is occluded by the block it's contained in, otherwise false
      */
-    public boolean isFluidSelfOccluded(BlockState selfBlockState, Direction facing, VoxelShape fluidShape) {
+    public boolean isFluidSelfVisible(BlockState selfBlockState, Direction facing, VoxelShape fluidShape) {
         // only perform self-occlusion if the own block state can't occlude
         if (selfBlockState.canOcclude()) {
             var selfShape = selfBlockState.getFaceOcclusionShape(facing);
@@ -133,28 +128,33 @@ public class DefaultFluidRenderer {
             if (!ShapeComparisonCache.isEmptyShape(selfShape)) {
                 // a full self-shape occludes everything
                 if (ShapeComparisonCache.isFullShape(selfShape) && ShapeComparisonCache.isFullShape(fluidShape)) {
-                    return true;
+                    return false;
                 }
 
                 // perform occlusion of the fluid by the block it's contained in
-                if (!this.occlusionCache.lookup(fluidShape, selfShape)) {
-                    return true;
-                }
+                return this.occlusionCache.lookup(fluidShape, selfShape);
             }
         }
 
-        return false;
+        return true;
+    }
+
+    private boolean isFullBlockFluidSelfVisible(BlockState blockState, Direction dir) {
+        return this.isFluidSelfVisible(blockState, dir, Shapes.block());
     }
 
     /**
      * Checks if a face of a fluid block with a specific height should be rendered based on the neighboring block state.
      *
-     * @param neighborBlockState The state of the neighboring block
-     * @param facing             The facing direction of the side to check
-     * @param height             The height of the fluid
+     * @param world       The block view for this render context
+     * @param neighborPos The position of the neighboring block
+     * @param facing      The facing direction of the side to check
+     * @param height      The height of the fluid
      * @return True if the fluid side facing {@param facing} is not occluded, otherwise false
      */
-    public boolean shouldDrawAccurateFluidSide(BlockState neighborBlockState, Direction facing, float height) {
+    public boolean isFluidSideExposed(BlockAndTintGetter world, BlockPos neighborPos, Direction facing, float height) {
+        var neighborBlockState = world.getBlockState(neighborPos);
+
         // zero-height fluids don't render anything anyway
         if (height <= 0.0F) {
             return false;
@@ -192,26 +192,12 @@ public class DefaultFluidRenderer {
         return this.occlusionCache.lookup(fluidShape, neighborShape);
     }
 
-    private boolean isFullBlockFluidSelfOccluded(BlockState blockState, Direction dir) {
-        return this.isFluidSelfOccluded(blockState, dir, Shapes.block());
-    }
-
-    private boolean isFullBlockFluidNeighborOccluded(BlockAndTintGetter world, BlockPos pos, Direction dir, BlockState blockState, FluidState fluid) {
-        return !this.shouldDrawFullBlockFluidSide(blockState, world, pos, dir, fluid, Shapes.block());
-    }
-
-    private boolean isFullBlockFluidOccluded(BlockAndTintGetter world, BlockPos pos, Direction dir, BlockState blockState, FluidState fluid) {
-        // check if this face of the fluid, assuming a full-block cull shape, is occluded by the block it's in or a neighboring block.
-        // it doesn't do a voxel shape comparison with the neighboring blocks since that is already done by isSideExposed
-        return this.isFullBlockFluidSelfOccluded(blockState, dir) || this.isFullBlockFluidNeighborOccluded(world, pos, dir, blockState, fluid);
-    }
-
-    private boolean isSideExposed(BlockAndTintGetter world, BlockPos pos, Direction dir, float height) {
-        return this.shouldDrawAccurateFluidSide(world.getBlockState(pos), dir, height);
-    }
-
     private boolean isSideExposedOffset(BlockAndTintGetter world, BlockPos originPos, Direction dir, float height) {
-        return this.isSideExposed(world, this.scratchPos.setWithOffset(originPos, dir), dir, height);
+        return this.isFluidSideExposed(world, this.scratchPos.setWithOffset(originPos, dir), dir, height);
+    }
+
+    private boolean isFullBlockFluidVisible(BlockAndTintGetter world, BlockPos pos, Direction dir, BlockState blockState, FluidState fluid) {
+        return isFullBlockFluidSelfVisible(blockState, dir) && this.isFullBlockFluidSideVisible(world, pos, dir, fluid);
     }
 
     private static final float DISCARD_SAMPLE = -1.0f;
@@ -230,7 +216,8 @@ public class DefaultFluidRenderer {
             }
         }
 
-        return 0.0f;
+        // NOTE: returning 0 here makes shallow water shallower and bends water surfaces towards non-occluding blocks like glass or non-waterlogged stairs
+        return DISCARD_SAMPLE;
     }
 
     private float fluidHeightDiscardOccluded(BlockAndTintGetter world, Fluid fluid, BlockPos origin, Direction offset) {
@@ -245,6 +232,7 @@ public class DefaultFluidRenderer {
             this.scratchHeight += sample;
             this.scratchSamples++;
         }
+
 
         // else -> sample == DISCARD_SAMPLE
     }
@@ -264,10 +252,10 @@ public class DefaultFluidRenderer {
         if (filteredHeightA > 0.0f || filteredHeightB > 0.0f) {
             // check that there's an accessible path to the diagonal
             var aNeighbor = this.scratchPos.setWithOffset(origin, dirA);
-            var exposedAD = !this.isFullBlockFluidSelfOccluded(world.getBlockState(aNeighbor), dirB) &&
+            var exposedAD = this.isFullBlockFluidSelfVisible(world.getBlockState(aNeighbor), dirB) &&
                     this.isSideExposedOffset(world, aNeighbor, dirB, 1.0f);
             var bNeighbor = this.scratchPos.setWithOffset(origin, dirB);
-            var exposedBD = !this.isFullBlockFluidSelfOccluded(world.getBlockState(bNeighbor), dirA) &&
+            var exposedBD = this.isFullBlockFluidSelfVisible(world.getBlockState(bNeighbor), dirA) &&
                     this.isSideExposedOffset(world, bNeighbor, dirA, 1.0f);
 
             exposedADB = exposedAD && exposedBD;
@@ -305,21 +293,22 @@ public class DefaultFluidRenderer {
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
         Fluid fluid = fluidState.getType();
 
-        boolean cullUp = this.isFullBlockFluidOccluded(level, blockPos, Direction.UP, blockState, fluidState);
-        boolean cullDown = this.isFullBlockFluidOccluded(level, blockPos, Direction.DOWN, blockState, fluidState) ||
-                !this.isSideExposedOffset(level, blockPos, Direction.DOWN, 0.8888889F);
+        boolean upVisible = this.isFullBlockFluidVisible(level, blockPos, Direction.UP, blockState, fluidState);
+        boolean downVisible = this.isFullBlockFluidVisible(level, blockPos, Direction.DOWN, blockState, fluidState) &&
+                this.isSideExposedOffset(level, blockPos, Direction.DOWN, 0.8888889F);
 
-        boolean northSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.NORTH);
-        boolean southSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.SOUTH);
-        boolean westSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.WEST);
-        boolean eastSelfOcclusion = this.isFullBlockFluidSelfOccluded(blockState, Direction.EAST);
-        boolean cullNorth = northSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.NORTH, blockState, fluidState);
-        boolean cullSouth = southSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.SOUTH, blockState, fluidState);
-        boolean cullWest = westSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.WEST, blockState, fluidState);
-        boolean cullEast = eastSelfOcclusion || this.isFullBlockFluidNeighborOccluded(level, blockPos, Direction.EAST, blockState, fluidState);
+        // TODO: disentangle why there are so many checks here. Can we just combine everything into one set of "visible/exposed" flags? Why does it seem to break when I do that, is it necessary to have self-visibility separate?
+        boolean northSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.NORTH);
+        boolean southSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.SOUTH);
+        boolean westSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.WEST);
+        boolean eastSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.EAST);
+        boolean northVisible = northSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.NORTH, blockState, fluidState);
+        boolean southVisible = southSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.SOUTH, blockState, fluidState);
+        boolean westVisible = westSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.WEST, blockState, fluidState);
+        boolean eastVisible = eastSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.EAST, blockState, fluidState);
 
         // stop rendering if all faces of the fluid are occluded
-        if (cullUp && cullDown && cullEast && cullWest && cullNorth && cullSouth) {
+        if (!upVisible && !downVisible && !eastVisible && !westVisible && !northVisible && !southVisible) {
             return;
         }
 
@@ -334,10 +323,10 @@ public class DefaultFluidRenderer {
             southEastHeight = 1.0f;
             northEastHeight = 1.0f;
         } else {
-            boolean northExposed = !northSelfOcclusion && this.isSideExposedOffset(level, blockPos, Direction.NORTH, 1.0f);
-            boolean southExposed = !southSelfOcclusion && this.isSideExposedOffset(level, blockPos, Direction.SOUTH, 1.0f);
-            boolean westExposed = !westSelfOcclusion && this.isSideExposedOffset(level, blockPos, Direction.WEST, 1.0f);
-            boolean eastExposed = !eastSelfOcclusion && this.isSideExposedOffset(level, blockPos, Direction.EAST, 1.0f);
+            boolean northExposed = northSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.NORTH, 1.0f);
+            boolean southExposed = southSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.SOUTH, 1.0f);
+            boolean westExposed = westSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.WEST, 1.0f);
+            boolean eastExposed = eastSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.EAST, 1.0f);
             float heightNorth = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.NORTH);
             float heightSouth = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.SOUTH);
             float heightEast = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.EAST);
@@ -348,7 +337,7 @@ public class DefaultFluidRenderer {
             southEastHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.SOUTH, Direction.EAST, heightSouth, heightEast, southExposed, eastExposed);
             northEastHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.NORTH, Direction.EAST, heightNorth, heightEast, northExposed, eastExposed);
         }
-        float yOffset = cullDown ? 0.0F : EPSILON;
+        float yOffset = !downVisible ? 0.0F : EPSILON;
 
         final ModelQuadViewMutable quad = this.quad;
 
@@ -358,7 +347,7 @@ public class DefaultFluidRenderer {
         quad.setFlags(0);
 
         float totalMinHeight = Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight));
-        if (!cullUp && this.isSideExposedOffset(level, blockPos, Direction.UP, totalMinHeight)) {
+        if (upVisible && this.isSideExposedOffset(level, blockPos, Direction.UP, totalMinHeight)) {
             northWestHeight -= EPSILON;
             southWestHeight -= EPSILON;
             southEastHeight -= EPSILON;
@@ -443,7 +432,7 @@ public class DefaultFluidRenderer {
             }
         }
 
-        if (!cullDown) {
+        if (downVisible) {
             TextureAtlasSprite sprite = sprites[0];
 
             float minU = sprite.getU0();
@@ -473,7 +462,7 @@ public class DefaultFluidRenderer {
 
             switch (dir) {
                 case NORTH -> {
-                    if (cullNorth) {
+                    if (!northVisible) {
                         continue;
                     }
                     c1 = northWestHeight;
@@ -484,7 +473,7 @@ public class DefaultFluidRenderer {
                     z2 = z1;
                 }
                 case SOUTH -> {
-                    if (cullSouth) {
+                    if (!southVisible) {
                         continue;
                     }
                     c1 = southEastHeight;
@@ -495,7 +484,7 @@ public class DefaultFluidRenderer {
                     z2 = z1;
                 }
                 case WEST -> {
-                    if (cullWest) {
+                    if (!westVisible) {
                         continue;
                     }
                     c1 = southWestHeight;
@@ -506,7 +495,7 @@ public class DefaultFluidRenderer {
                     z2 = 0.0f;
                 }
                 case EAST -> {
-                    if (cullEast) {
+                    if (!eastVisible) {
                         continue;
                     }
                     c1 = northEastHeight;
@@ -524,7 +513,7 @@ public class DefaultFluidRenderer {
             var sideFluidHeight = Math.max(c1, c2);
             this.scratchPos.setWithOffset(blockPos, dir);
 
-            if (this.isSideExposed(level, this.scratchPos, dir, sideFluidHeight)) {
+            if (this.isFluidSideExposed(level, this.scratchPos, dir, sideFluidHeight)) {
                 int adjX = this.scratchPos.getX();
                 int adjY = this.scratchPos.getY();
                 int adjZ = this.scratchPos.getZ();
