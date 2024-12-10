@@ -222,7 +222,7 @@ public class DefaultFluidRenderer {
         return DISCARD_SAMPLE;
     }
 
-    private float fluidHeightDiscardOccluded(BlockAndTintGetter world, Fluid fluid, BlockPos origin, Direction offset) {
+    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos origin, Direction offset) {
         return this.fluidHeight(world, fluid, this.scratchPos.setWithOffset(origin, offset));
     }
 
@@ -234,7 +234,6 @@ public class DefaultFluidRenderer {
             this.scratchHeight += sample;
             this.scratchSamples++;
         }
-
 
         // else -> sample == DISCARD_SAMPLE
     }
@@ -274,15 +273,15 @@ public class DefaultFluidRenderer {
             }
         }
 
-        this.addHeightSample(fluidHeight);
-
         // add samples for the sides if they're exposed or if there's a path through the diagonal to them
-        if (exposedB || exposedA && exposedADB) {
-            this.addHeightSample(fluidHeightB);
-        }
         if (exposedA || exposedB && exposedADB) {
             this.addHeightSample(fluidHeightA);
         }
+        if (exposedB || exposedA && exposedADB) {
+            this.addHeightSample(fluidHeightB);
+        }
+
+        this.addHeightSample(fluidHeight);
 
         // gather the samples and reset
         float result = this.scratchHeight / this.scratchSamples;
@@ -332,10 +331,10 @@ public class DefaultFluidRenderer {
             boolean southExposed = southSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.SOUTH, 1.0f);
             boolean westExposed = westSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.WEST, 1.0f);
             boolean eastExposed = eastSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.EAST, 1.0f);
-            float heightNorth = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.NORTH);
-            float heightSouth = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.SOUTH);
-            float heightEast = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.EAST);
-            float heightWest = this.fluidHeightDiscardOccluded(level, fluid, blockPos, Direction.WEST);
+            float heightNorth = this.fluidHeight(level, fluid, blockPos, Direction.NORTH);
+            float heightSouth = this.fluidHeight(level, fluid, blockPos, Direction.SOUTH);
+            float heightEast = this.fluidHeight(level, fluid, blockPos, Direction.EAST);
+            float heightWest = this.fluidHeight(level, fluid, blockPos, Direction.WEST);
 
             northWestHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.NORTH, Direction.WEST, heightNorth, heightWest, northExposed, westExposed);
             southWestHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.SOUTH, Direction.WEST, heightSouth, heightWest, southExposed, westExposed);
