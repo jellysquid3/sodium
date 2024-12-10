@@ -351,8 +351,21 @@ public class DefaultFluidRenderer {
 
         quad.setFlags(0);
 
-        float totalMinHeight = Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight));
-        if (upVisible && this.isSideExposedOffset(level, blockPos, Direction.UP, totalMinHeight)) {
+        // calculate up fluid face visibility
+        if (upVisible) {
+            float totalMinHeight = Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight));
+            upVisible = this.isSideExposedOffset(level, blockPos, Direction.UP, totalMinHeight);
+        }
+
+        // apply heuristic to not render inner up face and outer up face if there's solid or same-fluid blocks around it
+        boolean innerUpFaceVisible = true;
+        if (upVisible) {
+            innerUpFaceVisible = isUpFaceExposedByNeighbors(level, blockPos, fluid, 1, 1, -1) ||
+                    isUpFaceExposedByNeighbors(level, blockPos, fluid, 0, 1, 0);
+            upVisible = innerUpFaceVisible || isUpFaceExposedByNeighbors(level, blockPos, fluid, 1, 2, 1);
+        }
+
+        if (upVisible) {
             northWestHeight -= EPSILON;
             southWestHeight -= EPSILON;
             southEastHeight -= EPSILON;
@@ -431,7 +444,7 @@ public class DefaultFluidRenderer {
             this.updateQuad(quad, level, blockPos, lighter, Direction.UP, ModelQuadFacing.POS_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.POS_Y : ModelQuadFacing.UNASSIGNED, false);
 
-            if (fluidState.shouldRenderBackwardUpFace(level, this.scratchPos.setWithOffset(blockPos, Direction.UP))) {
+            if (innerUpFaceVisible) {
                 this.writeQuad(meshBuilder, collector, material, offset, quad,
                         aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
             }
@@ -562,6 +575,23 @@ public class DefaultFluidRenderer {
                 }
             }
         }
+    }
+
+    private boolean isUpFaceExposedByNeighbors(LevelSlice level, BlockPos blockPos, Fluid fluid, int yOffset, int range, int skipRange) {
+        for (int i = -range; i <= range; ++i) {
+            for (int j = -range; j <= range; ++j) {
+                if (skipRange >= 0 && i <= skipRange && i >= -skipRange && j <= skipRange && j >= -skipRange) {
+                    continue;
+                }
+
+                // the face is visible if any of the blocks
+                BlockPos blockPos2 = this.scratchPos.setWithOffset(blockPos, i, yOffset, j);
+                if (!level.getFluidState(blockPos2).getType().isSame(fluid) && !level.getBlockState(blockPos2).isSolidRender()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean isAlignedEquals(float a, float b) {
