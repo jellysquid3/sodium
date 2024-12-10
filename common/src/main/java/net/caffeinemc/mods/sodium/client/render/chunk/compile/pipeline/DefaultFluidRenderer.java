@@ -42,6 +42,10 @@ public class DefaultFluidRenderer {
     public static final float EPSILON = 0.001f;
     private static final float ALIGNED_EQUALS_EPSILON = 0.011f;
 
+    private static final float DISCARD_SAMPLE = -1.0f;
+    private static final float FULL_HEIGHT = 0.8888889f;
+    private static final float FLATTENING_FACTOR = 0.07f;
+
     private final BlockPos.MutableBlockPos scratchPos = new BlockPos.MutableBlockPos();
     private final BlockPos.MutableBlockPos occlusionScratchPos = new BlockPos.MutableBlockPos();
     private float scratchHeight = 0.0f;
@@ -200,8 +204,6 @@ public class DefaultFluidRenderer {
         return isFullBlockFluidSelfVisible(blockState, dir) && this.isFullBlockFluidSideVisible(world, pos, dir, fluid);
     }
 
-    private static final float DISCARD_SAMPLE = -1.0f;
-
     private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos) {
         BlockState blockState = world.getBlockState(blockPos);
         FluidState fluidState = blockState.getFluidState();
@@ -284,6 +286,9 @@ public class DefaultFluidRenderer {
 
         // gather the samples and reset
         float result = this.scratchHeight / this.scratchSamples;
+        if (result < FULL_HEIGHT) {
+            result -= (FULL_HEIGHT - result) * FLATTENING_FACTOR;
+        }
         this.scratchHeight = 0.0f;
         this.scratchSamples = 0;
 
@@ -295,7 +300,7 @@ public class DefaultFluidRenderer {
 
         boolean upVisible = this.isFullBlockFluidVisible(level, blockPos, Direction.UP, blockState, fluidState);
         boolean downVisible = this.isFullBlockFluidVisible(level, blockPos, Direction.DOWN, blockState, fluidState) &&
-                this.isSideExposedOffset(level, blockPos, Direction.DOWN, 0.8888889F);
+                this.isSideExposedOffset(level, blockPos, Direction.DOWN, FULL_HEIGHT);
 
         // TODO: disentangle why there are so many checks here. Can we just combine everything into one set of "visible/exposed" flags? Why does it seem to break when I do that, is it necessary to have self-visibility separate?
         boolean northSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.NORTH);
