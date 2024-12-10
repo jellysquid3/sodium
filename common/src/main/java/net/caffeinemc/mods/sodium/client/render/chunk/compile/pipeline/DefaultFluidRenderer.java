@@ -209,7 +209,7 @@ public class DefaultFluidRenderer {
         FluidState fluidState = blockState.getFluidState();
 
         if (fluid.isSame(fluidState.getType())) {
-            FluidState fluidStateUp = world.getFluidState(blockPos.above());
+            FluidState fluidStateUp = world.getFluidState(this.scratchPos.setWithOffset(blockPos, Direction.UP));
 
             if (fluid.isSame(fluidStateUp.getType())) {
                 return 1.0f;
@@ -218,7 +218,15 @@ public class DefaultFluidRenderer {
             }
         }
 
-        // NOTE: returning 0 here makes shallow water shallower and bends water surfaces towards non-occluding blocks like glass or non-waterlogged stairs
+        // if the block is air and there's either air or water below it, actually return a valid 0 sample that will bend the fluid downwards.
+        // this is important to maintain the sloped shape of diagonal waterfalls
+        if (blockState.isAir()) {
+            var downBlockState = world.getBlockState(this.scratchPos.setWithOffset(blockPos, Direction.DOWN));
+            if (downBlockState.isAir() || downBlockState.getFluidState().getType().isSame(fluid)) {
+                return 0.0f;
+            }
+        }
+
         return DISCARD_SAMPLE;
     }
 
@@ -285,8 +293,12 @@ public class DefaultFluidRenderer {
 
         // gather the samples and reset
         float result = this.scratchHeight / this.scratchSamples;
+
+        // shallow water is flattened somewhat to compensate for the fact that many air samples (height zero)
+        // that are otherwise taken into account with the reference implementation are discarded
         if (result < FULL_HEIGHT) {
             result -= (FULL_HEIGHT - result) * FLATTENING_FACTOR;
+            result = Math.max(result, 0.0f);
         }
         this.scratchHeight = 0.0f;
         this.scratchSamples = 0;
