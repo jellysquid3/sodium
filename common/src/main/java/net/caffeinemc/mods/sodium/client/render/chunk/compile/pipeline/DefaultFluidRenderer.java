@@ -218,13 +218,8 @@ public class DefaultFluidRenderer {
             }
         }
 
-        // if the block is air and there's either air or water below it, actually return a valid 0 sample that will bend the fluid downwards.
-        // this is important to maintain the sloped shape of diagonal waterfalls
-        if (blockState.isAir()) {
-            var downBlockState = world.getBlockState(this.scratchPos.setWithOffset(blockPos, Direction.DOWN));
-            if (downBlockState.isAir() || downBlockState.getFluidState().getType().isSame(fluid)) {
-                return 0.0f;
-            }
+        if (!blockState.isSolid()) {
+            return 0.0f;
         }
 
         return DISCARD_SAMPLE;
@@ -294,12 +289,6 @@ public class DefaultFluidRenderer {
         // gather the samples and reset
         float result = this.scratchHeight / this.scratchSamples;
 
-        // shallow water is flattened somewhat to compensate for the fact that many air samples (height zero)
-        // that are otherwise taken into account with the reference implementation are discarded
-        if (result < FULL_HEIGHT) {
-            result -= (FULL_HEIGHT - result) * FLATTENING_FACTOR;
-            result = Math.max(result, 0.0f);
-        }
         this.scratchHeight = 0.0f;
         this.scratchSamples = 0;
 
