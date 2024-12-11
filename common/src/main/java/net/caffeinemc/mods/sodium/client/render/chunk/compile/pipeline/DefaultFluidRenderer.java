@@ -310,6 +310,7 @@ public class DefaultFluidRenderer {
         boolean southSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.SOUTH);
         boolean westSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.WEST);
         boolean eastSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.EAST);
+
         boolean northVisible = northSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.NORTH, fluidState);
         boolean southVisible = southSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.SOUTH, fluidState);
         boolean westVisible = westSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.WEST, fluidState);
@@ -335,6 +336,7 @@ public class DefaultFluidRenderer {
             boolean southExposed = southSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.SOUTH, 1.0f);
             boolean westExposed = westSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.WEST, 1.0f);
             boolean eastExposed = eastSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.EAST, 1.0f);
+
             float heightNorth = this.fluidHeight(level, fluid, blockPos, Direction.NORTH);
             float heightSouth = this.fluidHeight(level, fluid, blockPos, Direction.SOUTH);
             float heightEast = this.fluidHeight(level, fluid, blockPos, Direction.EAST);
@@ -475,7 +477,13 @@ public class DefaultFluidRenderer {
 
             this.updateQuad(quad, level, blockPos, lighter, Direction.DOWN, ModelQuadFacing.NEG_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.NEG_Y, false);
-            this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.POS_Y, true);
+
+            // render inwards facing down face if the block below is not sturdy
+            // this is a better heuristic than using !isSolid (water rendered on too few blocks) or !isSolidRender (water rendered on too many blocks)
+            var below = this.scratchPos.setWithOffset(blockPos, Direction.DOWN);
+            if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+                this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.POS_Y, true);
+            }
         }
 
         quad.setFlags(ModelQuadFlags.IS_PARALLEL | ModelQuadFlags.IS_ALIGNED);
