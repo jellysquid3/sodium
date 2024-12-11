@@ -597,8 +597,8 @@ public class DefaultFluidRenderer {
                 }
 
                 // the face is visible if any of the blocks
-                BlockPos blockPos2 = this.scratchPos.setWithOffset(blockPos, i, yOffset, j);
-                if (!level.getFluidState(blockPos2).getType().isSame(fluid) && !level.getBlockState(blockPos2).isSolidRender()) {
+                BlockPos otherBlockPos = this.scratchPos.setWithOffset(blockPos, i, yOffset, j);
+                if (!(level.getFluidState(otherBlockPos).isSourceOfType(fluid) || level.getBlockState(otherBlockPos).isSolidRender())) {
                     return true;
                 }
             }
