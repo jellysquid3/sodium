@@ -44,7 +44,6 @@ public class DefaultFluidRenderer {
 
     private static final float DISCARD_SAMPLE = -1.0f;
     private static final float FULL_HEIGHT = 0.8888889f;
-    private static final float FLATTENING_FACTOR = 0.07f;
 
     private final BlockPos.MutableBlockPos scratchPos = new BlockPos.MutableBlockPos();
     private final BlockPos.MutableBlockPos occlusionScratchPos = new BlockPos.MutableBlockPos();
@@ -302,7 +301,11 @@ public class DefaultFluidRenderer {
         boolean downVisible = this.isFullBlockFluidVisible(level, blockPos, Direction.DOWN, blockState, fluidState) &&
                 this.isSideExposedOffset(level, blockPos, Direction.DOWN, FULL_HEIGHT);
 
-        // TODO: disentangle why there are so many checks here. Can we just combine everything into one set of "visible/exposed" flags? Why does it seem to break when I do that, is it necessary to have self-visibility separate?
+        // There are different concepts here:
+        // "visible" means the fluid face is rendered. Fluid faces are not rendered if it has neighbors of the same fluid type.
+        // "exposed" means there's an open path through this face of the fluid block. This is independent of whether there's another block of this type of fluid there.
+        // "self-visible" means the block the fluid is inside isn't preventing the fluid face from rendering.
+        // Visible implies self-visible implies exposed but not the other way around.
         boolean northSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.NORTH);
         boolean southSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.SOUTH);
         boolean westSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.WEST);
@@ -341,6 +344,12 @@ public class DefaultFluidRenderer {
             southWestHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.SOUTH, Direction.WEST, heightSouth, heightWest, southExposed, westExposed);
             southEastHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.SOUTH, Direction.EAST, heightSouth, heightEast, southExposed, eastExposed);
             northEastHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.NORTH, Direction.EAST, heightNorth, heightEast, northExposed, eastExposed);
+
+            // use the approximate exposure data to maybe cull faces
+            northVisible &= northExposed;
+            southVisible &= southExposed;
+            westVisible &= westExposed;
+            eastVisible &= eastExposed;
         }
         float yOffset = !downVisible ? 0.0F : EPSILON;
 
