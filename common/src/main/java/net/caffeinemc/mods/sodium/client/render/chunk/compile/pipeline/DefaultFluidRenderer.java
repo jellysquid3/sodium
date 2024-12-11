@@ -318,10 +318,10 @@ public class DefaultFluidRenderer {
         boolean southSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.SOUTH);
         boolean westSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.WEST);
         boolean eastSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.EAST);
-        boolean northVisible = northSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.NORTH, blockState, fluidState);
-        boolean southVisible = southSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.SOUTH, blockState, fluidState);
-        boolean westVisible = westSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.WEST, blockState, fluidState);
-        boolean eastVisible = eastSelfVisible && this.isFullBlockFluidVisible(level, blockPos, Direction.EAST, blockState, fluidState);
+        boolean northVisible = northSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.NORTH, fluidState);
+        boolean southVisible = southSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.SOUTH, fluidState);
+        boolean westVisible = westSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.WEST, fluidState);
+        boolean eastVisible = eastSelfVisible && this.isFullBlockFluidSideVisible(level, blockPos, Direction.EAST, fluidState);
 
         // stop rendering if all faces of the fluid are occluded
         if (!upVisible && !downVisible && !eastVisible && !westVisible && !northVisible && !southVisible) {
