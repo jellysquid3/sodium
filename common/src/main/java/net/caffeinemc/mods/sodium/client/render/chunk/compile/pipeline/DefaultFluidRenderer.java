@@ -550,19 +550,14 @@ public class DefaultFluidRenderer {
             this.scratchPos.setWithOffset(blockPos, dir);
 
             if (this.isFluidSideExposed(level, this.scratchPos, dir, sideFluidHeight)) {
-                int adjX = this.scratchPos.getX();
-                int adjY = this.scratchPos.getY();
-                int adjZ = this.scratchPos.getZ();
-
                 TextureAtlasSprite sprite = sprites[1];
 
                 boolean isOverlay = false;
 
                 if (sprites.length > 2 && sprites[2] != null) {
-                    BlockPos adjPos = this.scratchPos.set(adjX, adjY, adjZ);
-                    BlockState adjBlock = level.getBlockState(adjPos);
+                    BlockState adjBlock = level.getBlockState(this.scratchPos);
 
-                    if (PlatformBlockAccess.getInstance().shouldShowFluidOverlay(adjBlock, level, adjPos, fluidState)) {
+                    if (PlatformBlockAccess.getInstance().shouldShowFluidOverlay(adjBlock, level, this.scratchPos, fluidState)) {
                         sprite = sprites[2];
                         isOverlay = true;
                     }
