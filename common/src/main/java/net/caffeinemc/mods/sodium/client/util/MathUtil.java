@@ -13,6 +13,20 @@ public class MathUtil {
     }
 
     /**
+     * <p>Rounds the integer {@param num} up to the next multiple of {@param alignment}. This multiple *MUST* be
+     * a power-of-two, or undefined behavior will occur.</p>
+     *
+     * @param num The number to round up
+     * @param alignment The power-of-two multiple to round to
+     * @return The rounded number
+     */
+    public static int align(int num, int alignment) {
+        int additive = alignment - 1;
+        int mask = ~additive;
+        return (num + additive) & mask;
+    }
+
+    /**
      * Converts a float to a comparable integer value. This is used to compare
      * floating point values by their int bits (for example packed in a long).
      * <p>
