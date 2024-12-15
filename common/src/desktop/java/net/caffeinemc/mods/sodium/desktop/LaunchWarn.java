@@ -7,7 +7,7 @@ import java.awt.*;
 import java.io.IOException;
 
 public class LaunchWarn {
-    private static final String HELP_URL = "https://github.com/CaffeineMC/sodium/wiki/Installation";
+    private static final String HELP_URL = "https://link.caffeinemc.net/guides/sodium/installation";
 
     private static final String RICH_MESSAGE =
                     "<html>" +

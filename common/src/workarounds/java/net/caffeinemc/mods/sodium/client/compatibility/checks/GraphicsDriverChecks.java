@@ -31,9 +31,9 @@ class GraphicsDriverChecks {
                                 Installed version: ###CURRENT_DRIVER###
                                 Required version: 10.18.10.5161 (or newer)
                                 
-                                You must update your graphics card driver in order to continue."""
+                                Please click the 'Help' button to read more about how to fix this problem."""
                                 .replace("###CURRENT_DRIVER###", installedVersionString),
-                        "https://github.com/CaffeineMC/sodium/wiki/Driver-Compatibility#windows-intel-gen7");
+                        "https://link.caffeinemc.net/help/sodium/graphics-driver/windows/intel/gh-899");
             }
         }
 
@@ -53,9 +53,9 @@ class GraphicsDriverChecks {
                                 Installed version: ###CURRENT_DRIVER###
                                 Required version: 536.23 (or newer)
                                 
-                                You must update your graphics card driver in order to continue."""
+                                Please click the 'Help' button to read more about how to fix this problem."""
                                 .replace("###CURRENT_DRIVER###", installedVersionString),
-                        "https://github.com/CaffeineMC/sodium/wiki/Driver-Compatibility#nvidia-gpus");
+                        "https://link.caffeinemc.net/help/sodium/graphics-driver/windows/nvidia/gh-1486");
 
             }
         }
