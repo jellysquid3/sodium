@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline;
 
 
+import it.unimi.dsi.fastutil.bytes.ByteArrayFIFOQueue;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.caffeinemc.mods.sodium.client.model.color.ColorProvider;
@@ -49,6 +50,8 @@ public class DefaultFluidRenderer {
     private final BlockPos.MutableBlockPos occlusionScratchPos = new BlockPos.MutableBlockPos();
     private float scratchHeight = 0.0f;
     private int scratchSamples = 0;
+    private final ByteArrayFIFOQueue queue = new ByteArrayFIFOQueue();
+    private long visited = 0;
 
     private final ShapeComparisonCache occlusionCache = new ShapeComparisonCache();
 
@@ -369,11 +372,8 @@ public class DefaultFluidRenderer {
         }
 
         // apply heuristic to not render inner up face and outer up face if there's solid or same-fluid blocks around it
-        boolean innerUpFaceVisible = true;
         if (upVisible) {
-            innerUpFaceVisible = isUpFaceExposedByNeighbors(level, blockPos, fluid, 1, 1, -1) ||
-                    isUpFaceExposedByNeighbors(level, blockPos, fluid, 0, 1, 0);
-            upVisible = innerUpFaceVisible || isUpFaceExposedByNeighbors(level, blockPos, fluid, 1, 2, 1);
+            upVisible = isUpFaceExposedByNeighbors(level, blockPos, fluid);
         }
 
         if (upVisible) {
@@ -454,11 +454,7 @@ public class DefaultFluidRenderer {
 
             this.updateQuad(quad, level, blockPos, lighter, Direction.UP, ModelQuadFacing.POS_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.POS_Y : ModelQuadFacing.UNASSIGNED, false);
-
-            if (innerUpFaceVisible) {
-                this.writeQuad(meshBuilder, collector, material, offset, quad,
-                        aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
-            }
+            this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
         }
 
         if (downVisible) {
@@ -589,20 +585,61 @@ public class DefaultFluidRenderer {
         }
     }
 
-    private boolean isUpFaceExposedByNeighbors(LevelSlice level, BlockPos blockPos, Fluid fluid, int yOffset, int range, int skipRange) {
-        for (int i = -range; i <= range; ++i) {
-            for (int j = -range; j <= range; ++j) {
-                if (skipRange >= 0 && i <= skipRange && i >= -skipRange && j <= skipRange && j >= -skipRange) {
-                    continue;
-                }
+    private long offsetToMask(int x, int y, int z) {
+        return 1L << ((x + 2) + (y << 5) + (z + 2) * 5);
+    }
 
-                // the face is visible if any of the blocks
-                BlockPos otherBlockPos = this.scratchPos.setWithOffset(blockPos, i, yOffset, j);
-                if (!(level.getFluidState(otherBlockPos).isSourceOfType(fluid) || level.getBlockState(otherBlockPos).isSolidRender())) {
+    private boolean visitExposureNeighbor(BlockGetter level, BlockPos origin, Fluid fluid, ByteArrayFIFOQueue queue, byte xOffset, byte yOffset, byte zOffset) {
+        var upNeighborMask = offsetToMask(xOffset, yOffset, zOffset);
+        if ((this.visited & upNeighborMask) == 0) {
+            this.visited |= upNeighborMask;
+
+            var other = this.scratchPos.setWithOffset(origin, xOffset, yOffset, zOffset);
+            var blockState = level.getBlockState(other);
+            if (!blockState.isSolidRender()) {
+                if (!blockState.getFluidState().isSourceOfType(fluid)) {
                     return true;
+                } else {
+                    queue.enqueue(xOffset);
+                    queue.enqueue(yOffset);
+                    queue.enqueue(zOffset);
                 }
             }
         }
+
+        return false;
+    }
+
+    private boolean isUpFaceExposedByNeighbors(BlockGetter level, BlockPos origin, Fluid fluid) {
+        this.visited = 1L << offsetToMask(0, 0, 0);
+        var queue = this.queue;
+        queue.clear();
+        queue.enqueue((byte) 0);
+        queue.enqueue((byte) 0);
+        queue.enqueue((byte) 0);
+
+        while (!queue.isEmpty()) {
+            var x = queue.dequeueByte();
+            var y = queue.dequeueByte();
+            var z = queue.dequeueByte();
+
+            if (y == 0 && visitExposureNeighbor(level, origin, fluid, queue, x, (byte) 1, z)) {
+                return true;
+            }
+            if (x >= 0 && x < 2 && visitExposureNeighbor(level, origin, fluid, queue, (byte) (x + 1), y, z)) {
+                return true;
+            }
+            if (x <= 0 && x > -2 && visitExposureNeighbor(level, origin, fluid, queue, (byte) (x - 1), y, z)) {
+                return true;
+            }
+            if (z >= 0 && z < 2 && visitExposureNeighbor(level, origin, fluid, queue, x, y, (byte) (z + 1))) {
+                return true;
+            }
+            if (z <= 0 && z > -2 && visitExposureNeighbor(level, origin, fluid, queue, x, y, (byte) (z - 1))) {
+                return true;
+            }
+        }
+
         return false;
     }
 
