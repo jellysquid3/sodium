@@ -49,7 +49,7 @@ public class PreLaunchChecks {
                 .replace("###ADVICE_STRING###", advice);
 
         PlatformHelper.showCriticalErrorAndClose(null, "Sodium Renderer - Unsupported LWJGL", message,
-                "https://github.com/CaffeineMC/sodium/wiki/LWJGL-Compatibility");
+                "https://link.caffeinemc.net/help/sodium/runtime-issue/lwjgl3/gh-2561");
     }
 
     private static boolean isUsingKnownCompatibleLwjglVersion() {
