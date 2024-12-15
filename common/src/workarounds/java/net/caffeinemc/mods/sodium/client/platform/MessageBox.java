@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.platform;
 
 import net.caffeinemc.mods.sodium.client.compatibility.environment.OsUtils;
+import net.caffeinemc.mods.sodium.client.platform.windows.api.Shell32;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.User32;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.msgbox.MsgBoxCallback;
 import net.caffeinemc.mods.sodium.client.platform.windows.api.msgbox.MsgBoxParamSw;
@@ -58,11 +59,7 @@ public class MessageBox {
 
             if (helpUrl != null) {
                 msgBoxCallback = MsgBoxCallback.create(lpHelpInfo -> {
-                    try {
-                        Desktop.getDesktop().browse(URI.create(helpUrl));
-                    } catch (IOException e) {
-                        System.out.println("Failed to open! Giving up.");
-                    }
+                    Shell32.browseUrl(window, helpUrl);
                 });
             } else {
                 msgBoxCallback = null;
