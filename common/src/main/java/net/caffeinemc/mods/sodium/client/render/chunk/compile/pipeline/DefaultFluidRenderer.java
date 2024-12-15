@@ -478,10 +478,9 @@ public class DefaultFluidRenderer {
             this.updateQuad(quad, level, blockPos, lighter, Direction.DOWN, ModelQuadFacing.NEG_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.NEG_Y, false);
 
-            // render inwards facing down face if the block below is not sturdy
-            // this is a better heuristic than using !isSolid (water rendered on too few blocks) or !isSolidRender (water rendered on too many blocks)
-            var below = this.scratchPos.setWithOffset(blockPos, Direction.DOWN);
-            if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+            // render inwards facing down fluid face using the same heuristic as the side faces
+            var blockStateBelow = level.getBlockState(this.scratchPos.setWithOffset(blockPos, Direction.DOWN));
+            if (!PlatformBlockAccess.getInstance().shouldShowFluidOverlay(blockStateBelow, level, this.scratchPos, fluidState)) {
                 this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.POS_Y, true);
             }
         }
