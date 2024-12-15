@@ -2,6 +2,8 @@ package net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline;
 
 
 import it.unimi.dsi.fastutil.bytes.ByteArrayFIFOQueue;
+import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+import it.unimi.dsi.fastutil.bytes.ByteList;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.caffeinemc.mods.sodium.client.model.color.ColorProvider;
@@ -50,7 +52,7 @@ public class DefaultFluidRenderer {
     private final BlockPos.MutableBlockPos occlusionScratchPos = new BlockPos.MutableBlockPos();
     private float scratchHeight = 0.0f;
     private int scratchSamples = 0;
-    private final ByteArrayFIFOQueue queue = new ByteArrayFIFOQueue();
+    private final ByteList stack = new ByteArrayList();
     private long visited = 0;
 
     private final ShapeComparisonCache occlusionCache = new ShapeComparisonCache();
@@ -589,7 +591,7 @@ public class DefaultFluidRenderer {
         return 1L << ((x + 2) + (y << 5) + (z + 2) * 5);
     }
 
-    private boolean visitExposureNeighbor(BlockGetter level, BlockPos origin, Fluid fluid, ByteArrayFIFOQueue queue, byte xOffset, byte yOffset, byte zOffset) {
+    private boolean visitExposureNeighbor(BlockGetter level, BlockPos origin, Fluid fluid, ByteList stack, byte xOffset, byte yOffset, byte zOffset) {
         var upNeighborMask = offsetToMask(xOffset, yOffset, zOffset);
         if ((this.visited & upNeighborMask) == 0) {
             this.visited |= upNeighborMask;
@@ -600,9 +602,9 @@ public class DefaultFluidRenderer {
                 if (!blockState.getFluidState().isSourceOfType(fluid)) {
                     return true;
                 } else {
-                    queue.enqueue(xOffset);
-                    queue.enqueue(yOffset);
-                    queue.enqueue(zOffset);
+                    stack.add(xOffset);
+                    stack.add(yOffset);
+                    stack.add(zOffset);
                 }
             }
         }
@@ -611,31 +613,37 @@ public class DefaultFluidRenderer {
     }
 
     private boolean isUpFaceExposedByNeighbors(BlockGetter level, BlockPos origin, Fluid fluid) {
+        // search for an accessible non-solid block that's reachable through a path of same-type fluid source blocks.
+        // if such a block exists, the fluid is exposed. If it can't be reached, the fluid is considered occluded.
+
+        // performs a simple DFS using a stack and a visited bit mask
         this.visited = 1L << offsetToMask(0, 0, 0);
-        var queue = this.queue;
-        queue.clear();
-        queue.enqueue((byte) 0);
-        queue.enqueue((byte) 0);
-        queue.enqueue((byte) 0);
+        var stack = this.stack;
+        stack.clear();
+        stack.add((byte) 0);
+        stack.add((byte) 0);
+        stack.add((byte) 0);
 
-        while (!queue.isEmpty()) {
-            var x = queue.dequeueByte();
-            var y = queue.dequeueByte();
-            var z = queue.dequeueByte();
+        while (!stack.isEmpty()) {
+            // remove coordinates from the stack in reverse order to preserve their format
+            var z = stack.removeByte(stack.size() - 1);
+            var y = stack.removeByte(stack.size() - 1);
+            var x = stack.removeByte(stack.size() - 1);
 
-            if (y == 0 && visitExposureNeighbor(level, origin, fluid, queue, x, (byte) 1, z)) {
+            // traverse into unvisited neighbors in outwards direction
+            if (y == 0 && visitExposureNeighbor(level, origin, fluid, stack, x, (byte) 1, z)) {
                 return true;
             }
-            if (x >= 0 && x < 2 && visitExposureNeighbor(level, origin, fluid, queue, (byte) (x + 1), y, z)) {
+            if (x >= 0 && x < 2 && visitExposureNeighbor(level, origin, fluid, stack, (byte) (x + 1), y, z)) {
                 return true;
             }
-            if (x <= 0 && x > -2 && visitExposureNeighbor(level, origin, fluid, queue, (byte) (x - 1), y, z)) {
+            if (x <= 0 && x > -2 && visitExposureNeighbor(level, origin, fluid, stack, (byte) (x - 1), y, z)) {
                 return true;
             }
-            if (z >= 0 && z < 2 && visitExposureNeighbor(level, origin, fluid, queue, x, y, (byte) (z + 1))) {
+            if (z >= 0 && z < 2 && visitExposureNeighbor(level, origin, fluid, stack, x, y, (byte) (z + 1))) {
                 return true;
             }
-            if (z <= 0 && z > -2 && visitExposureNeighbor(level, origin, fluid, queue, x, y, (byte) (z - 1))) {
+            if (z <= 0 && z > -2 && visitExposureNeighbor(level, origin, fluid, stack, x, y, (byte) (z - 1))) {
                 return true;
             }
         }
