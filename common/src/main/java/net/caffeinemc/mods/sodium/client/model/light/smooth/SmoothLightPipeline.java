@@ -6,7 +6,6 @@ import net.caffeinemc.mods.sodium.client.model.light.data.LightDataAccess;
 import net.caffeinemc.mods.sodium.client.model.light.data.QuadLightData;
 import net.caffeinemc.mods.sodium.client.model.quad.ModelQuadView;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFlags;
-import net.caffeinemc.mods.sodium.client.util.DirectionUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
@@ -58,22 +57,11 @@ public class SmoothLightPipeline implements LightPipeline {
      */
     private final float[] weights = new float[4];
 
-    // Cached per-face brightness received from the dimension's ambient lighting.
-    // This data is static for a given world and dimension.
-    private final float[] ambientBrightnessShaded = new float[6];
-    private final float[] ambientBrightnessUnshaded = new float[6];
-
     public SmoothLightPipeline(LightDataAccess cache) {
         this.lightCache = cache;
 
         for (int i = 0; i < this.cachedFaceData.length; i++) {
             this.cachedFaceData[i] = new AoFaceData();
-        }
-
-        for (Direction direction : DirectionUtil.ALL_DIRECTIONS) {
-            var level = cache.getLevel();
-            this.ambientBrightnessShaded[direction.ordinal()] = level.getShade(direction, true);
-            this.ambientBrightnessUnshaded[direction.ordinal()] = level.getShade(direction, false);
         }
     }
 
@@ -348,7 +336,8 @@ public class SmoothLightPipeline implements LightPipeline {
      * @param shade Whether the block face is receiving directional light
      */
     private float getAmbientBrightness(Direction face, boolean shade) {
-        return (shade ? this.ambientBrightnessShaded : this.ambientBrightnessUnshaded)[face.ordinal()];
+        return this.lightCache.getLevel()
+                .getShade(face, shade);
     }
 
     /**
