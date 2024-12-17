@@ -1,10 +1,10 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.data;
 
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.VisibilityEncoding;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
-import net.caffeinemc.mods.sodium.client.render.texture.SpriteUtil;
 import net.minecraft.client.renderer.chunk.VisibilitySet;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -79,7 +79,7 @@ public class BuiltSectionInfo {
          * @param sprite The sprite
          */
         public void addSprite(TextureAtlasSprite sprite) {
-            if (SpriteUtil.hasAnimation(sprite)) {
+            if (SpriteUtil.INSTANCE.hasAnimation(sprite)) {
                 this.animatedSprites.add(sprite);
             }
         }

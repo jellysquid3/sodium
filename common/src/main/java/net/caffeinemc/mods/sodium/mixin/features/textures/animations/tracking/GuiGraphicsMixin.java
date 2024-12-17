@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.mixin.features.textures.animations.tracking;
 
-import net.caffeinemc.mods.sodium.client.render.texture.SpriteUtil;
+import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +16,7 @@ public class GuiGraphicsMixin {
                                TextureAtlasSprite sprite,
                                CallbackInfo ci)
     {
-        SpriteUtil.markSpriteActive(sprite);
+        SpriteUtil.INSTANCE.markSpriteActive(sprite);
     }
 
     @Inject(method = "blit(IIIIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;FFFF)V", at = @At("HEAD"))
@@ -26,6 +26,6 @@ public class GuiGraphicsMixin {
                                float red, float green, float blue, float alpha,
                                CallbackInfo ci)
     {
-        SpriteUtil.markSpriteActive(sprite);
+        SpriteUtil.INSTANCE.markSpriteActive(sprite);
     }
 }

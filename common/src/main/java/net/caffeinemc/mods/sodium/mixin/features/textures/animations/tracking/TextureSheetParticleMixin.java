@@ -1,7 +1,7 @@
 package net.caffeinemc.mods.sodium.mixin.features.textures.animations.tracking;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.caffeinemc.mods.sodium.client.render.texture.SpriteUtil;
+import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
@@ -28,13 +28,13 @@ public abstract class TextureSheetParticleMixin extends SingleQuadParticle {
 
     @Inject(method = "setSprite(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)V", at = @At("RETURN"))
     private void afterSetSprite(TextureAtlasSprite sprite, CallbackInfo ci) {
-        this.shouldTickSprite = sprite != null && SpriteUtil.hasAnimation(sprite);
+        this.shouldTickSprite = sprite != null && SpriteUtil.INSTANCE.hasAnimation(sprite);
     }
 
     @Override
     public void render(VertexConsumer vertexConsumer, Camera camera, float tickDelta) {
         if (this.shouldTickSprite) {
-            SpriteUtil.markSpriteActive(this.sprite);
+            SpriteUtil.INSTANCE.markSpriteActive(this.sprite);
         }
 
         super.render(vertexConsumer, camera, tickDelta);
