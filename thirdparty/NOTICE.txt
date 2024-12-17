@@ -19,11 +19,3 @@ The complete text for each software license can be found in the directory "third
     * https://github.com/lodborg/interval-tree/tree/v1.0.0
   * Files:
     * common/src/main/java/net/caffeinemc/mods/sodium/client/util/interval_tree
-
-* coderbot's mip-map generator patches for Minecraft
-  * Copyright (c) 2021 Coderbot
-  * License: Mozilla Public License (SPDX: MPL2)
-  * Original Source:
-    * https://github.com/IrisShaders/Iris/tree/41095ac23ea0add664afd1b85c414d1f1ed94066/src/main/java/net/coderbot/iris/mixin/bettermipmaps
-  * Files:
-    * common/src/main/java/net/caffeinemc/mods/sodium/mixin/features/textures/mipmaps
