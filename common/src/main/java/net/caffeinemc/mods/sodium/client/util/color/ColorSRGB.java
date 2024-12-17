@@ -76,22 +76,11 @@ public class ColorSRGB {
     }
 
     /**
-     * Converts the linear RGB components into non-linear sRGB space, and then packs them alongside a non-linear alpha.
-     * @param r The red-component in non-linear sRGB space (0.0 to 1.0)
-     * @param g The green-component in non-linear sRGB space (0.0 to 1.0)
-     * @param b The blue-component in non-linear sRGB space (0.0 to 1.0)
-     * @param a The alpha-component in linear RGB space (0 to 255)
-     */
-    public static int linearToSrgb(float r, float g, float b, int a) {
-        return ColorABGR.pack(linearToSrgb(r), linearToSrgb(g), linearToSrgb(b), a);
-    }
-
-    /**
      * Converts a linear RGB component into a non-linear SRGB8 component.
      * @param c The linear RGB component (0.0 to 1.0)
      * @return The non-linear SRGB8 component (0 to 255)
      */
-    private static int linearToSrgb(float c) {
+    public static int linearToSrgb(float c) {
         int inputBits = Float.floatToRawIntBits(clampLinearInput(c));
         int entry = TO_SRGB8_TABLE[((inputBits - MIN_BITS) >> 20)];
 

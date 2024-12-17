@@ -7,31 +7,26 @@
  */
 package net.caffeinemc.mods.sodium.mixin.features.textures.mipmaps;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.client.util.NativeImageHelper;
 import net.caffeinemc.mods.sodium.client.util.color.ColorSRGB;
 import net.minecraft.client.renderer.texture.SpriteContents;
+import net.minecraft.client.resources.metadata.animation.FrameSize;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import org.lwjgl.system.MemoryUtil;
-import org.objectweb.asm.Opcodes;
-import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SpriteContents.class)
 public class SpriteContentsMixin {
-    @Mutable
-    @Shadow
-    @Final
-    private NativeImage originalImage;
-
-    @WrapOperation(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/texture/SpriteContents;originalImage:Lcom/mojang/blaze3d/platform/NativeImage;", opcode = Opcodes.PUTFIELD))
-    private void sodium$beforeGenerateMipLevels(SpriteContents instance, NativeImage nativeImage, Operation<Void> original) {
-        sodium$fillInTransparentPixelColors(nativeImage);
-
-        original.call(instance, nativeImage);
+    @Inject(method = "<init>", at = @At(value = "RETURN"))
+    private void sodium$beforeGenerateMipLevels(ResourceLocation name, FrameSize frameSize, NativeImage originalImage, ResourceMetadata metadata, CallbackInfo ci) {
+        sodium$fillInTransparentPixelColors(originalImage);
     }
 
     /**
@@ -85,10 +80,10 @@ public class SpriteContentsMixin {
 
         // Convert that color in linear space back to sRGB.
         // Use an alpha value of zero - this works since we only replace pixels with an alpha value of 0.
-        int averageColor = ColorSRGB.linearToSrgb(r, g, b, 0);
+        int averageColor = ColorABGR.pack(ColorSRGB.linearToSrgb(r), ColorSRGB.linearToSrgb(g), ColorSRGB.linearToSrgb(b), 0x0);
 
         for (int pixelIndex = 0; pixelIndex < pixelCount; pixelIndex++) {
-            long pPixel = ppPixel + (pixelIndex * 4);
+            long pPixel = ppPixel + (pixelIndex * 4L);
 
             int color = MemoryUtil.memGetInt(pPixel);
             int alpha = ColorABGR.unpackAlpha(color);
