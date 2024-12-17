@@ -15,7 +15,7 @@ public class CompactChunkVertex implements ChunkVertexType {
             .addElement(DefaultChunkMeshAttributes.POSITION, ChunkShaderBindingPoints.ATTRIBUTE_POSITION, 0)
             .addElement(DefaultChunkMeshAttributes.COLOR, ChunkShaderBindingPoints.ATTRIBUTE_COLOR, 8)
             .addElement(DefaultChunkMeshAttributes.TEXTURE, ChunkShaderBindingPoints.ATTRIBUTE_TEXTURE, 12)
-            .addElement(DefaultChunkMeshAttributes.LIGHT_MATERIAL_INDEX, ChunkShaderBindingPoints.ATTRIBUTE_LIGHT_MATERIAL_INDEX, 16)
+            .addElement(DefaultChunkMeshAttributes.LIGHT_INDEX, ChunkShaderBindingPoints.ATTRIBUTE_LIGHT_INDEX, 16)
             .build();
 
     private static final int POSITION_MAX_VALUE = 1 << 20;
@@ -31,7 +31,7 @@ public class CompactChunkVertex implements ChunkVertexType {
 
     @Override
     public ChunkVertexEncoder getEncoder() {
-        return (ptr, materialBits, vertices, section) -> {
+        return (ptr, vertices, section) -> {
             // Calculate the center point of the texture region which is mapped to the quad
             float texCentroidU = 0.0f;
             float texCentroidV = 0.0f;
@@ -60,7 +60,7 @@ public class CompactChunkVertex implements ChunkVertexType {
                 MemoryUtil.memPutInt(ptr +  4L, packPositionLo(x, y, z));
                 MemoryUtil.memPutInt(ptr +  8L, ColorARGB.mulRGB(vertex.color, vertex.ao));
                 MemoryUtil.memPutInt(ptr + 12L, packTexture(u, v));
-                MemoryUtil.memPutInt(ptr + 16L, packLightAndData(light, materialBits, section));
+                MemoryUtil.memPutInt(ptr + 16L, packLightAndSectionIndex(light, section));
 
                 ptr += STRIDE;
             }
@@ -113,9 +113,8 @@ public class CompactChunkVertex implements ChunkVertexType {
         return (block << 0) | (sky << 8);
     }
 
-    private static int packLightAndData(int light, int material, int section) {
+    private static int packLightAndSectionIndex(int light, int section) {
         return ((light & 0xFFFF) << 0) |
-                ((material & 0xFF) << 16) |
                 ((section & 0xFF) << 24);
     }
 

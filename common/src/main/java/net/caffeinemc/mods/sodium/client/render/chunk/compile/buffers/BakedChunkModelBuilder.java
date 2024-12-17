@@ -3,19 +3,22 @@ package net.caffeinemc.mods.sodium.client.render.chunk.compile.buffers;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionInfo;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
+import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TranslucentGeometryCollector;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 public class BakedChunkModelBuilder implements ChunkModelBuilder {
+    private final TerrainRenderPass renderPass;
+
     private final ChunkMeshBufferBuilder[] vertexBuffers;
     private final ChunkVertexConsumer fallbackVertexConsumer = new ChunkVertexConsumer(this);
 
     private BuiltSectionInfo.Builder renderData;
 
-    public BakedChunkModelBuilder(ChunkMeshBufferBuilder[] vertexBuffers) {
+    public BakedChunkModelBuilder(TerrainRenderPass renderPass, ChunkMeshBufferBuilder[] vertexBuffers) {
         this.vertexBuffers = vertexBuffers;
+        this.renderPass = renderPass;
     }
 
     @Override
@@ -29,8 +32,8 @@ public class BakedChunkModelBuilder implements ChunkModelBuilder {
     }
 
     @Override
-    public VertexConsumer asFallbackVertexConsumer(Material material, TranslucentGeometryCollector collector) {
-        fallbackVertexConsumer.setData(material, collector);
+    public VertexConsumer asFallbackVertexConsumer(TranslucentGeometryCollector collector) {
+        fallbackVertexConsumer.setData(collector);
         return fallbackVertexConsumer;
     }
 
@@ -46,5 +49,10 @@ public class BakedChunkModelBuilder implements ChunkModelBuilder {
         for (var vertexBuffer : this.vertexBuffers) {
             vertexBuffer.start(sectionIndex);
         }
+    }
+
+    @Override
+    public TerrainRenderPass getRenderPass() {
+        return this.renderPass;
     }
 }

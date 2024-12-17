@@ -5,7 +5,6 @@ import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TranslucentGeometryCollector;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexEncoder;
 import net.caffeinemc.mods.sodium.client.render.texture.SpriteFinderCache;
@@ -23,7 +22,6 @@ public class ChunkVertexConsumer implements VertexConsumer {
     private final ChunkModelBuilder modelBuilder;
     private final ChunkVertexEncoder.Vertex[] vertices = ChunkVertexEncoder.Vertex.uninitializedQuad();
 
-    private Material material;
     private int vertexIndex;
     private int writtenAttributes;
     private TranslucentGeometryCollector collector;
@@ -32,8 +30,7 @@ public class ChunkVertexConsumer implements VertexConsumer {
         this.modelBuilder = modelBuilder;
     }
 
-    public void setData(Material material, TranslucentGeometryCollector collector) {
-        this.material = material;
+    public void setData(TranslucentGeometryCollector collector) {
         this.collector = collector;
     }
 
@@ -128,11 +125,11 @@ public class ChunkVertexConsumer implements VertexConsumer {
 
             ModelQuadFacing cullFace = ModelQuadFacing.fromPackedNormal(normal);
 
-            if (this.material.isTranslucent() && this.collector != null) {
+            if (this.modelBuilder.getRenderPass().isTranslucent() && this.collector != null) {
                 this.collector.appendQuad(normal, this.vertices, cullFace);
             }
 
-            this.modelBuilder.getVertexBuffer(cullFace).push(this.vertices, this.material);
+            this.modelBuilder.getVertexBuffer(cullFace).push(this.vertices);
 
             float u = 0;
             float v = 0;

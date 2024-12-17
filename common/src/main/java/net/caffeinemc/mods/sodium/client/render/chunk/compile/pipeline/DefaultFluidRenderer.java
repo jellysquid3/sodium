@@ -14,7 +14,6 @@ import net.caffeinemc.mods.sodium.client.model.quad.ModelQuadViewMutable;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFlags;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.buffers.ChunkModelBuilder;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TranslucentGeometryCollector;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexEncoder;
 import net.caffeinemc.mods.sodium.client.services.PlatformBlockAccess;
@@ -90,7 +89,7 @@ public class DefaultFluidRenderer {
         return true;
     }
 
-    public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
+    public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
         int posX = blockPos.getX();
         int posY = blockPos.getY();
         int posZ = blockPos.getZ();
@@ -224,10 +223,10 @@ public class DefaultFluidRenderer {
             }
 
             this.updateQuad(quad, level, blockPos, lighter, Direction.UP, ModelQuadFacing.POS_Y, 1.0F, colorProvider, fluidState);
-            this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.POS_Y : ModelQuadFacing.UNASSIGNED, false);
+            this.writeQuad(meshBuilder, collector, offset, quad, aligned ? ModelQuadFacing.POS_Y : ModelQuadFacing.UNASSIGNED, false);
 
             if (fluidState.shouldRenderBackwardUpFace(level, this.scratchPos.set(posX, posY + 1, posZ))) {
-                this.writeQuad(meshBuilder, collector, material, offset, quad,
+                this.writeQuad(meshBuilder, collector, offset, quad,
                         aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
             }
         }
@@ -247,7 +246,7 @@ public class DefaultFluidRenderer {
             setVertex(quad, 3, 1.0F, yOffset, 1.0F, maxU, maxV);
 
             this.updateQuad(quad, level, blockPos, lighter, Direction.DOWN, ModelQuadFacing.NEG_Y, 1.0F, colorProvider, fluidState);
-            this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.NEG_Y, false);
+            this.writeQuad(meshBuilder, collector, offset, quad, ModelQuadFacing.NEG_Y, false);
         }
 
         quad.setFlags(ModelQuadFlags.IS_PARALLEL | ModelQuadFlags.IS_ALIGNED);
@@ -347,10 +346,10 @@ public class DefaultFluidRenderer {
                 ModelQuadFacing facing = ModelQuadFacing.fromDirection(dir);
 
                 this.updateQuad(quad, level, blockPos, lighter, dir, facing, br, colorProvider, fluidState);
-                this.writeQuad(meshBuilder, collector, material, offset, quad, facing, false);
+                this.writeQuad(meshBuilder, collector, offset, quad, facing, false);
 
                 if (!isOverlay) {
-                    this.writeQuad(meshBuilder, collector, material, offset, quad, facing.getOpposite(), true);
+                    this.writeQuad(meshBuilder, collector, offset, quad, facing.getOpposite(), true);
                 }
 
             }
@@ -387,7 +386,7 @@ public class DefaultFluidRenderer {
         }
     }
 
-    private void writeQuad(ChunkModelBuilder builder, TranslucentGeometryCollector collector, Material material, BlockPos offset, ModelQuadView quad,
+    private void writeQuad(ChunkModelBuilder builder, TranslucentGeometryCollector collector, BlockPos offset, ModelQuadView quad,
                            ModelQuadFacing facing, boolean flip) {
         var vertices = this.vertices;
 
@@ -410,7 +409,7 @@ public class DefaultFluidRenderer {
             builder.addSprite(sprite);
         }
 
-        if (material.isTranslucent() && collector != null) {
+        if (builder.getRenderPass().isTranslucent() && collector != null) {
             int normal;
 
             if (facing.isAligned()) {
@@ -427,8 +426,8 @@ public class DefaultFluidRenderer {
             collector.appendQuad(normal, vertices, facing);
         }
 
-        var vertexBuffer = builder.getVertexBuffer(facing);
-        vertexBuffer.push(vertices, material);
+        builder.getVertexBuffer(facing)
+                .push(vertices);
     }
 
     private static void setVertex(ModelQuadViewMutable quad, int i, float x, float y, float z, float u, float v) {

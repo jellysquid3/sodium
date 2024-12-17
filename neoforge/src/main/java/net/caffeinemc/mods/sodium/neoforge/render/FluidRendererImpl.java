@@ -8,8 +8,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.buffers.ChunkModelBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline.DefaultFluidRenderer;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.DefaultMaterials;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
+import net.caffeinemc.mods.sodium.client.render.chunk.terrain.DefaultTerrainRenderPasses;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TranslucentGeometryCollector;
 import net.caffeinemc.mods.sodium.client.services.FluidRendererFactory;
 import net.caffeinemc.mods.sodium.client.world.LevelSlice;
@@ -20,8 +19,6 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.textures.FluidSpriteCache;
-
-import java.util.Objects;
 
 public class FluidRendererImpl extends FluidRenderer {
     // The current default context is set up before invoking FluidRenderHandler#renderFluid and cleared afterwards.
@@ -35,9 +32,10 @@ public class FluidRendererImpl extends FluidRenderer {
         defaultRenderer = new DefaultFluidRenderer(lighters);
     }
 
+    @Override
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkBuildBuffers buffers) {
-        var material = DefaultMaterials.forFluidState(fluidState);
-        var meshBuilder = buffers.get(material);
+        var renderPass = DefaultTerrainRenderPasses.forFluidState(fluidState);
+        var meshBuilder = buffers.get(renderPass);
 
         IClientFluidTypeExtensions handler = IClientFluidTypeExtensions.of(fluidState);
 
@@ -63,10 +61,10 @@ public class FluidRendererImpl extends FluidRenderer {
         // parameters are bundled into a DefaultRenderContext which is stored in a ThreadLocal.
 
         DefaultRenderContext defaultContext = CURRENT_DEFAULT_CONTEXT.get();
-        defaultContext.setUp(this.colorProviderRegistry, this.defaultRenderer, level, blockState, fluidState, blockPos, offset, collector, meshBuilder, material, handler);
+        defaultContext.setUp(this.colorProviderRegistry, this.defaultRenderer, level, blockState, fluidState, blockPos, offset, collector, meshBuilder, handler);
 
         try {
-            if (!handler.renderFluid(fluidState, level, blockPos, meshBuilder.asFallbackVertexConsumer(material, collector), blockState)) {
+            if (!handler.renderFluid(fluidState, level, blockPos, meshBuilder.asFallbackVertexConsumer(collector), blockState)) {
                 defaultContext.render();
             }
         } finally {
@@ -83,11 +81,10 @@ public class FluidRendererImpl extends FluidRenderer {
         private BlockPos offset;
         private TranslucentGeometryCollector collector;
         private ChunkModelBuilder meshBuilder;
-        private Material material;
         private IClientFluidTypeExtensions handler;
         private ColorProviderRegistry colorProviderRegistry;
 
-        public void setUp(ColorProviderRegistry colorProviderRegistry, DefaultFluidRenderer renderer, LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, IClientFluidTypeExtensions handler) {
+        public void setUp(ColorProviderRegistry colorProviderRegistry, DefaultFluidRenderer renderer, LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, IClientFluidTypeExtensions handler) {
             this.colorProviderRegistry = colorProviderRegistry;
             this.renderer = renderer;
             this.level = level;
@@ -97,7 +94,6 @@ public class FluidRendererImpl extends FluidRenderer {
             this.offset = offset;
             this.collector = collector;
             this.meshBuilder = meshBuilder;
-            this.material = material;
             this.handler = handler;
         }
 
@@ -110,7 +106,6 @@ public class FluidRendererImpl extends FluidRenderer {
             this.offset = null;
             this.collector = null;
             this.meshBuilder = null;
-            this.material = null;
             this.handler = null;
         }
 
@@ -125,7 +120,7 @@ public class FluidRendererImpl extends FluidRenderer {
         }
 
         public void render() {
-            this.renderer.render(this.level, this.blockState, this.fluidState, this.blockPos, this.offset, this.collector, this.meshBuilder, this.material,
+            this.renderer.render(this.level, this.blockState, this.fluidState, this.blockPos, this.offset, this.collector, this.meshBuilder,
                     getColorProvider(fluidState.getType()), FluidSpriteCache.getFluidSprites(level, blockPos, fluidState));
         }
     }

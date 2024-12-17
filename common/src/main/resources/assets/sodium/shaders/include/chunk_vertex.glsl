@@ -13,9 +13,6 @@ vec4 _vert_color;
 // The index of the draw command which this vertex belongs to
 uint _draw_id;
 
-// The material bits for the primitive
-uint _material_params;
-
 #ifdef USE_VERTEX_COMPRESSION
 const uint POSITION_BITS        = 20u;
 const uint POSITION_MAX_COORD   = 1u << POSITION_BITS;
@@ -59,7 +56,6 @@ void _vert_init() {
 
     _vert_tex_light_coord = vec2(a_LightAndData.xy) / vec2(256.0);
 
-    _material_params = a_LightAndData[2];
     _draw_id = a_LightAndData[3];
 }
 

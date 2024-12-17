@@ -14,10 +14,6 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.buffers.ChunkModelBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.DefaultTerrainRenderPasses;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.DefaultMaterials;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.parameters.AlphaCutoffParameter;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.parameters.MaterialParameters;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TranslucentGeometryCollector;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexEncoder;
@@ -125,18 +121,18 @@ public class BlockRenderer extends AbstractBlockRenderContext {
         }
         final boolean emissive = mat.emissive();
 
-        Material material;
+        TerrainRenderPass renderPass;
 
         final BlendMode blendMode = mat.blendMode();
         if (blendMode == BlendMode.DEFAULT) {
-            material = DefaultMaterials.forRenderLayer(type);
+            renderPass = DefaultTerrainRenderPasses.forRenderLayer(type);
         } else {
-            material = DefaultMaterials.forRenderLayer(blendMode.blockRenderLayer == null ? type : blendMode.blockRenderLayer);
+            renderPass = DefaultTerrainRenderPasses.forRenderLayer(blendMode.blockRenderLayer == null ? type : blendMode.blockRenderLayer);
         }
 
         this.tintQuad(quad);
         this.shadeQuad(quad, lightMode, emissive, shadeMode);
-        this.bufferQuad(quad, this.quadLightData.br, material);
+        this.bufferQuad(quad, this.quadLightData.br, renderPass);
     }
 
     private void tintQuad(MutableQuadViewImpl quad) {
@@ -156,7 +152,7 @@ public class BlockRenderer extends AbstractBlockRenderContext {
         }
     }
 
-    private void bufferQuad(MutableQuadViewImpl quad, float[] brightnesses, Material material) {
+    private void bufferQuad(MutableQuadViewImpl quad, float[] brightnesses, TerrainRenderPass renderPass) {
         // TODO: Find a way to reimplement quad reorientation
         ModelQuadOrientation orientation = ModelQuadOrientation.NORMAL;
         ChunkVertexEncoder.Vertex[] vertices = this.vertices;
@@ -181,31 +177,19 @@ public class BlockRenderer extends AbstractBlockRenderContext {
         }
 
         var atlasSprite = quad.sprite(SpriteFinderCache.forBlockAtlas());
-        var materialBits = material.bits();
         ModelQuadFacing normalFace = quad.normalFace();
 
         // attempt render pass downgrade if possible
-        var pass = material.pass;
-
-        var downgradedPass = attemptPassDowngrade(atlasSprite, pass);
-        if (downgradedPass != null) {
-            pass = downgradedPass;
-        }
+        var optimalRenderPass = this.attemptPassDowngrade(atlasSprite, renderPass);
 
         // collect all translucent quads into the translucency sorting system if enabled
-        if (pass.isTranslucent() && this.collector != null) {
+        if (optimalRenderPass.isTranslucent() && this.collector != null) {
             this.collector.appendQuad(quad.getFaceNormal(), vertices, normalFace);
         }
 
-        // if there was a downgrade from translucent to cutout, the material bits' alpha cutoff needs to be updated
-        if (downgradedPass != null && material == DefaultMaterials.TRANSLUCENT && pass == DefaultTerrainRenderPasses.CUTOUT) {
-            // ONE_TENTH and HALF are functionally the same so it doesn't matter which one we take here
-            materialBits = MaterialParameters.pack(AlphaCutoffParameter.ONE_TENTH, material.mipped);
-        }
-
-        ChunkModelBuilder builder = this.buffers.get(pass);
+        ChunkModelBuilder builder = this.buffers.get(optimalRenderPass);
         ChunkMeshBufferBuilder vertexBuffer = builder.getVertexBuffer(normalFace);
-        vertexBuffer.push(vertices, materialBits);
+        vertexBuffer.push(vertices);
 
         builder.addSprite(atlasSprite);
     }
@@ -228,9 +212,9 @@ public class BlockRenderer extends AbstractBlockRenderContext {
         return true;
     }
 
-    private @Nullable TerrainRenderPass attemptPassDowngrade(TextureAtlasSprite sprite, TerrainRenderPass pass) {
+    private TerrainRenderPass attemptPassDowngrade(TextureAtlasSprite sprite, TerrainRenderPass pass) {
         if (Workarounds.isWorkaroundEnabled(Workarounds.Reference.INTEL_DEPTH_BUFFER_COMPARISON_UNRELIABLE)) {
-            return null;
+            return pass;
         }
 
         boolean attemptDowngrade = true;
@@ -253,7 +237,7 @@ public class BlockRenderer extends AbstractBlockRenderContext {
             return getDowngradedPass(sprite, pass);
         }
 
-        return null;
+        return pass;
     }
 
     private static TerrainRenderPass getDowngradedPass(TextureAtlasSprite sprite, TerrainRenderPass pass) {
@@ -265,6 +249,7 @@ public class BlockRenderer extends AbstractBlockRenderContext {
                 pass = DefaultTerrainRenderPasses.SOLID;
             }
         }
+
         return pass;
     }
 }

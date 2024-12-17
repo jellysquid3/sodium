@@ -8,7 +8,6 @@ import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionInfo;
 import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionMeshParts;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.DefaultTerrainRenderPasses;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexType;
 import net.caffeinemc.mods.sodium.client.util.NativeBuffer;
@@ -37,7 +36,7 @@ public class ChunkBuildBuffers {
                 vertexBuffers[facing] = new ChunkMeshBufferBuilder(this.vertexType, 128 * 1024);
             }
 
-            this.builders.put(pass, new BakedChunkModelBuilder(vertexBuffers));
+            this.builders.put(pass, new BakedChunkModelBuilder(pass, vertexBuffers));
         }
     }
 
@@ -45,10 +44,6 @@ public class ChunkBuildBuffers {
         for (var builder : this.builders.values()) {
             builder.begin(renderData, sectionIndex);
         }
-    }
-
-    public ChunkModelBuilder get(Material material) {
-        return this.builders.get(material.pass);
     }
 
     public ChunkModelBuilder get(TerrainRenderPass pass) {

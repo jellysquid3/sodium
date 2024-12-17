@@ -1,9 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.vertex.builder;
 
-import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexEncoder;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexType;
-import org.apache.commons.lang3.Validate;
 import org.lwjgl.system.MemoryUtil;
 import java.nio.ByteBuffer;
 
@@ -29,19 +27,14 @@ public class ChunkMeshBufferBuilder {
         this.initialCapacity = initialCapacity;
     }
 
-    public void push(ChunkVertexEncoder.Vertex[] vertices, Material material) {
-        this.push(vertices, material.bits());
-    }
-
-    public void push(ChunkVertexEncoder.Vertex[] vertices, int materialBits) {
+    public void push(ChunkVertexEncoder.Vertex[] vertices) {
         if (vertices.length != 4) {
             throw new IllegalArgumentException("Only quad primitives (with 4 vertices) can be pushed");
         }
 
         this.ensureCapacity(4);
 
-        this.encoder.write(MemoryUtil.memAddress(this.buffer, this.vertexCount * this.stride),
-                materialBits, vertices, this.sectionIndex);
+        this.encoder.write(MemoryUtil.memAddress(this.buffer, this.vertexCount * this.stride), vertices, this.sectionIndex);
         this.vertexCount += 4;
     }
 
