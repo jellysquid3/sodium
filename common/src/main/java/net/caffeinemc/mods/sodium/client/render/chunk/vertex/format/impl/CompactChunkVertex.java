@@ -5,21 +5,23 @@ import net.caffeinemc.mods.sodium.client.gl.attribute.GlVertexFormat;
 import net.caffeinemc.mods.sodium.client.render.chunk.shader.ChunkShaderBindingPoints;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexEncoder;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkVertexType;
+import net.caffeinemc.mods.sodium.client.render.texture.SpriteFinderCache;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.Mth;
 import org.lwjgl.system.MemoryUtil;
 
 public class CompactChunkVertex implements ChunkVertexType {
-    public static final int STRIDE = 20;
+    public static final int STRIDE = 24;
 
     public static final GlVertexFormat VERTEX_FORMAT = GlVertexFormat.builder(STRIDE)
             .addElement(DefaultChunkMeshAttributes.POSITION, ChunkShaderBindingPoints.ATTRIBUTE_POSITION, 0)
             .addElement(DefaultChunkMeshAttributes.COLOR, ChunkShaderBindingPoints.ATTRIBUTE_COLOR, 8)
-            .addElement(DefaultChunkMeshAttributes.TEXTURE, ChunkShaderBindingPoints.ATTRIBUTE_TEXTURE, 12)
-            .addElement(DefaultChunkMeshAttributes.LIGHT_INDEX, ChunkShaderBindingPoints.ATTRIBUTE_LIGHT_INDEX, 16)
+            .addElement(DefaultChunkMeshAttributes.TEXTURE_COORD, ChunkShaderBindingPoints.ATTRIBUTE_TEXTURE_COORD, 12)
+            .addElement(DefaultChunkMeshAttributes.TEXTURE_ORIGIN, ChunkShaderBindingPoints.ATTRIBUTE_TEXTURE_ORIGIN, 16)
+            .addElement(DefaultChunkMeshAttributes.LIGHT_INDEX, ChunkShaderBindingPoints.ATTRIBUTE_LIGHT_INDEX, 20)
             .build();
 
     private static final int POSITION_MAX_VALUE = 1 << 20;
-    private static final int TEXTURE_MAX_VALUE = 1 << 15;
 
     private static final float MODEL_ORIGIN = 8.0f;
     private static final float MODEL_RANGE = 32.0f;
@@ -44,6 +46,13 @@ public class CompactChunkVertex implements ChunkVertexType {
             texCentroidU *= (1.0f / 4.0f);
             texCentroidV *= (1.0f / 4.0f);
 
+            TextureAtlasSprite sprite = SpriteFinderCache.forBlockAtlas()
+                    .find(texCentroidU, texCentroidV);
+
+            if (sprite == null) {
+                throw new RuntimeException("Couldn't find sprite");
+            }
+
             for (int i = 0; i < 4; i++) {
                 var vertex = vertices[i];
 
@@ -51,22 +60,24 @@ public class CompactChunkVertex implements ChunkVertexType {
                 int y = quantizePosition(vertex.y);
                 int z = quantizePosition(vertex.z);
 
-                int u = encodeTexture(texCentroidU, vertex.u);
-                int v = encodeTexture(texCentroidV, vertex.v);
-
                 int light = encodeLight(vertex.light);
 
                 MemoryUtil.memPutInt(ptr +  0L, packPositionHi(x, y, z));
                 MemoryUtil.memPutInt(ptr +  4L, packPositionLo(x, y, z));
                 MemoryUtil.memPutInt(ptr +  8L, ColorARGB.mulRGB(vertex.color, vertex.ao));
-                MemoryUtil.memPutInt(ptr + 12L, packTexture(u, v));
-                MemoryUtil.memPutInt(ptr + 16L, packLightAndSectionIndex(light, section));
+                MemoryUtil.memPutInt(ptr + 12L, encodeTexture(vertex.u, vertex.v, sprite));
+                MemoryUtil.memPutInt(ptr + 16L, encodeSprite(sprite));
+                MemoryUtil.memPutInt(ptr + 20L, packLightAndSectionIndex(light, section));
 
                 ptr += STRIDE;
             }
 
             return ptr;
         };
+    }
+
+    private static int encodeSprite(TextureAtlasSprite sprite) {
+        return ((sprite.getX() & 0xFFFF) << 0) | ((sprite.getY() & 0xFFFF) << 16);
     }
 
     private static int packPositionHi(int x, int y, int z) {
@@ -89,21 +100,14 @@ public class CompactChunkVertex implements ChunkVertexType {
         return (MODEL_ORIGIN + v) / MODEL_RANGE;
     }
 
-    private static int packTexture(int u, int v) {
-        return ((u & 0xFFFF) << 0) | ((v & 0xFFFF) << 16);
-    }
+    private static int encodeTexture(float u, float v, TextureAtlasSprite sprite) {
+        u = (u - sprite.getU0()) / (sprite.getU1() - sprite.getU0());
+        v = (v - sprite.getV0()) / (sprite.getV1() - sprite.getV0());
 
-    private static int encodeTexture(float center, float x) {
-        // Shrink the texture coordinates (towards the center of the mapped texture region) by the minimum
-        // addressable unit (after quantization.) Then, encode the sign of the bias that was used, and apply
-        // the inverse transformation on the GPU with a small epsilon.
-        //
-        // This makes it possible to use much smaller epsilons for avoiding texture bleed, since the epsilon is no
-        // longer encoded into the vertex data (instead, we only store the sign.)
-        int bias = (x < center) ? 1 : -1;
-        int quantized = floorInt(x * TEXTURE_MAX_VALUE) + bias;
+        int iu = Math.round(u * (1 << 15));
+        int iv = Math.round(v * (1 << 15));
 
-        return (quantized & 0x7FFF) | (sign(bias) << 15);
+        return ((iu & 0xFFFF) << 0) | ((iv & 0xFFFF) << 16);
     }
 
     private static int encodeLight(int light) {
@@ -116,12 +120,6 @@ public class CompactChunkVertex implements ChunkVertexType {
     private static int packLightAndSectionIndex(int light, int section) {
         return ((light & 0xFFFF) << 0) |
                 ((section & 0xFF) << 24);
-    }
-
-    private static int sign(int x) {
-        // Shift the sign-bit to the least significant bit's position
-        // (0) if positive, (1) if negative
-        return (x >>> 31);
     }
 
     private static int floorInt(float x) {

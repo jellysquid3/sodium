@@ -50,7 +50,7 @@ public class DefaultShaderInterface implements ChunkShaderInterface {
     }
 
     @Deprecated(forRemoval = true) // should be handled properly in GFX instead.
-    private void bindTexture(ChunkShaderTextureSlot slot, int textureId) {
+    public void bindTexture(ChunkShaderTextureSlot slot, int textureId) {
         GlStateManager._activeTexture(GL32C.GL_TEXTURE0 + slot.ordinal());
         GlStateManager._bindTexture(textureId);
 
