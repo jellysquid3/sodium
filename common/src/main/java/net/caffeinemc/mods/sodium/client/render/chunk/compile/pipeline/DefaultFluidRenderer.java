@@ -37,7 +37,21 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-// TODO: fix perfectly joining stairs from being water-transmitting and making weird fluid shapes, use shape operation BooleanOp.AND (extend cache to support it)
+// TODO: fix perfectly joining stairs from being fluid-exposed to each other and making weird fluid shapes, use shape operation BooleanOp.AND (extend cache to support it)
+
+/**
+ * The default fluid renderer implementation generates fluid geometry for each fluid block based on its fluid state, the block state, and other blocks around it.
+ * <p>
+ * First, preliminary culling for the six fluid faces determines whether they are visible at all. Visibility refers to a whether a face is rendered. Faces are not rendered if the neighboring block is of the same fluid type or if the face is occluded by the block it's contained in, i.e. water logging, or the neighboring block. Self-visibility refers to whether the block the fluid is inside is preventing the fluid face from rendering.
+ * <p>
+ * If the fluid block is not a full fluid block, the corner fluid heights are calculated from the fluid heights of the surrounding blocks. Each corner is calculated separately and takes weighted samples, which are then averaged into the final height. The fluid block itself contributes a sample, alongside directly neighboring and diagonally neighboring blocks, depending on connectivity. Samples from neighboring blocks are only taken if the blocks' shapes don't occlude the path between them. A sample is also taken from the diagonally neighboring block, if there is a path to it through one of the direct neighbors.
+ * <p>
+ * Before visible fluid faces are rendered into quads, they must also be tested as exposed. Exposed means that there is an open path through this face of the fluid block. This is independent of whether there's another block of this type of fluid there. The exposed test is done against the neighboring block's occlusion shape.
+ * <p>
+ * Visible implies self-visible implies exposed but not the other way around.
+ * <p>
+ * The top fluid face is additionally culled if the flooded cave heuristic determines that the fluid is within a flooded cave. Within flooded caves the top face isn't rendered for performance and because it would look ugly.
+ */
 public class DefaultFluidRenderer {
     // TODO: allow this to be changed by vertex format, WARNING: make sure TranslucentGeometryCollector knows about EPSILON
     // TODO: move fluid rendering to a separate render pass and control glPolygonOffset and glDepthFunc to fix this properly
@@ -73,13 +87,13 @@ public class DefaultFluidRenderer {
     }
 
     /**
-     * Checks if a face of a fluid block, assumed to be a full block for now, should be considered for rendering based on the neighboring block state, but not the voxel shapes (that test is done later).
+     * Checks if a fluid face should be considered for rendering based on the neighboring block state and its occlusion shape, but without comparing the occlusion shapes with each other. This only calculates visibility, not exposure.
      *
      * @param view    The block view for this render context
      * @param selfPos The position of the fluid
      * @param facing  The facing direction of the side to check
      * @param fluid   The fluid state
-     * @return True if the fluid side facing {@param facing} is not occluded, otherwise false
+     * @return True if the fluid side facing {@param facing} is visible, otherwise false
      */
     public boolean isFullBlockFluidSideVisible(BlockGetter view, BlockPos selfPos, Direction facing, FluidState fluid) {
         // perform occlusion against the neighboring block
@@ -119,12 +133,12 @@ public class DefaultFluidRenderer {
     }
 
     /**
-     * Checks if a face of the fluid is occluded by the block it's contained in.
+     * Checks if a face of the fluid is self-visible and not occluded by the block it's contained in.
      *
      * @param selfBlockState The state of the block in the level
      * @param facing         The facing direction of the side to check
      * @param fluidShape     The shape of the fluid
-     * @return True if the fluid side facing {@param facing} is occluded by the block it's contained in, otherwise false
+     * @return True if the fluid side facing {@param facing} is self-visible, otherwise false
      */
     public boolean isFluidSelfVisible(BlockState selfBlockState, Direction facing, VoxelShape fluidShape) {
         // only perform self-occlusion if the own block state can't occlude
@@ -203,11 +217,22 @@ public class DefaultFluidRenderer {
         return this.isFluidSideExposed(world, this.scratchPos.setWithOffset(originPos, dir), dir, height);
     }
 
+    /**
+     * Calculates the combined visibility of a fluid face based on the neighboring block states and the fluid state.
+     */
     private boolean isFullBlockFluidVisible(BlockAndTintGetter world, BlockPos pos, Direction dir, BlockState blockState, FluidState fluid) {
         return isFullBlockFluidSelfVisible(blockState, dir) && this.isFullBlockFluidSideVisible(world, pos, dir, fluid);
     }
 
-    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos) {
+    /**
+     * Gets a fluid height sample for a specific block position for a given fluid. If the fluid is a different type and the block is solid, the sample is discarded.
+     *
+     * @param world    The block view for this render context
+     * @param fluid    The requesting block's fluid type
+     * @param blockPos The position of the block
+     * @return The fluid height sample
+     */
+    private float sampleFluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos blockPos) {
         BlockState blockState = world.getBlockState(blockPos);
         FluidState fluidState = blockState.getFluidState();
 
@@ -228,8 +253,8 @@ public class DefaultFluidRenderer {
         return DISCARD_SAMPLE;
     }
 
-    private float fluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos origin, Direction offset) {
-        return this.fluidHeight(world, fluid, this.scratchPos.setWithOffset(origin, offset));
+    private float sampleFluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos origin, Direction offset) {
+        return this.sampleFluidHeight(world, fluid, this.scratchPos.setWithOffset(origin, offset));
     }
 
     private void addHeightSample(float sample) {
@@ -244,6 +269,21 @@ public class DefaultFluidRenderer {
         // else -> sample == DISCARD_SAMPLE
     }
 
+    /**
+     * Calculates the corner height of a fluid block based on the fluid heights of the surrounding blocks by taking samples of connected blocks.
+     *
+     * @param world        The block view for this render context
+     * @param origin       The position of the fluid block
+     * @param fluid        The fluid type of the fluid block
+     * @param fluidHeight  The fluid block's own fluid height
+     * @param dirA         The first direction of the corner
+     * @param dirB         The second direction of the corner
+     * @param fluidHeightA The fluid height of the block in direction A
+     * @param fluidHeightB The fluid height of the block in direction B
+     * @param exposedA     Whether the block in direction A is exposed
+     * @param exposedB     Whether the block in direction B is exposed
+     * @return The calculated corner height
+     */
     private float fluidCornerHeight(BlockAndTintGetter world, BlockPos origin, Fluid fluid, float fluidHeight, Direction dirA, Direction dirB, float fluidHeightA, float fluidHeightB, boolean exposedA, boolean exposedB) {
         // if both sides are full height fluids, the corner is full height too
         float filteredHeightA = exposedA ? fluidHeightA : DISCARD_SAMPLE;
@@ -269,7 +309,7 @@ public class DefaultFluidRenderer {
             if (exposedA && exposedAD || exposedB && exposedBD) {
                 // add a sample using diagonal block's fluid height
                 var abNeighbor = this.scratchPos.set(origin).move(dirA).move(dirB);
-                float height = this.fluidHeight(world, fluid, abNeighbor);
+                float height = this.sampleFluidHeight(world, fluid, abNeighbor);
 
                 if (height >= 1.0f) {
                     return 1.0f;
@@ -305,11 +345,8 @@ public class DefaultFluidRenderer {
         boolean downVisible = this.isFullBlockFluidVisible(level, blockPos, Direction.DOWN, blockState, fluidState) &&
                 this.isSideExposedOffset(level, blockPos, Direction.DOWN, FULL_HEIGHT);
 
-        // There are different concepts here:
-        // "visible" means the fluid face is rendered. Fluid faces are not rendered if it has neighbors of the same fluid type.
-        // "exposed" means there's an open path through this face of the fluid block. This is independent of whether there's another block of this type of fluid there.
-        // "self-visible" means the block the fluid is inside isn't preventing the fluid face from rendering.
-        // Visible implies self-visible implies exposed but not the other way around.
+        // self-visibility and visibility are kept separate because self-visibility is used by the corner height sampling
+        // while visibility would be too strict (as faces are not visible if there's an adjacent fluid of the same type)
         boolean northSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.NORTH);
         boolean southSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.SOUTH);
         boolean westSelfVisible = this.isFullBlockFluidSelfVisible(blockState, Direction.WEST);
@@ -327,24 +364,24 @@ public class DefaultFluidRenderer {
 
         boolean isWater = fluidState.is(FluidTags.WATER);
 
-        float fluidHeight = this.fluidHeight(level, fluid, blockPos);
-        boolean fullFluidBlock = fluidHeight >= 1.0f;
+        float fluidHeight = this.sampleFluidHeight(level, fluid, blockPos);
         float northWestHeight, southWestHeight, southEastHeight, northEastHeight;
-        if (fullFluidBlock) {
+        if (fluidHeight >= 1.0f) {
             northWestHeight = 1.0f;
             southWestHeight = 1.0f;
             southEastHeight = 1.0f;
             northEastHeight = 1.0f;
         } else {
+            // calculate the exposure of the side faces using a conservative estimate (1.0f) of the fluid height for deciding what neighbor samples to take
             boolean northExposed = northSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.NORTH, 1.0f);
             boolean southExposed = southSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.SOUTH, 1.0f);
             boolean westExposed = westSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.WEST, 1.0f);
             boolean eastExposed = eastSelfVisible && this.isSideExposedOffset(level, blockPos, Direction.EAST, 1.0f);
 
-            float heightNorth = this.fluidHeight(level, fluid, blockPos, Direction.NORTH);
-            float heightSouth = this.fluidHeight(level, fluid, blockPos, Direction.SOUTH);
-            float heightEast = this.fluidHeight(level, fluid, blockPos, Direction.EAST);
-            float heightWest = this.fluidHeight(level, fluid, blockPos, Direction.WEST);
+            float heightNorth = this.sampleFluidHeight(level, fluid, blockPos, Direction.NORTH);
+            float heightSouth = this.sampleFluidHeight(level, fluid, blockPos, Direction.SOUTH);
+            float heightEast = this.sampleFluidHeight(level, fluid, blockPos, Direction.EAST);
+            float heightWest = this.sampleFluidHeight(level, fluid, blockPos, Direction.WEST);
 
             northWestHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.NORTH, Direction.WEST, heightNorth, heightWest, northExposed, westExposed);
             southWestHeight = this.fluidCornerHeight(level, blockPos, fluid, fluidHeight, Direction.SOUTH, Direction.WEST, heightSouth, heightWest, southExposed, westExposed);
@@ -366,13 +403,13 @@ public class DefaultFluidRenderer {
 
         quad.setFlags(0);
 
-        // calculate up fluid face visibility
+        // calculate up fluid face exposure
         if (upVisible) {
             float totalMinHeight = Math.min(Math.min(northWestHeight, southWestHeight), Math.min(southEastHeight, northEastHeight));
             upVisible = this.isSideExposedOffset(level, blockPos, Direction.UP, totalMinHeight);
         }
 
-        // apply heuristic to not render inner up face and outer up face if there's solid or same-fluid blocks around it
+        // apply heuristic to not render up face it's in a flooded cave
         if (upVisible) {
             upVisible = isUpFaceExposedByNeighbors(level, blockPos, fluid);
         }
@@ -435,6 +472,7 @@ public class DefaultFluidRenderer {
                     && isAlignedEquals(southEastHeight, southWestHeight)
                     && isAlignedEquals(southWestHeight, northEastHeight);
 
+            // calculate in which direction the crease is best placed and rotate the quad accordingly
             boolean creaseNorthEastSouthWest = aligned
                     || northEastHeight > northWestHeight && northEastHeight > southEastHeight
                     || northEastHeight < northWestHeight && northEastHeight < southEastHeight
@@ -475,7 +513,8 @@ public class DefaultFluidRenderer {
             this.updateQuad(quad, level, blockPos, lighter, Direction.DOWN, ModelQuadFacing.NEG_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.NEG_Y, false);
 
-            // render inwards facing down fluid face using the same heuristic as the side faces
+            // render inwards facing down fluid face using the same heuristic as the side faces.
+            // this fixes a number of inconsistencies between the top and side faces
             var blockStateBelow = level.getBlockState(this.scratchPos.setWithOffset(blockPos, Direction.DOWN));
             if (!PlatformBlockAccess.getInstance().shouldShowFluidOverlay(blockStateBelow, level, this.scratchPos, fluidState)) {
                 this.writeQuad(meshBuilder, collector, material, offset, quad, ModelQuadFacing.POS_Y, true);
@@ -586,35 +625,10 @@ public class DefaultFluidRenderer {
         }
     }
 
-    private long offsetToMask(int x, int y, int z) {
-        return 1L << ((x + 2) + (y << 5) + (z + 2) * 5);
-    }
-
-    private boolean visitExposureNeighbor(BlockGetter level, BlockPos origin, Fluid fluid, ByteList stack, byte xOffset, byte yOffset, byte zOffset) {
-        var upNeighborMask = offsetToMask(xOffset, yOffset, zOffset);
-        if ((this.visited & upNeighborMask) == 0) {
-            this.visited |= upNeighborMask;
-
-            var other = this.scratchPos.setWithOffset(origin, xOffset, yOffset, zOffset);
-            var blockState = level.getBlockState(other);
-            if (!blockState.isSolidRender()) {
-                if (!blockState.getFluidState().isSourceOfType(fluid)) {
-                    return true;
-                } else {
-                    stack.add(xOffset);
-                    stack.add(yOffset);
-                    stack.add(zOffset);
-                }
-            }
-        }
-
-        return false;
-    }
-
+    /**
+     * This flooded cave heuristic performs a depth-first search looking for a non-solid block that's reachable through a path of same-type fluid source blocks. If such a block exists, the fluid is considered exposed. If it can't be reached, the fluid is considered occluded.
+     */
     private boolean isUpFaceExposedByNeighbors(BlockGetter level, BlockPos origin, Fluid fluid) {
-        // search for an accessible non-solid block that's reachable through a path of same-type fluid source blocks.
-        // if such a block exists, the fluid is exposed. If it can't be reached, the fluid is considered occluded.
-
         // performs a simple DFS using a stack and a visited bit mask
         this.visited = offsetToMask(0, 0, 0);
         var stack = this.stack;
@@ -644,6 +658,31 @@ public class DefaultFluidRenderer {
             }
             if (z <= 0 && z > -2 && visitExposureNeighbor(level, origin, fluid, stack, x, y, (byte) (z - 1))) {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    private long offsetToMask(int x, int y, int z) {
+        return 1L << ((x + 2) + (y << 5) + (z + 2) * 5);
+    }
+
+    private boolean visitExposureNeighbor(BlockGetter level, BlockPos origin, Fluid fluid, ByteList stack, byte xOffset, byte yOffset, byte zOffset) {
+        var upNeighborMask = offsetToMask(xOffset, yOffset, zOffset);
+        if ((this.visited & upNeighborMask) == 0) {
+            this.visited |= upNeighborMask;
+
+            var other = this.scratchPos.setWithOffset(origin, xOffset, yOffset, zOffset);
+            var blockState = level.getBlockState(other);
+            if (!blockState.isSolidRender()) {
+                if (!blockState.getFluidState().isSourceOfType(fluid)) {
+                    return true;
+                } else {
+                    stack.add(xOffset);
+                    stack.add(yOffset);
+                    stack.add(zOffset);
+                }
             }
         }
 
