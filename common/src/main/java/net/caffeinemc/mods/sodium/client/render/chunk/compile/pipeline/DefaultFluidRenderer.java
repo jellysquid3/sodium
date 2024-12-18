@@ -616,7 +616,7 @@ public class DefaultFluidRenderer {
         // if such a block exists, the fluid is exposed. If it can't be reached, the fluid is considered occluded.
 
         // performs a simple DFS using a stack and a visited bit mask
-        this.visited = 1L << offsetToMask(0, 0, 0);
+        this.visited = offsetToMask(0, 0, 0);
         var stack = this.stack;
         stack.clear();
         stack.add((byte) 0);
