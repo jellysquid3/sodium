@@ -87,8 +87,8 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         this.tree.add(x, y, z);
     }
 
-    public void finalizeTrees() {
-        this.tree.calculateReduced();
+    public void prepareForTraversal() {
+        this.tree.prepareForTraversal();
     }
 
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
@@ -118,7 +118,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         return this.tree.getPresence(x, y, z) == Tree.PRESENT;
     }
 
-    public void traverseVisible(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
+    public void traverse(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
         this.tree.traverse(visitor, viewport, distanceLimit);
     }
 }

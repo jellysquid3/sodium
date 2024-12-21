@@ -22,9 +22,12 @@ public class FrustumCullTask extends CullTask<FrustumCullResult> {
     @Override
     public FrustumCullResult runTask() {
         var tree = new RayOcclusionSectionTree(this.viewport, this.buildDistance, this.frame, CullType.FRUSTUM, this.level);
+
         var start = System.nanoTime();
+
         this.occlusionCuller.findVisible(tree, this.viewport, this.buildDistance, this.useOcclusionCulling, this);
-        tree.finalizeTrees();
+        tree.prepareForTraversal();
+
         var end = System.nanoTime();
         var time = end - start;
         timings.add(time);

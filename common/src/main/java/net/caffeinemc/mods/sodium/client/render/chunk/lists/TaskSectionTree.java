@@ -19,7 +19,7 @@ public class TaskSectionTree extends RayOcclusionSectionTree {
     }
 
     public void markSectionTask(RenderSection section) {
-        this.taskTree.add(section.getChunkX(), section.getChunkY(), section.getChunkZ());
+        this.taskTree.add(section);
         this.taskTreeFinalized = false;
     }
 
@@ -32,7 +32,7 @@ public class TaskSectionTree extends RayOcclusionSectionTree {
 
     public void traverseVisiblePendingTasks(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
         if (!this.taskTreeFinalized) {
-            this.taskTree.calculateReduced();
+            this.taskTree.prepareForTraversal();
             this.taskTreeFinalized = true;
         }
 

@@ -17,11 +17,10 @@ import java.util.Queue;
  * The async visible chunk collector is passed into a section tree to collect visible chunks.
  */
 public class VisibleChunkCollectorAsync implements SectionTree.VisibleSectionVisitor {
-    private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
-
     private final RenderRegionManager regions;
-
     private final int frame;
+
+    private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
 
     public VisibleChunkCollectorAsync(RenderRegionManager regions, int frame) {
         this.regions = regions;

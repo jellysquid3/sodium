@@ -5,7 +5,7 @@ import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.minecraft.world.level.Level;
 
 public interface TraversableForest extends Forest {
-    void calculateReduced();
+    void prepareForTraversal();
 
     void traverse(SectionTree.VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit);
 

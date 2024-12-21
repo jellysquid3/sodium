@@ -214,7 +214,7 @@ public class RenderSectionManager {
 
         var tree = new VisibleChunkCollectorSync(viewport, searchDistance, this.frame, CullType.FRUSTUM, this.level);
         this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, CancellationToken.NEVER_CANCELLED);
-        tree.finalizeTrees();
+        tree.prepareForTraversal();
 
         this.frustumTaskLists = tree.getPendingTaskLists();
         this.globalTaskLists = null;
@@ -299,15 +299,16 @@ public class RenderSectionManager {
             var tree = this.trees.get(type);
 
             // don't schedule frustum tasks if the camera just changed to prevent throwing them away constantly
-            // since they're going to be invalid in the next frame
+            // since they're going to be invalid by the time they're completed in the next frame
             if (type == CullType.FRUSTUM && this.cameraChanged) {
                 continue;
             }
 
+            // schedule a task of this type if there's no valid and current result for it yet
             var searchDistance = this.getSearchDistanceForCullType(type);
-            if ((tree == null || tree.getFrame() < this.lastGraphDirtyFrame ||
-                    !tree.isValidFor(viewport, searchDistance)) && (
-                    currentRunningTask == null ||
+            if ((tree == null || tree.getFrame() < this.lastGraphDirtyFrame || !tree.isValidFor(viewport, searchDistance)) &&
+                    // and if there's no currently running task that will produce a valid and current result
+                    (currentRunningTask == null ||
                             currentRunningTask instanceof CullTask<?> cullTask && cullTask.getCullType() != type ||
                             currentRunningTask.getFrame() < this.lastGraphDirtyFrame)) {
                 var useOcclusionCulling = this.shouldUseOcclusionCulling(camera, spectator);
@@ -331,7 +332,7 @@ public class RenderSectionManager {
     private static final CullType[] COMPROMISE = { CullType.REGULAR, CullType.FRUSTUM, CullType.WIDE };
 
     private CullType[] getScheduleOrder() {
-        // if the camera is stationary, do the FRUSTUM update to first to prevent the render count from oscillating
+        // if the camera is stationary, do the FRUSTUM update first to prevent the rendered section count from oscillating
         if (!this.cameraChanged) {
             return NARROW_TO_WIDE;
         }
@@ -386,7 +387,7 @@ public class RenderSectionManager {
             }
         }
 
-        // wait if there's no current tree (first frames after initial load/reload)
+        // wait for pending tasks if there's no current tree (first frames after initial load/reload)
         if (bestTree == null) {
             bestTree = this.unpackTaskResults(true);
 
@@ -397,7 +398,7 @@ public class RenderSectionManager {
 
         var start = System.nanoTime();
         var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
-        bestTree.traverseVisible(visibleCollector, viewport, this.getSearchDistance());
+        bestTree.traverse(visibleCollector, viewport, this.getSearchDistance());
         this.renderLists = visibleCollector.createRenderLists();
         var end = System.nanoTime();
         var time = end - start;

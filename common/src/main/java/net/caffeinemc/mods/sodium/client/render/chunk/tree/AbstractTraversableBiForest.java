@@ -9,10 +9,10 @@ public abstract class AbstractTraversableBiForest<T extends TraversableTree> ext
     }
 
     @Override
-    public void calculateReduced() {
-        this.mainTree.calculateReduced();
+    public void prepareForTraversal() {
+        this.mainTree.prepareForTraversal();
         if (this.secondaryTree != null) {
-            this.secondaryTree.calculateReduced();
+            this.secondaryTree.prepareForTraversal();
         }
     }
 

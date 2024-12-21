@@ -10,10 +10,10 @@ public abstract class AbstractTraversableMultiForest<T extends TraversableTree> 
     }
 
     @Override
-    public void calculateReduced() {
+    public void prepareForTraversal() {
         for (var tree : this.trees) {
             if (tree != null) {
-                tree.calculateReduced();
+                tree.prepareForTraversal();
             }
         }
     }

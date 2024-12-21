@@ -48,7 +48,7 @@ public class RayOcclusionSectionTree extends SectionTree {
         this.lastSectionKnownEmpty = false;
 
         // mark all traversed sections as portals, even if they don't have terrain that needs rendering
-        this.portalTree.add(section.getChunkX(), section.getChunkY(), section.getChunkZ());
+        this.portalTree.add(section);
     }
 
     private boolean isRayBlockedStepped(RenderSection section) {

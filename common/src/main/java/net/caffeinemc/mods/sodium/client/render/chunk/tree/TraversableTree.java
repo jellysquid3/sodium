@@ -23,7 +23,7 @@ public class TraversableTree extends Tree {
         super(offsetX, offsetY, offsetZ);
     }
 
-    public void calculateReduced() {
+    public void prepareForTraversal() {
         long doubleReduced = 0;
         for (int i = 0; i < 64; i++) {
             long reduced = 0;
