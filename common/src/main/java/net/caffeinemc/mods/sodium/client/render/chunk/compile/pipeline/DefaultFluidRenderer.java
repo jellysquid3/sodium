@@ -410,8 +410,11 @@ public class DefaultFluidRenderer {
         }
 
         // apply heuristic to not render up face it's in a flooded cave
+        boolean inwardsUpFaceVisible = true;
         if (upVisible) {
-            upVisible = isUpFaceExposedByNeighbors(level, blockPos, fluid);
+            var exposureResult = getUpFaceExposureByNeighbors(level, blockPos, fluidState);
+            upVisible = exposureResult != NO_EXPOSURE;
+            inwardsUpFaceVisible = exposureResult == BOTH_EXPOSED;
         }
 
         if (upVisible) {
@@ -493,7 +496,10 @@ public class DefaultFluidRenderer {
 
             this.updateQuad(quad, level, blockPos, lighter, Direction.UP, ModelQuadFacing.POS_Y, 1.0F, colorProvider, fluidState);
             this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.POS_Y : ModelQuadFacing.UNASSIGNED, false);
-            this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
+
+            if (inwardsUpFaceVisible) {
+                this.writeQuad(meshBuilder, collector, material, offset, quad, aligned ? ModelQuadFacing.NEG_Y : ModelQuadFacing.UNASSIGNED, true);
+            }
         }
 
         if (downVisible) {
@@ -625,68 +631,119 @@ public class DefaultFluidRenderer {
         }
     }
 
+    private static final int NO_EXPOSURE = 0b00;
+    private static final int OUTWARDS_EXPOSED = NO_EXPOSURE | 0b01;
+    private static final int BOTH_EXPOSED = OUTWARDS_EXPOSED | 0b10;
+
     /**
-     * This flooded cave heuristic performs a depth-first search looking for a non-solid block that's reachable through a path of same-type fluid source blocks. If such a block exists, the fluid is considered exposed. If it can't be reached, the fluid is considered occluded.
+     * This flooded cave heuristic performs a depth-first search looking for a block that causes a fluid quad to be visible and is reachable through a path of same-type fluid source blocks. If such a block exists, the fluid is considered exposed. If it can't be reached, the fluid is considered occluded.
+     * <p>
+     * Since in some cases only the outward fluid face should be rendered, it returns a bitmask indicating if the inwards and outwards faces are exposed.
+     * <p>
+     * NOTE: Sometimes this suffers from missing block updates because neighboring chunks aren't rebuild if the block receiving the update wasn't on the chunk border.
      */
-    private boolean isUpFaceExposedByNeighbors(BlockGetter level, BlockPos origin, Fluid fluid) {
+    private int getUpFaceExposureByNeighbors(BlockAndTintGetter level, BlockPos origin, FluidState fluidState) {
         // performs a simple DFS using a stack and a visited bit mask
-        this.visited = offsetToMask(0, 0, 0);
+        this.visited = 0;
         var stack = this.stack;
         stack.clear();
-        stack.add((byte) 0);
-        stack.add((byte) 0);
-        stack.add((byte) 0);
+
+        var result = 0;
+        result |= visitExposureNeighbor(level, origin, fluidState, stack, (byte) 0, (byte) 0);
+        if (result == BOTH_EXPOSED) {
+            return result;
+        }
 
         while (!stack.isEmpty()) {
             // remove coordinates from the stack in reverse order to preserve their format
             var z = stack.removeByte(stack.size() - 1);
-            var y = stack.removeByte(stack.size() - 1);
             var x = stack.removeByte(stack.size() - 1);
 
-            // traverse into unvisited neighbors in outwards direction
-            if (y == 0 && visitExposureNeighbor(level, origin, fluid, stack, x, (byte) 1, z)) {
-                return true;
+            // traverse into unvisited neighbors, return immediately if both faces are exposed (no further change possible)
+            if (x < 2) {
+                result |= visitExposureNeighbor(level, origin, fluidState, stack, (byte) (x + 1), z);
+                if (result == BOTH_EXPOSED) {
+                    return result;
+                }
             }
-            if (x >= 0 && x < 2 && visitExposureNeighbor(level, origin, fluid, stack, (byte) (x + 1), y, z)) {
-                return true;
+            if (x > -2) {
+                result |= visitExposureNeighbor(level, origin, fluidState, stack, (byte) (x - 1), z);
+                if (result == BOTH_EXPOSED) {
+                    return result;
+                }
             }
-            if (x <= 0 && x > -2 && visitExposureNeighbor(level, origin, fluid, stack, (byte) (x - 1), y, z)) {
-                return true;
+            if (z < 2) {
+                result |= visitExposureNeighbor(level, origin, fluidState, stack, x, (byte) (z + 1));
+                if (result == BOTH_EXPOSED) {
+                    return result;
+                }
             }
-            if (z >= 0 && z < 2 && visitExposureNeighbor(level, origin, fluid, stack, x, y, (byte) (z + 1))) {
-                return true;
-            }
-            if (z <= 0 && z > -2 && visitExposureNeighbor(level, origin, fluid, stack, x, y, (byte) (z - 1))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private long offsetToMask(int x, int y, int z) {
-        return 1L << ((x + 2) + (y << 5) + (z + 2) * 5);
-    }
-
-    private boolean visitExposureNeighbor(BlockGetter level, BlockPos origin, Fluid fluid, ByteList stack, byte xOffset, byte yOffset, byte zOffset) {
-        var upNeighborMask = offsetToMask(xOffset, yOffset, zOffset);
-        if ((this.visited & upNeighborMask) == 0) {
-            this.visited |= upNeighborMask;
-
-            var other = this.scratchPos.setWithOffset(origin, xOffset, yOffset, zOffset);
-            var blockState = level.getBlockState(other);
-            if (!blockState.isSolidRender()) {
-                if (!blockState.getFluidState().isSourceOfType(fluid)) {
-                    return true;
-                } else {
-                    stack.add(xOffset);
-                    stack.add(yOffset);
-                    stack.add(zOffset);
+            if (z > -2) {
+                result |= visitExposureNeighbor(level, origin, fluidState, stack, x, (byte) (z - 1));
+                if (result == BOTH_EXPOSED) {
+                    return result;
                 }
             }
         }
 
-        return false;
+        return result;
+    }
+
+    private long offsetToMask(int x, int z) {
+        return 1L << ((x + 2) + (z + 2) * 5);
+    }
+
+    private int visitExposureNeighbor(BlockAndTintGetter level, BlockPos origin, FluidState fluidState, ByteList stack, byte xOffset, byte zOffset) {
+        // stop if position was already visited previously
+        var upNeighborMask = offsetToMask(xOffset, zOffset);
+        if ((this.visited & upNeighborMask) != 0) {
+            return NO_EXPOSURE;
+        }
+        this.visited |= upNeighborMask;
+
+        // stop at solid blocks, don't propagate but also not considered exposed
+        var neighborBlockState = level.getBlockState(this.scratchPos.setWithOffset(origin, xOffset, 0, zOffset));
+        if (neighborBlockState.isSolidRender()) {
+            return NO_EXPOSURE;
+        }
+
+        var fluid = fluidState.getType();
+        var aboveBlockState = level.getBlockState(this.scratchPos.move(Direction.UP));
+        var aboveIsSameFluid = aboveBlockState.getFluidState().isSourceOfType(fluid);
+
+        var result = NO_EXPOSURE;
+
+        // propagate connectedness through same-type fluid blocks.
+        // only propagate if the block above is not the same fluid. Since if it is, the propagation stops
+        // since the potential fluid surface is not connected.
+        if (neighborBlockState.getFluidState().isSourceOfType(fluid)) {
+            if (!aboveIsSameFluid) {
+                stack.add(xOffset);
+                stack.add(zOffset);
+            }
+        }
+
+        // if the block is not solid, and not the same fluid, render at least the outwards face, and the inwards face if the block shows them
+        else if (!PlatformBlockAccess.getInstance().shouldShowFluidOverlay(neighborBlockState, level, this.scratchPos, fluidState)) {
+            return BOTH_EXPOSED;
+        } else {
+            result = OUTWARDS_EXPOSED;
+        }
+
+        // expose faces if the block above is not the same fluid and not solid, i.e. the up face is visible.
+        // If it's a block that should have fluid faces rendered against it, expose both. Otherwise just the outwards face is rendered
+        // to prevent the inwards face from being visible from within the water. However, the outwards face is still visible from the outside
+        // and needs to be rendered in any case the block is not solid.
+        if (!aboveIsSameFluid && !aboveBlockState.isSolidRender()) {
+            if (!PlatformBlockAccess.getInstance().shouldShowFluidOverlay(aboveBlockState, level, this.scratchPos, fluidState)) {
+                return BOTH_EXPOSED;
+            } else {
+                // propagation can't stop immediately since the inwards face might still become exposed through further traversal
+                result |= OUTWARDS_EXPOSED;
+            }
+        }
+
+        return result;
     }
 
     private static boolean isAlignedEquals(float a, float b) {
