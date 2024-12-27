@@ -587,8 +587,8 @@ public class RenderSectionManager {
         }
     }
 
+    // renderTree is not necessarily frustum-filtered but that is ok since the caller makes sure to eventually also perform a frustum test on the box being tested (see EntityRendererMixin)
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
-        // TODO: this isn't actually frustum tested? Should it be? Is the original method we're replacing here frustum-tested?
         return this.renderTree == null || this.renderTree.isBoxVisible(x1, y1, z1, x2, y2, z2);
     }
 
@@ -1117,8 +1117,6 @@ public class RenderSectionManager {
     }
 
     public String getChunksDebugString() {
-        // TODO: add dirty and queued counts
-
         // C: visible/total D: distance
         return String.format(
                 "C: %d/%d (%s) D: %d",
