@@ -76,5 +76,4 @@
   "sodium.options.chunk_memory_allocator.swap": "스왑",
   "modmenu.summaryTranslation.sodium": "최고의 속도와 호환성을 자랑하는 Minecraft 렌더링 최적화 모드.",
   "modmenu.descriptionTranslation.sodium": "Sodium은 프레임 속도와 마이크로 스터터를 크게 개선하고, 다양한 그래픽 문제를 해결하는 강력한 Minecraft 렌더링 엔진입니다.",
-  "sodium.resource_pack.unofficial": "§7Sodium 비공식 번역§r"
 }
