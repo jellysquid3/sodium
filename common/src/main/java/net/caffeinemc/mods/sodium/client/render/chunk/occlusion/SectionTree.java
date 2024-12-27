@@ -9,11 +9,6 @@ import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
 
-/*
- * - make another tree similar to this one that is used to track invalidation cubes in the bfs to make it possible to reuse some of its results (?)
- * - make another tree that that is filled with all bfs-visited sections to do ray-cast culling during traversal. This is fast if we can just check for certain bits in the tree instead of stepping through many sections. If the top node is 1, that means a ray might be able to get through, traverse further in that case. If it's 0, that means it's definitely blocked since we haven't visited sections that it might go through, but since bfs goes outwards, no such sections will be added later. Delete this auxiliary tree after traversal. Would need to check the projection of the entire section to the camera (potentially irregular hexagonal frustum, or just check each of the at most six visible corners.) Do a single traversal where each time the node is checked against all participating rays/visibility shapes. Alternatively, check a cylinder that encompasses the section's elongation towards the camera plane. (would just require some distance checks, maybe faster?)
- * - are incremental bfs updates possible or useful? Since bfs order doesn't matter with the render list being generated from the tree, that might reduce the load on the async cull thread. (essentially just bfs but with the queue initialized to the set of changed sections.) Problem: might result in more sections being visible than intended, since sections aren't removed when another bfs is run starting from updated sections.
- */
 public class SectionTree extends PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
     private final TraversableForest tree;
 
@@ -43,9 +38,9 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
     public boolean isValidFor(Viewport viewport, float searchDistance) {
         var cameraPos = viewport.getChunkCoord();
-        return this.cameraX >> 4 == cameraPos.getX() &&
-                this.cameraY >> 4 == cameraPos.getY() &&
-                this.cameraZ >> 4 == cameraPos.getZ() &&
+        return  Math.abs((this.cameraX >> 4) - cameraPos.getX()) <= this.bfsWidth &&
+                Math.abs((this.cameraY >> 4) - cameraPos.getY()) <= this.bfsWidth &&
+                Math.abs((this.cameraZ >> 4) - cameraPos.getZ()) <= this.bfsWidth &&
                 this.buildDistance >= searchDistance;
     }
 

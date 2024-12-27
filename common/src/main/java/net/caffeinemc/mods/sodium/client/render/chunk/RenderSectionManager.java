@@ -29,6 +29,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.N
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.TranslucentData;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.trigger.CameraMovement;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.trigger.SortTriggering;
+import net.caffeinemc.mods.sodium.client.render.chunk.tree.RemovableMultiForest;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkMeshFormats;
 import net.caffeinemc.mods.sodium.client.render.texture.SpriteUtil;
 import net.caffeinemc.mods.sodium.client.render.util.RenderAsserts;
@@ -115,7 +116,8 @@ public class RenderSectionManager {
     private final ObjectArrayList<AsyncRenderTask<?>> pendingTasks = new ObjectArrayList<>();
     private SectionTree renderTree = null;
     private TaskSectionTree globalTaskTree = null;
-    private final Map<CullType, SectionTree> trees = new EnumMap<>(CullType.class);
+    private final Map<CullType, SectionTree> cullResults = new EnumMap<>(CullType.class);
+    private final RemovableMultiForest renderableSectionTree;
 
     private final AsyncCameraTimingControl cameraTimingControl = new AsyncCameraTimingControl();
 
@@ -134,6 +136,8 @@ public class RenderSectionManager {
 
         this.renderLists = SortedRenderLists.empty();
         this.occlusionCuller = new OcclusionCuller(Long2ReferenceMaps.unmodifiable(this.sectionByPosition), this.level);
+
+        this.renderableSectionTree = new RemovableMultiForest(renderDistance);
     }
 
     public void updateCameraState(Vector3dc cameraPosition, Camera camera) {
@@ -148,8 +152,8 @@ public class RenderSectionManager {
         if (this.averageFrameDuration == -1) {
             this.averageFrameDuration = this.lastFrameDuration;
         } else {
-            this.averageFrameDuration = (long)(this.lastFrameDuration * AVERAGE_FRAME_DURATION_FACTOR) +
-                (long)(this.averageFrameDuration * (1 - AVERAGE_FRAME_DURATION_FACTOR));
+            this.averageFrameDuration = (long) (this.lastFrameDuration * AVERAGE_FRAME_DURATION_FACTOR) +
+                    (long) (this.averageFrameDuration * (1 - AVERAGE_FRAME_DURATION_FACTOR));
         }
         this.averageFrameDuration = Mth.clamp(this.averageFrameDuration, 1_000_100, 100_000_000);
 
@@ -170,7 +174,7 @@ public class RenderSectionManager {
 
         // discard unusable present and pending frustum-tested trees
         if (this.cameraChanged) {
-            this.trees.remove(CullType.FRUSTUM);
+            this.cullResults.remove(CullType.FRUSTUM);
 
             this.pendingTasks.removeIf(task -> {
                 if (task instanceof CullTask<?> cullTask && cullTask.getCullType() == CullType.FRUSTUM) {
@@ -184,7 +188,7 @@ public class RenderSectionManager {
         // remove all tasks that aren't in progress yet
         this.pendingTasks.removeIf(AsyncRenderTask::cancelIfNotStarted);
 
-        this.unpackTaskResults(false);
+        this.unpackTaskResults(null);
 
         this.scheduleAsyncWork(camera, viewport, spectator);
 
@@ -218,27 +222,28 @@ public class RenderSectionManager {
 
         this.frustumTaskLists = tree.getPendingTaskLists();
         this.globalTaskLists = null;
-        this.trees.put(CullType.FRUSTUM, tree);
+        this.cullResults.put(CullType.FRUSTUM, tree);
         this.renderTree = tree;
 
         this.renderLists = tree.createRenderLists(viewport);
 
         // remove the other trees, they're very wrong by now
-        this.trees.remove(CullType.WIDE);
-        this.trees.remove(CullType.REGULAR);
+        this.cullResults.remove(CullType.WIDE);
+        this.cullResults.remove(CullType.REGULAR);
 
         this.needsRenderListUpdate = false;
         this.needsGraphUpdate = false;
         this.cameraChanged = false;
     }
 
-    private SectionTree unpackTaskResults(boolean wait) {
+    private SectionTree unpackTaskResults(Viewport waitingViewport) {
         SectionTree latestTree = null;
+        CullType latestTreeCullType = null;
 
         var it = this.pendingTasks.iterator();
         while (it.hasNext()) {
             var task = it.next();
-            if (!wait && !task.isDone()) {
+            if (waitingViewport == null && !task.isDone()) {
                 continue;
             }
             it.remove();
@@ -252,8 +257,9 @@ public class RenderSectionManager {
                     // ensure no useless frustum tree is accepted
                     if (!this.cameraChanged) {
                         var tree = result.getTree();
-                        this.trees.put(CullType.FRUSTUM, tree);
+                        this.cullResults.put(CullType.FRUSTUM, tree);
                         latestTree = tree;
+                        latestTreeCullType = CullType.FRUSTUM;
 
                         this.needsRenderListUpdate = true;
                     }
@@ -264,8 +270,10 @@ public class RenderSectionManager {
                     this.globalTaskLists = result.getGlobalTaskLists();
                     this.frustumTaskLists = result.getFrustumTaskLists();
                     this.globalTaskTree = tree;
-                    this.trees.put(globalCullTask.getCullType(), tree);
+                    var cullType = globalCullTask.getCullType();
+                    this.cullResults.put(cullType, tree);
                     latestTree = tree;
+                    latestTreeCullType = cullType;
 
                     this.needsRenderListUpdate = true;
                 }
@@ -276,7 +284,13 @@ public class RenderSectionManager {
             }
         }
 
-        return latestTree;
+        if (waitingViewport != null && latestTree != null) {
+            var searchDistance = this.getSearchDistanceForCullType(latestTreeCullType);
+            if (latestTree.isValidFor(waitingViewport, searchDistance)) {
+                return latestTree;
+            }
+        }
+        return null;
     }
 
     private static Thread makeAsyncCullThread(Runnable runnable) {
@@ -286,6 +300,11 @@ public class RenderSectionManager {
     }
 
     private void scheduleAsyncWork(Camera camera, Viewport viewport, boolean spectator) {
+        // if the origin section doesn't exist, cull tasks won't produce any useful results
+        if (!this.occlusionCuller.graphOriginPresent(viewport)) {
+            return;
+        }
+
         // submit tasks of types that are applicable and not yet running
         AsyncRenderTask<?> currentRunningTask = null;
         if (!this.pendingTasks.isEmpty()) {
@@ -296,7 +315,7 @@ public class RenderSectionManager {
         var scheduleOrder = getScheduleOrder();
 
         for (var type : scheduleOrder) {
-            var tree = this.trees.get(type);
+            var tree = this.cullResults.get(type);
 
             // don't schedule frustum tasks if the camera just changed to prevent throwing them away constantly
             // since they're going to be invalid by the time they're completed in the next frame
@@ -369,47 +388,59 @@ public class RenderSectionManager {
     }
 
     private void processRenderListUpdate(Viewport viewport) {
-        // pick the narrowest up-to-date tree, if this tree is insufficiently up to date we would've switched to sync bfs earlier
+        // pick the narrowest valid tree. This tree is either up-to-date or the origin is out of the graph as otherwise sync bfs would have been triggered (in graph but moving rapidly)
         SectionTree bestTree = null;
-        boolean bestTreeValid = false;
         for (var type : NARROW_TO_WIDE) {
-            var tree = this.trees.get(type);
+            var tree = this.cullResults.get(type);
             if (tree == null) {
                 continue;
             }
 
             // pick the most recent and most valid tree
             float searchDistance = this.getSearchDistanceForCullType(type);
-            var treeIsValid = tree.isValidFor(viewport, searchDistance);
-            if (bestTree == null || tree.getFrame() > bestTree.getFrame() || !bestTreeValid && treeIsValid) {
+            if (!tree.isValidFor(viewport, searchDistance)) {
+                continue;
+            }
+            if (bestTree == null || tree.getFrame() > bestTree.getFrame()) {
                 bestTree = tree;
-                bestTreeValid = treeIsValid;
             }
         }
 
-        // wait for pending tasks if there's no current tree (first frames after initial load/reload)
+        // wait for pending tasks to maybe supply a valid tree if there's no current tree (first frames after initial load/reload)
         if (bestTree == null) {
-            bestTree = this.unpackTaskResults(true);
+            bestTree = this.unpackTaskResults(viewport);
+        }
 
-            if (bestTree == null) {
-                throw new IllegalStateException("Unpacked tree was not valid but a tree is required to render.");
+        // use out-of-graph fallback there's still no result because nothing was scheduled (missing origin section, empty world)
+        if (bestTree == null) {
+            var searchDistance = this.getSearchDistance();
+            var visitor = new FallbackVisibleChunkCollector(viewport, searchDistance, this.sectionByPosition, this.regions, this.frame);
+
+            this.renderableSectionTree.prepareForTraversal();
+            this.renderableSectionTree.traverse(visitor, viewport, searchDistance);
+
+            this.renderLists = visitor.createRenderLists();
+            this.frustumTaskLists = visitor.getPendingTaskLists();
+            this.globalTaskLists = null;
+            this.renderTree = null;
+        } else {
+            var start = System.nanoTime();
+
+            var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
+            bestTree.traverse(visibleCollector, viewport, this.getSearchDistance());
+            this.renderLists = visibleCollector.createRenderLists();
+
+            var end = System.nanoTime();
+            var time = end - start;
+            timings.add(time);
+            if (timings.size() >= 500) {
+                var average = timings.longStream().average().orElse(0);
+                System.out.println("Render list generation took " + (average) / 1000 + "µs over " + timings.size() + " samples");
+                timings.clear();
             }
-        }
 
-        var start = System.nanoTime();
-        var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
-        bestTree.traverse(visibleCollector, viewport, this.getSearchDistance());
-        this.renderLists = visibleCollector.createRenderLists();
-        var end = System.nanoTime();
-        var time = end - start;
-        timings.add(time);
-        if (timings.size() >= 500) {
-            var average = timings.longStream().average().orElse(0);
-            System.out.println("Render list generation took " + (average) / 1000 + "µs over " + timings.size() + " samples");
-            timings.clear();
+            this.renderTree = bestTree;
         }
-
-        this.renderTree = bestTree;
     }
 
     public void markGraphDirty() {
@@ -457,6 +488,10 @@ public class RenderSectionManager {
         return useOcclusionCulling;
     }
 
+    public void beforeSectionUpdates() {
+        this.renderableSectionTree.ensureCapacity(this.getRenderDistance());
+    }
+
     public void onSectionAdded(int x, int y, int z) {
         long key = SectionPos.asLong(x, y, z);
 
@@ -477,6 +512,7 @@ public class RenderSectionManager {
         if (section.hasOnlyAir()) {
             this.updateSectionInfo(renderSection, BuiltSectionInfo.EMPTY);
         } else {
+            this.renderableSectionTree.add(renderSection);
             renderSection.setPendingUpdate(ChunkUpdateType.INITIAL_BUILD, this.lastFrameAtTime);
         }
 
@@ -493,6 +529,8 @@ public class RenderSectionManager {
         if (section == null) {
             return;
         }
+
+        this.renderableSectionTree.remove(x, y, z);
 
         if (section.getTranslucentData() != null) {
             this.sortTriggering.removeSection(section.getTranslucentData(), sectionPos);
@@ -550,6 +588,7 @@ public class RenderSectionManager {
     }
 
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
+        // TODO: this isn't actually frustum tested? Should it be? Is the original method we're replacing here frustum-tested?
         return this.renderTree == null || this.renderTree.isBoxVisible(x1, y1, z1, x2, y2, z2);
     }
 
@@ -617,6 +656,12 @@ public class RenderSectionManager {
     }
 
     private boolean updateSectionInfo(RenderSection render, BuiltSectionInfo info) {
+        if (info == null || (info.flags & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
+            this.renderableSectionTree.remove(render);
+        } else {
+            this.renderableSectionTree.add(render);
+        }
+
         var infoChanged = render.setInfo(info);
 
         if (info == null || ArrayUtils.isEmpty(info.globalBlockEntities)) {
@@ -1049,7 +1094,7 @@ public class RenderSectionManager {
         list.add(String.format("Transfer Queue: %s", this.regions.getStagingBuffer().toString()));
 
         list.add(String.format("Chunk Builder: Schd=%02d | Busy=%02d (%04d%%) | Total=%02d",
-                this.builder.getScheduledJobCount(), this.builder.getBusyThreadCount(), (int)(this.builder.getBusyFraction(this.lastFrameDuration) * 100), this.builder.getTotalThreadCount())
+                this.builder.getScheduledJobCount(), this.builder.getBusyThreadCount(), (int) (this.builder.getBusyFraction(this.lastFrameDuration) * 100), this.builder.getTotalThreadCount())
         );
 
         list.add(String.format("Tasks: N0=%03d | N1=%03d | Def=%03d, Recv=%03d",
@@ -1086,7 +1131,7 @@ public class RenderSectionManager {
     private String getCullTypeName() {
         CullType renderTreeCullType = null;
         for (var type : CullType.values()) {
-            if (this.trees.get(type) == this.renderTree) {
+            if (this.cullResults.get(type) == this.renderTree) {
                 renderTreeCullType = type;
                 break;
             }

@@ -293,6 +293,14 @@ public class OcclusionCuller {
         }
     }
 
+    public boolean graphOriginPresent(Viewport viewport) {
+        var origin = viewport.getChunkCoord();
+        var originY = origin.getY();
+        return originY < this.level.getMinSectionY() ||
+                originY > this.level.getMaxSectionY() ||
+                this.sections.get(viewport.getChunkCoord().asLong()) != null;
+    }
+
     private void init(WriteQueue<RenderSection> queue)
     {
         var origin = this.viewport.getChunkCoord();

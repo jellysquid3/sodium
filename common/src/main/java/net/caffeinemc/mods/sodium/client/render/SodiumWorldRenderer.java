@@ -251,6 +251,7 @@ public class SodiumWorldRenderer {
     }
 
     private void processChunkEvents() {
+        this.renderSectionManager.beforeSectionUpdates();
         var tracker = ChunkTrackerHolder.get(this.level);
         tracker.forEachEvent(this.renderSectionManager::onChunkAdded, this.renderSectionManager::onChunkRemoved);
     }
