@@ -257,14 +257,23 @@ public class BlockRenderer extends AbstractBlockRenderContext {
     }
 
     private static TerrainRenderPass getDowngradedPass(TextureAtlasSprite sprite, TerrainRenderPass pass) {
-        if (sprite.contents() instanceof SpriteContentsExtension contents) {
-            if (pass == DefaultTerrainRenderPasses.TRANSLUCENT && !contents.sodium$hasTranslucentPixels()) {
-                pass = DefaultTerrainRenderPasses.CUTOUT;
+        if (sprite instanceof TextureAtlasSpriteExtension spriteExt) {
+            // Some mods may use a custom ticker which we cannot look into. To avoid problems with these mods,
+            // do not attempt to downgrade the render pass.
+            if (spriteExt.sodium$hasUnknownImageContents()) {
+                return pass;
             }
-            if (pass == DefaultTerrainRenderPasses.CUTOUT && !contents.sodium$hasTransparentPixels()) {
-                pass = DefaultTerrainRenderPasses.SOLID;
+
+            if (sprite.contents() instanceof SpriteContentsExtension contentsExt) {
+                if (pass == DefaultTerrainRenderPasses.TRANSLUCENT && !contentsExt.sodium$hasTranslucentPixels()) {
+                    pass = DefaultTerrainRenderPasses.CUTOUT;
+                }
+                if (pass == DefaultTerrainRenderPasses.CUTOUT && !contentsExt.sodium$hasTransparentPixels()) {
+                    pass = DefaultTerrainRenderPasses.SOLID;
+                }
             }
         }
+
         return pass;
     }
 }
