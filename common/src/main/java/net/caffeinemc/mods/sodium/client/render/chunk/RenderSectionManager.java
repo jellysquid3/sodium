@@ -94,8 +94,8 @@ public class RenderSectionManager {
     @NotNull
     private SortedRenderLists renderLists;
 
-    private PendingTaskCollector.TaskListCollection frustumTaskLists;
-    private PendingTaskCollector.TaskListCollection globalTaskLists;
+    private TaskListCollection frustumTaskLists;
+    private TaskListCollection globalTaskLists;
 
     private int frame;
     private int lastGraphDirtyFrame;
@@ -785,7 +785,7 @@ public class RenderSectionManager {
         float frustumPriorityBias = 0;
         float globalPriorityBias = 0;
         if (this.frustumTaskLists != null) {
-            frustumQueue = this.frustumTaskLists.pendingTasks.get(deferMode);
+            frustumQueue = this.frustumTaskLists.get(deferMode);
         }
         if (frustumQueue != null) {
             frustumPriorityBias = this.frustumTaskLists.getCollectorPriorityBias(this.lastFrameAtTime);
@@ -794,7 +794,7 @@ public class RenderSectionManager {
         }
 
         if (this.globalTaskLists != null) {
-            globalQueue = this.globalTaskLists.pendingTasks.get(deferMode);
+            globalQueue = this.globalTaskLists.get(deferMode);
         }
         if (globalQueue != null) {
             globalPriorityBias = this.globalTaskLists.getCollectorPriorityBias(this.lastFrameAtTime);

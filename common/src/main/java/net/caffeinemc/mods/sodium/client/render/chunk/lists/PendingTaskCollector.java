@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
-import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongHeapPriorityQueue;
 import net.caffeinemc.mods.sodium.client.render.chunk.ChunkUpdateType;
@@ -9,23 +8,19 @@ import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
-import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
-
-import java.util.EnumMap;
-import java.util.Map;
 
 public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisitor {
     public static final int SECTION_Y_MIN = -128; // used instead of baseOffsetY to accommodate all permissible y values (-2048 to 2048 blocks)
 
     // tunable parameters for the priority calculation.
     // each "gained" point means a reduction in the final priority score (lowest score processed first)
-    private static final float PENDING_TIME_FACTOR = -1.0f / 500_000_000.0f; // 1 point gained per 500ms
-    private static final float WITHIN_FRUSTUM_BIAS = -3.0f; // points for being within the frustum
-    private static final float PROXIMITY_FACTOR = 3.0f; // penalty for being far away
-    private static final float CLOSE_DISTANCE = 50.0f; // distance at which another proximity bonus is applied
-    private static final float CLOSE_PROXIMITY_FACTOR = 0.6f; // penalty for being CLOSE_DISTANCE or farther away
-    private static final float INV_MAX_DISTANCE_CLOSE = CLOSE_PROXIMITY_FACTOR / CLOSE_DISTANCE;
+    static final float PENDING_TIME_FACTOR = -1.0f / 500_000_000.0f; // 1 point gained per 500ms
+    static final float WITHIN_FRUSTUM_BIAS = -3.0f; // points for being within the frustum
+    static final float PROXIMITY_FACTOR = 3.0f; // penalty for being far away
+    static final float CLOSE_DISTANCE = 50.0f; // distance at which another proximity bonus is applied
+    static final float CLOSE_PROXIMITY_FACTOR = 0.6f; // penalty for being CLOSE_DISTANCE or farther away
+    static final float INV_MAX_DISTANCE_CLOSE = CLOSE_PROXIMITY_FACTOR / CLOSE_DISTANCE;
 
     private final LongArrayList[] pendingTasks = new LongArrayList[DeferMode.values().length];
 
@@ -127,7 +122,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     }
 
     public TaskListCollection getPendingTaskLists() {
-        var result = new EnumMap<DeferMode, LongHeapPriorityQueue>(DeferMode.class);
+        var result = new TaskListCollection(DeferMode.class, this.creationTime, this.isFrustumTested, this.baseOffsetX, this.baseOffsetZ);
 
         for (var mode : DeferMode.values()) {
             var list = this.pendingTasks[mode.ordinal()];
@@ -137,32 +132,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
             }
         }
 
-        return new TaskListCollection(result);
+        return result;
     }
 
-    public class TaskListCollection {
-        public final Map<DeferMode, LongHeapPriorityQueue> pendingTasks;
-
-        public TaskListCollection(Map<DeferMode, LongHeapPriorityQueue> pendingTasks) {
-            this.pendingTasks = pendingTasks;
-        }
-
-        public float getCollectorPriorityBias(long now) {
-            // compensate for creation time of the list and whether the sections are in the frustum
-            return (now - PendingTaskCollector.this.creationTime) * PENDING_TIME_FACTOR +
-                    (PendingTaskCollector.this.isFrustumTested ? WITHIN_FRUSTUM_BIAS : 0);
-        }
-
-        public RenderSection decodeAndFetchSection(Long2ReferenceMap<RenderSection> sectionByPosition, long encoded) {
-            var localX = (int) (encoded >>> 20) & 0b1111111111;
-            var localY = (int) (encoded >>> 10) & 0b1111111111;
-            var localZ = (int) (encoded & 0b1111111111);
-
-            var globalX = localX + PendingTaskCollector.this.baseOffsetX;
-            var globalY = localY + SECTION_Y_MIN;
-            var globalZ = localZ + PendingTaskCollector.this.baseOffsetZ;
-
-            return sectionByPosition.get(SectionPos.asLong(globalX, globalY, globalZ));
-        }
-    }
 }
