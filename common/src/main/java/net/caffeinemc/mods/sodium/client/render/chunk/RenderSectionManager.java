@@ -152,8 +152,7 @@ public class RenderSectionManager {
         if (this.averageFrameDuration == -1) {
             this.averageFrameDuration = this.lastFrameDuration;
         } else {
-            this.averageFrameDuration = (long) (this.lastFrameDuration * AVERAGE_FRAME_DURATION_FACTOR) +
-                    (long) (this.averageFrameDuration * (1 - AVERAGE_FRAME_DURATION_FACTOR));
+            this.averageFrameDuration = MathUtil.exponentialMovingAverage(this.averageFrameDuration, this.lastFrameDuration, AVERAGE_FRAME_DURATION_FACTOR);
         }
         this.averageFrameDuration = Mth.clamp(this.averageFrameDuration, 1_000_100, 100_000_000);
 

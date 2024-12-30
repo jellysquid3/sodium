@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.objects.Reference2FloatMap;
 import it.unimi.dsi.fastutil.objects.Reference2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceMap;
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
+import net.caffeinemc.mods.sodium.client.util.MathUtil;
 
 public class CategoryFactorEstimator<C> {
     private final Reference2FloatMap<C> aPerB = new Reference2FloatOpenHashMap<>();
@@ -62,7 +63,7 @@ public class CategoryFactorEstimator<C> {
             }
             if (this.aPerB.containsKey(category)) {
                 var oldFactor = this.aPerB.getFloat(category);
-                var newValue = oldFactor * (1 - this.newDataFactor) + newFactor * this.newDataFactor;
+                var newValue = MathUtil.exponentialMovingAverage(oldFactor, newFactor, this.newDataFactor);
                 this.aPerB.put(category, newValue);
             } else {
                 this.aPerB.put(category, newFactor);
