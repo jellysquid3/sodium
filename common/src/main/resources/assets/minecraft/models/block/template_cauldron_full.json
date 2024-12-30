@@ -1,11 +1,11 @@
 {
     "ambientocclusion": false,
     "textures": {
-        "rim": "block/cauldron_top",
+        "top": "block/cauldron_top",
         "particle": "block/cauldron_side",
-        "outside": "block/cauldron_side",
+        "side": "block/cauldron_side",
         "inside": "block/cauldron_inner",
-        "feet": "block/cauldron_bottom"
+        "bottom": "block/cauldron_bottom"
     },
     "elements": [
         {
