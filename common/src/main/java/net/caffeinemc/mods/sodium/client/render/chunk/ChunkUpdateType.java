@@ -27,12 +27,12 @@ public enum ChunkUpdateType {
         return null;
     }
 
-    public DeferMode getDeferMode() {
-        return this.deferMode;
-    }
-
     public boolean isImportant() {
         return this == IMPORTANT_REBUILD || this == IMPORTANT_SORT;
+    }
+
+    public DeferMode getDeferMode() {
+        return this.deferMode;
     }
 
     public float getPriorityValue() {

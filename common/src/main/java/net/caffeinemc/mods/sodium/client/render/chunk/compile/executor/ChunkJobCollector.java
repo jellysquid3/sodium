@@ -54,7 +54,7 @@ public class ChunkJobCollector {
         return this.duration > 0;
     }
 
-    public long getSubmittedTaskCount() {
+    public int getSubmittedTaskCount() {
         return this.submitted.size();
     }
 }

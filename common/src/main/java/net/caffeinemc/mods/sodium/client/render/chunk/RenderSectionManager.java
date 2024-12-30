@@ -75,9 +75,9 @@ public class RenderSectionManager {
     private final JobDurationEstimator jobDurationEstimator = new JobDurationEstimator();
     private final MeshTaskSizeEstimator meshTaskSizeEstimator = new MeshTaskSizeEstimator();
     private ChunkJobCollector lastBlockingCollector;
-    private long thisFrameBlockingTasks;
-    private long nextFrameBlockingTasks;
-    private long deferredTasks;
+    private int thisFrameBlockingTasks;
+    private int nextFrameBlockingTasks;
+    private int deferredTasks;
 
     private final ChunkRenderer chunkRenderer;
 
