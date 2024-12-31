@@ -5,6 +5,9 @@ import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
 import org.joml.FrustumIntersection;
 
+/**
+ * A traversable tree is a tree of sections that can be traversed with a distance limit and a frustum. It traverses the sections in visual front-to-back order, so that they can be directly put into a render list. Note however that ordering regions by adding them to the list the first time one of their sections is visited does not yield the correct order. This is because the sections are traversed in visual order, not ordered by distance from the camera.
+ */
 public class TraversableTree extends Tree {
     private static final int INSIDE_FRUSTUM = 0b01;
     private static final int INSIDE_DISTANCE = 0b10;

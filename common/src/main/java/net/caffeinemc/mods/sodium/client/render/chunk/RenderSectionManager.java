@@ -423,7 +423,7 @@ public class RenderSectionManager {
             this.renderableSectionTree.prepareForTraversal();
             this.renderableSectionTree.traverse(visitor, viewport, searchDistance);
 
-            this.renderLists = visitor.createRenderLists();
+            this.renderLists = visitor.createRenderLists(viewport);
             this.frustumTaskLists = visitor.getPendingTaskLists();
             this.globalTaskLists = null;
             this.renderTree = null;
@@ -432,7 +432,7 @@ public class RenderSectionManager {
 
             var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
             bestTree.traverse(visibleCollector, viewport, this.getSearchDistance());
-            this.renderLists = visibleCollector.createRenderLists();
+            this.renderLists = visibleCollector.createRenderLists(viewport);
 
             var end = System.nanoTime();
             var time = end - start;

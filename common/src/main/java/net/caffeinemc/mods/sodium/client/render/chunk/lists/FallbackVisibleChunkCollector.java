@@ -13,8 +13,8 @@ public class FallbackVisibleChunkCollector extends FrustumTaskCollector {
         this.renderListCollector = new VisibleChunkCollectorAsync(regions, frame);
     }
 
-    public SortedRenderLists createRenderLists() {
-        return this.renderListCollector.createRenderLists();
+    public SortedRenderLists createRenderLists(Viewport viewport) {
+        return this.renderListCollector.createRenderLists(viewport);
     }
 
     @Override

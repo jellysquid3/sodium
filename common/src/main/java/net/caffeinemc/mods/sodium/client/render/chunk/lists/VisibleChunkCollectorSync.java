@@ -1,6 +1,5 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
-import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
@@ -13,7 +12,7 @@ import net.minecraft.world.level.Level;
 /**
  * The sync visible chunk collector is passed into the graph search occlusion culler to collect visible chunks.
  */
-public class VisibleChunkCollectorSync extends SectionTree {
+public class VisibleChunkCollectorSync extends SectionTree implements RenderListProvider {
     private final ObjectArrayList<ChunkRenderList> sortedRenderLists;
 
     public VisibleChunkCollectorSync(Viewport viewport, float buildDistance, int frame, CullType cullType, Level level) {
@@ -44,39 +43,18 @@ public class VisibleChunkCollectorSync extends SectionTree {
 
     private static int[] sortItems = new int[RenderRegion.REGION_SIZE];
 
-    public SortedRenderLists createRenderLists(Viewport viewport) {
-        // sort the regions by distance to fix rare region ordering bugs
-        var sectionPos = viewport.getChunkCoord();
-        var cameraX = sectionPos.getX() >> RenderRegion.REGION_WIDTH_SH;
-        var cameraY = sectionPos.getY() >> RenderRegion.REGION_HEIGHT_SH;
-        var cameraZ = sectionPos.getZ() >> RenderRegion.REGION_LENGTH_SH;
-        var size = this.sortedRenderLists.size();
+    @Override
+    public ObjectArrayList<ChunkRenderList> getUnsortedRenderLists() {
+        return this.sortedRenderLists;
+    }
 
-        if (sortItems.length < size) {
-            sortItems = new int[size];
-        }
+    @Override
+    public int[] getCachedSortItems() {
+        return sortItems;
+    }
 
-        for (var i = 0; i < size; i++) {
-            var region = this.sortedRenderLists.get(i).getRegion();
-            var x = Math.abs(region.getX() - cameraX);
-            var y = Math.abs(region.getY() - cameraY);
-            var z = Math.abs(region.getZ() - cameraZ);
-            sortItems[i] = (x + y + z) << 16 | i;
-        }
-
-        IntArrays.unstableSort(sortItems, 0, size);
-
-        var sorted = new ObjectArrayList<ChunkRenderList>(size);
-        for (var i = 0; i < size; i++) {
-            var key = sortItems[i];
-            var renderList = this.sortedRenderLists.get(key & 0xFFFF);
-            sorted.add(renderList);
-        }
-
-        for (var list : sorted) {
-            list.sortSections(sectionPos, sortItems);
-        }
-
-        return new SortedRenderLists(sorted);
+    @Override
+    public void setCachedSortItems(int[] sortItems) {
+        VisibleChunkCollectorSync.sortItems = sortItems;
     }
 }

@@ -1,22 +1,15 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
-import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.SectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegionManager;
-import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
-
-import java.util.ArrayDeque;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Queue;
 
 /**
  * The async visible chunk collector is passed into a section tree to collect visible chunks.
  */
-public class VisibleChunkCollectorAsync implements SectionTree.VisibleSectionVisitor {
+public class VisibleChunkCollectorAsync implements SectionTree.VisibleSectionVisitor, RenderListProvider {
     private final RenderRegionManager regions;
     private final int frame;
 
@@ -55,7 +48,20 @@ public class VisibleChunkCollectorAsync implements SectionTree.VisibleSectionVis
         renderList.add(sectionIndex);
     }
 
-    public SortedRenderLists createRenderLists() {
-        return new SortedRenderLists(this.sortedRenderLists);
+    private static int[] sortItems = new int[RenderRegion.REGION_SIZE];
+
+    @Override
+    public ObjectArrayList<ChunkRenderList> getUnsortedRenderLists() {
+        return this.sortedRenderLists;
+    }
+
+    @Override
+    public int[] getCachedSortItems() {
+        return sortItems;
+    }
+
+    @Override
+    public void setCachedSortItems(int[] sortItems) {
+        VisibleChunkCollectorAsync.sortItems = sortItems;
     }
 }
