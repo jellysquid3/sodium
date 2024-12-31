@@ -22,7 +22,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     static final float CLOSE_PROXIMITY_FACTOR = 0.6f; // penalty for being CLOSE_DISTANCE or farther away
     static final float INV_MAX_DISTANCE_CLOSE = CLOSE_PROXIMITY_FACTOR / CLOSE_DISTANCE;
 
-    private final LongArrayList[] pendingTasks = new LongArrayList[DeferMode.values().length];
+    private final LongArrayList pendingTasks = new LongArrayList();
 
     protected final boolean isFrustumTested;
     protected final int baseOffsetX, baseOffsetY, baseOffsetZ;
@@ -67,7 +67,8 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
     protected void checkForTask(RenderSection section) {
         ChunkUpdateType type = section.getPendingUpdate();
 
-        if (type != null && section.getTaskCancellationToken() == null) {
+        // collect non-important tasks (important tasks are handled separately)
+        if (type != null && !type.isImportant() && section.getTaskCancellationToken() == null) {
             this.addPendingSection(section, type);
         }
     }
@@ -82,14 +83,8 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         var localZ = section.getChunkZ() - this.baseOffsetZ;
         long taskCoordinate = (long) (localX & 0b1111111111) << 20 | (long) (localY & 0b1111111111) << 10 | (long) (localZ & 0b1111111111);
 
-        var queue = this.pendingTasks[type.getDeferMode().ordinal()];
-        if (queue == null) {
-            queue = new LongArrayList();
-            this.pendingTasks[type.getDeferMode().ordinal()] = queue;
-        }
-
         // encode the priority and the section position into a single long such that all parts can be later decoded
-        queue.add((long) MathUtil.floatToComparableInt(priority) << 32 | taskCoordinate);
+        this.pendingTasks.add((long) MathUtil.floatToComparableInt(priority) << 32 | taskCoordinate);
     }
 
     private float getSectionPriority(RenderSection section, ChunkUpdateType type) {
@@ -121,18 +116,8 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
         return MathUtil.comparableIntToFloat((int) (encoded >>> 32));
     }
 
-    public TaskListCollection getPendingTaskLists() {
-        var result = new TaskListCollection(DeferMode.class, this.creationTime, this.isFrustumTested, this.baseOffsetX, this.baseOffsetZ);
-
-        for (var mode : DeferMode.values()) {
-            var list = this.pendingTasks[mode.ordinal()];
-            if (list != null) {
-                var queue = new LongHeapPriorityQueue(list.elements(), list.size());
-                result.put(mode, queue);
-            }
-        }
-
-        return result;
+    public DeferredTaskList getPendingTaskLists() {
+        return DeferredTaskList.createHeapCopyOf(this.pendingTasks, this.creationTime, this.isFrustumTested, this.baseOffsetX, this.baseOffsetZ);
     }
 
 }

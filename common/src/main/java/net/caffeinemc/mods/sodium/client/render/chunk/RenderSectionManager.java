@@ -94,8 +94,9 @@ public class RenderSectionManager {
     @NotNull
     private SortedRenderLists renderLists;
 
-    private TaskListCollection frustumTaskLists;
-    private TaskListCollection globalTaskLists;
+    private DeferredTaskList frustumTaskLists;
+    private DeferredTaskList globalTaskLists;
+    private final EnumMap<DeferMode, ReferenceLinkedOpenHashSet<RenderSection>> importantTasks;
 
     private int frame;
     private int lastGraphDirtyFrame;
@@ -138,14 +139,13 @@ public class RenderSectionManager {
         this.occlusionCuller = new OcclusionCuller(Long2ReferenceMaps.unmodifiable(this.sectionByPosition), this.level);
 
         this.renderableSectionTree = new RemovableMultiForest(renderDistance);
+
+        this.importantTasks = new EnumMap<>(DeferMode.class);
+        this.importantTasks.put(DeferMode.ZERO_FRAMES, new ReferenceLinkedOpenHashSet<>());
+        this.importantTasks.put(DeferMode.ONE_FRAME, new ReferenceLinkedOpenHashSet<>());
     }
 
     public void updateCameraState(Vector3dc cameraPosition, Camera camera) {
-        this.cameraBlockPos = camera.getBlockPosition();
-        this.cameraPosition = cameraPosition;
-    }
-
-    public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator, boolean updateImmediately) {
         var now = System.nanoTime();
         this.lastFrameDuration = now - this.lastFrameAtTime;
         this.lastFrameAtTime = now;
@@ -160,6 +160,11 @@ public class RenderSectionManager {
         this.needsRenderListUpdate |= this.cameraChanged;
         this.needsFrustumTaskListUpdate |= this.needsRenderListUpdate;
 
+        this.cameraBlockPos = camera.getBlockPosition();
+        this.cameraPosition = cameraPosition;
+    }
+
+    public void updateRenderLists(Camera camera, Viewport viewport, boolean spectator, boolean updateImmediately) {
         // do sync bfs based on update immediately (flawless frames) or if the camera moved too much
         var shouldRenderSync = this.cameraTimingControl.getShouldRenderSync(camera);
         if ((updateImmediately || shouldRenderSync) && (this.needsGraphUpdate || this.needsRenderListUpdate)) {
@@ -670,7 +675,7 @@ public class RenderSectionManager {
         }
     }
 
-    private static List<BuilderTaskOutput> filterChunkBuildResults(ArrayList<BuilderTaskOutput> outputs) {
+    private List<BuilderTaskOutput> filterChunkBuildResults(ArrayList<BuilderTaskOutput> outputs) {
         var map = new Reference2ReferenceLinkedOpenHashMap<RenderSection, BuilderTaskOutput>();
 
         for (var output : outputs) {
@@ -713,7 +718,7 @@ public class RenderSectionManager {
         this.regions.update();
     }
 
-    public void updateChunks(boolean updateImmediately) {
+    public void updateChunks(Viewport viewport, boolean updateImmediately) {
         this.thisFrameBlockingTasks = 0;
         this.nextFrameBlockingTasks = 0;
         this.deferredTasks = 0;
@@ -727,22 +732,23 @@ public class RenderSectionManager {
         if (updateImmediately) {
             // for a perfect frame where everything is finished use the last frame's blocking collector
             // and add all tasks to it so that they're waited on
-            this.submitSectionTasks(Long.MAX_VALUE, thisFrameBlockingCollector, thisFrameBlockingCollector, thisFrameBlockingCollector);
+            this.submitSectionTasks(thisFrameBlockingCollector, thisFrameBlockingCollector, thisFrameBlockingCollector, Long.MAX_VALUE, viewport);
 
             this.thisFrameBlockingTasks = thisFrameBlockingCollector.getSubmittedTaskCount();
             thisFrameBlockingCollector.awaitCompletion(this.builder);
         } else {
-            var nextFrameBlockingCollector = new ChunkJobCollector(this.buildResults::add);
             var remainingDuration = this.builder.getTotalRemainingDuration(this.averageFrameDuration);
             var remainingUploadSize = this.regions.getStagingBuffer().getUploadSizeLimit(this.averageFrameDuration);
+
+            var nextFrameBlockingCollector = new ChunkJobCollector(this.buildResults::add);
             var deferredCollector = new ChunkJobCollector(remainingDuration, this.buildResults::add);
 
             // if zero frame delay is allowed, submit important sorts with the current frame blocking collector.
             // otherwise submit with the collector that the next frame is blocking on.
             if (SodiumClientMod.options().performance.getSortBehavior().getDeferMode() == DeferMode.ZERO_FRAMES) {
-                this.submitSectionTasks(remainingUploadSize, thisFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
+                this.submitSectionTasks(thisFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector, remainingUploadSize, viewport);
             } else {
-                this.submitSectionTasks(remainingUploadSize, nextFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector);
+                this.submitSectionTasks(nextFrameBlockingCollector, nextFrameBlockingCollector, deferredCollector, remainingUploadSize, viewport);
             }
 
             this.thisFrameBlockingTasks = thisFrameBlockingCollector.getSubmittedTaskCount();
@@ -759,46 +765,65 @@ public class RenderSectionManager {
     }
 
     private void submitSectionTasks(
-            long remainingUploadSize,
-            ChunkJobCollector importantCollector,
-            ChunkJobCollector semiImportantCollector,
-            ChunkJobCollector deferredCollector) {
-        for (var deferMode : DeferMode.values()) {
-            var collector = switch (deferMode) {
-                case ZERO_FRAMES -> importantCollector;
-                case ONE_FRAME -> semiImportantCollector;
-                case ALWAYS -> deferredCollector;
-            };
-
-            // don't limit on size for zero frame defer (needs to be done, no matter the limit)
-            remainingUploadSize = submitSectionTasks(remainingUploadSize, deferMode != DeferMode.ZERO_FRAMES, collector, deferMode);
-            if (remainingUploadSize <= 0) {
-                break;
-            }
-        }
+            ChunkJobCollector importantCollector, ChunkJobCollector semiImportantCollector, ChunkJobCollector deferredCollector, long remainingUploadSize, Viewport viewport) {
+        remainingUploadSize = submitImportantSectionTasks(importantCollector, remainingUploadSize, DeferMode.ZERO_FRAMES, viewport);
+        remainingUploadSize = submitImportantSectionTasks(semiImportantCollector, remainingUploadSize, DeferMode.ONE_FRAME, viewport);
+        submitDeferredSectionTasks(deferredCollector, remainingUploadSize);
     }
 
-    private long submitSectionTasks(long remainingUploadSize, boolean limitOnSize, ChunkJobCollector collector, DeferMode deferMode) {
-        LongHeapPriorityQueue frustumQueue = null;
-        LongHeapPriorityQueue globalQueue = null;
+    private static final LongPriorityQueue EMPTY_TASK_QUEUE = new LongPriorityQueue() {
+        @Override
+        public void enqueue(long x) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long dequeueLong() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long firstLong() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public LongComparator comparator() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int size() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        public void clear() {
+            throw new UnsupportedOperationException();
+        }
+    };
+
+    private void submitDeferredSectionTasks(ChunkJobCollector collector, long remainingUploadSize) {
+        LongPriorityQueue frustumQueue = this.frustumTaskLists;
+        LongPriorityQueue globalQueue = this.globalTaskLists;
         float frustumPriorityBias = 0;
         float globalPriorityBias = 0;
-        if (this.frustumTaskLists != null) {
-            frustumQueue = this.frustumTaskLists.get(deferMode);
-        }
+
         if (frustumQueue != null) {
             frustumPriorityBias = this.frustumTaskLists.getCollectorPriorityBias(this.lastFrameAtTime);
         } else {
-            frustumQueue = new LongHeapPriorityQueue();
+            frustumQueue = EMPTY_TASK_QUEUE;
         }
 
-        if (this.globalTaskLists != null) {
-            globalQueue = this.globalTaskLists.get(deferMode);
-        }
         if (globalQueue != null) {
             globalPriorityBias = this.globalTaskLists.getCollectorPriorityBias(this.lastFrameAtTime);
         } else {
-            globalQueue = new LongHeapPriorityQueue();
+            globalQueue = EMPTY_TASK_QUEUE;
         }
 
         float frustumPriority = Float.POSITIVE_INFINITY;
@@ -806,8 +831,7 @@ public class RenderSectionManager {
         long frustumItem = 0;
         long globalItem = 0;
 
-        while ((!frustumQueue.isEmpty() || !globalQueue.isEmpty()) &&
-                collector.hasBudgetRemaining() && (!limitOnSize || remainingUploadSize > 0)) {
+        while ((!frustumQueue.isEmpty() || !globalQueue.isEmpty()) && collector.hasBudgetRemaining() && remainingUploadSize > 0) {
             // get the first item from the non-empty queues and see which one has higher priority.
             // if the priority is not infinity, then the item priority was fetched the last iteration and doesn't need updating.
             if (!frustumQueue.isEmpty() && Float.isInfinite(frustumPriority)) {
@@ -819,6 +843,7 @@ public class RenderSectionManager {
                 globalPriority = PendingTaskCollector.decodePriority(globalItem) + globalPriorityBias;
             }
 
+            // pick the task with the higher priority, decode the section, and schedule its task if it exists
             RenderSection section;
             if (frustumPriority < globalPriority) {
                 frustumQueue.dequeueLong();
@@ -832,62 +857,93 @@ public class RenderSectionManager {
                 section = this.globalTaskLists.decodeAndFetchSection(this.sectionByPosition, globalItem);
             }
 
-            if (section == null || section.isDisposed()) {
-                continue;
+            if (section != null) {
+                remainingUploadSize -= submitSectionTask(collector, section);
             }
+        }
+    }
 
-            // don't schedule tasks for sections that don't need it anymore,
-            // since the pending update it cleared when a task is started, this includes
-            // sections for which there's a currently running task.
-            var type = section.getPendingUpdate();
-            if (type == null) {
-                continue;
-            }
+    private long submitImportantSectionTasks(ChunkJobCollector collector, long remainingUploadSize, DeferMode deferMode, Viewport viewport) {
+        var limitOnSize = deferMode != DeferMode.ZERO_FRAMES;
+        var it =  this.importantTasks.get(deferMode).iterator();
 
-            ChunkBuilderTask<? extends BuilderTaskOutput> task;
-            if (type == ChunkUpdateType.SORT || type == ChunkUpdateType.IMPORTANT_SORT) {
-                task = this.createSortTask(section, this.frame);
-
-                if (task == null) {
-                    // when a sort task is null it means the render section has no dynamic data and
-                    // doesn't need to be sorted. Nothing needs to be done.
+        while (it.hasNext() && collector.hasBudgetRemaining() && (!limitOnSize || remainingUploadSize > 0)) {
+            var section = it.next();
+            var pendingUpdate = section.getPendingUpdate();
+            if (pendingUpdate != null && pendingUpdate.getDeferMode() == deferMode) {
+                if (this.renderTree == null || this.renderTree.isSectionVisible(viewport, section)) {
+                    remainingUploadSize -= submitSectionTask(collector, section, pendingUpdate);
+                } else {
+                    // don't remove if simply not visible but still needs to be run
                     continue;
                 }
-            } else {
-                task = this.createRebuildTask(section, this.frame);
-
-                if (task == null) {
-                    // if the section is empty or doesn't exist submit this null-task to set the
-                    // built flag on the render section.
-                    // It's important to use a NoData instead of null translucency data here in
-                    // order for it to clear the old data from the translucency sorting system.
-                    // This doesn't apply to sorting tasks as that would result in the section being
-                    // marked as empty just because it was scheduled to be sorted and its dynamic
-                    // data has since been removed. In that case simply nothing is done as the
-                    // rebuild that must have happened in the meantime includes new non-dynamic
-                    // index data.
-                    var result = ChunkJobResult.successfully(new ChunkBuildOutput(
-                            section, this.frame, NoData.forEmptySection(section.getPosition()),
-                            BuiltSectionInfo.EMPTY, Collections.emptyMap()));
-                    this.buildResults.add(result);
-
-                    section.setTaskCancellationToken(null);
-                }
             }
-
-            if (task != null) {
-                var job = this.builder.scheduleTask(task, type.isImportant(), collector::onJobFinished);
-                collector.addSubmittedJob(job);
-                remainingUploadSize -= job.getEstimatedSize();
-
-                section.setTaskCancellationToken(job);
-            }
-
-            section.setLastSubmittedFrame(this.frame);
-            section.clearPendingUpdate();
+            it.remove();
         }
 
         return remainingUploadSize;
+    }
+
+    private long submitSectionTask(ChunkJobCollector collector, @NotNull RenderSection section) {
+        // don't schedule tasks for sections that don't need it anymore,
+        // since the pending update it cleared when a task is started, this includes
+        // sections for which there's a currently running task.
+        var type = section.getPendingUpdate();
+        if (type == null) {
+            return 0;
+        }
+
+        return submitSectionTask(collector, section, type);
+    }
+
+    private long submitSectionTask(ChunkJobCollector collector, @NotNull RenderSection section, ChunkUpdateType type) {
+        if (section.isDisposed()) {
+            return 0;
+        }
+
+        ChunkBuilderTask<? extends BuilderTaskOutput> task;
+        if (type == ChunkUpdateType.SORT || type == ChunkUpdateType.IMPORTANT_SORT) {
+            task = this.createSortTask(section, this.frame);
+
+            if (task == null) {
+                // when a sort task is null it means the render section has no dynamic data and
+                // doesn't need to be sorted. Nothing needs to be done.
+                return 0;
+            }
+        } else {
+            task = this.createRebuildTask(section, this.frame);
+
+            if (task == null) {
+                // if the section is empty or doesn't exist submit this null-task to set the
+                // built flag on the render section.
+                // It's important to use a NoData instead of null translucency data here in
+                // order for it to clear the old data from the translucency sorting system.
+                // This doesn't apply to sorting tasks as that would result in the section being
+                // marked as empty just because it was scheduled to be sorted and its dynamic
+                // data has since been removed. In that case simply nothing is done as the
+                // rebuild that must have happened in the meantime includes new non-dynamic
+                // index data.
+                var result = ChunkJobResult.successfully(new ChunkBuildOutput(
+                        section, this.frame, NoData.forEmptySection(section.getPosition()),
+                        BuiltSectionInfo.EMPTY, Collections.emptyMap()));
+                this.buildResults.add(result);
+
+                section.setTaskCancellationToken(null);
+            }
+        }
+
+        var estimatedTaskSize = 0L;
+        if (task != null) {
+            var job = this.builder.scheduleTask(task, type.isImportant(), collector::onJobFinished);
+            collector.addSubmittedJob(job);
+            estimatedTaskSize = job.getEstimatedSize();
+
+            section.setTaskCancellationToken(job);
+        }
+
+        section.setLastSubmittedFrame(this.frame);
+        section.clearPendingUpdate();
+        return estimatedTaskSize;
     }
 
     public @Nullable ChunkBuilderMeshingTask createRebuildTask(RenderSection render, int frame) {
@@ -957,12 +1013,17 @@ public class RenderSectionManager {
         return sections;
     }
 
-    // TODO: this fixes very delayed tasks, but it still regresses on same-frame tasks that don't get to run in time because the frustum task collection task takes at least one (and usually only one) frame to run
-    // maybe intercept tasks that are scheduled in zero- or one-frame defer mode?
-    // collect and prioritize regardless of visibility if it's an important defer mode?
     private ChunkUpdateType upgradePendingUpdate(RenderSection section, ChunkUpdateType type) {
         var current = section.getPendingUpdate();
         type = ChunkUpdateType.getPromotionUpdateType(current, type);
+
+        // when the pending task type changes and it's important, add it to the list of important tasks
+        if (type != null && current != type) {
+            var deferMode = type.getDeferMode();
+            if (deferMode != DeferMode.ALWAYS) {
+                this.importantTasks.get(deferMode).add(section);
+            }
+        }
 
         section.setPendingUpdate(type, this.lastFrameAtTime);
 

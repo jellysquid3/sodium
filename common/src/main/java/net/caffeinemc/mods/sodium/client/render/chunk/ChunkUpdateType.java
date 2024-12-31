@@ -1,5 +1,8 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
+/**
+ * NOTE: Update types with not-ALWAYS defer mode should be prefixed "important".
+ */
 public enum ChunkUpdateType {
     SORT(DeferMode.ALWAYS, 2),
     INITIAL_BUILD(DeferMode.ALWAYS, 0),
@@ -28,7 +31,7 @@ public enum ChunkUpdateType {
     }
 
     public boolean isImportant() {
-        return this == IMPORTANT_REBUILD || this == IMPORTANT_SORT;
+        return this.deferMode != DeferMode.ALWAYS;
     }
 
     public DeferMode getDeferMode() {

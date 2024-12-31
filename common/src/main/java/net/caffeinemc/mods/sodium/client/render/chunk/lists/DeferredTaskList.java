@@ -1,21 +1,24 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.lists;
 
 import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongCollection;
 import it.unimi.dsi.fastutil.longs.LongHeapPriorityQueue;
-import net.caffeinemc.mods.sodium.client.render.chunk.DeferMode;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.minecraft.core.SectionPos;
 
-import java.util.EnumMap;
-
-public class TaskListCollection extends EnumMap<DeferMode, LongHeapPriorityQueue> {
+public class DeferredTaskList extends LongHeapPriorityQueue {
     private final long creationTime;
     private final boolean isFrustumTested;
     private final int baseOffsetX;
     private final int baseOffsetZ;
 
-    public TaskListCollection(Class<DeferMode> keyType, long creationTime, boolean isFrustumTested, int baseOffsetX, int baseOffsetZ) {
-        super(keyType);
+    public static DeferredTaskList createHeapCopyOf(LongCollection copyFrom, long creationTime, boolean isFrustumTested, int baseOffsetX, int baseOffsetZ) {
+        return new DeferredTaskList(new LongArrayList(copyFrom), creationTime, isFrustumTested, baseOffsetX, baseOffsetZ);
+    }
+
+    private DeferredTaskList(LongArrayList copyFrom, long creationTime, boolean isFrustumTested, int baseOffsetX, int baseOffsetZ) {
+        super(copyFrom.elements(), copyFrom.size());
         this.creationTime = creationTime;
         this.isFrustumTested = isFrustumTested;
         this.baseOffsetX = baseOffsetX;

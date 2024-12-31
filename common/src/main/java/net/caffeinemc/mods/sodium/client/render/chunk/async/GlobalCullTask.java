@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.FrustumTaskCollector;
-import net.caffeinemc.mods.sodium.client.render.chunk.lists.TaskListCollection;
+import net.caffeinemc.mods.sodium.client.render.chunk.lists.DeferredTaskList;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.TaskSectionTree;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.CullType;
 import net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller;
@@ -56,12 +56,12 @@ public class GlobalCullTask extends CullTask<GlobalCullResult> {
             }
 
             @Override
-            public TaskListCollection getFrustumTaskLists() {
+            public DeferredTaskList getFrustumTaskLists() {
                 return frustumTaskLists;
             }
 
             @Override
-            public TaskListCollection getGlobalTaskLists() {
+            public DeferredTaskList getGlobalTaskLists() {
                 return globalTaskLists;
             }
         };

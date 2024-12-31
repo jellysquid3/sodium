@@ -38,9 +38,9 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
     public boolean isValidFor(Viewport viewport, float searchDistance) {
         var cameraPos = viewport.getChunkCoord();
-        return  Math.abs((this.cameraX >> 4) - cameraPos.getX()) <= this.bfsWidth &&
-                Math.abs((this.cameraY >> 4) - cameraPos.getY()) <= this.bfsWidth &&
-                Math.abs((this.cameraZ >> 4) - cameraPos.getZ()) <= this.bfsWidth &&
+        return Math.abs((this.cameraX >> 4) - cameraPos.getX()) <= this.bfsWidth &&
+               Math.abs((this.cameraY >> 4) - cameraPos.getY()) <= this.bfsWidth &&
+               Math.abs((this.cameraZ >> 4) - cameraPos.getZ()) <= this.bfsWidth &&
                 this.buildDistance >= searchDistance;
     }
 
@@ -111,6 +111,11 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
     private boolean isSectionPresent(int x, int y, int z) {
         return this.tree.getPresence(x, y, z) == Tree.PRESENT;
+    }
+
+    public boolean isSectionVisible(Viewport viewport, RenderSection section) {
+        return this.isSectionPresent(section.getChunkX(), section.getChunkY(), section.getChunkZ()) &&
+                this.isWithinFrustum(viewport, section);
     }
 
     public void traverse(VisibleSectionVisitor visitor, Viewport viewport, float distanceLimit) {
