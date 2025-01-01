@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 // TODO: show option group's names somewhere
 // TODO: add button or some other way for user to reset a specific option, all options on a page, and all options of a mod to their default values (not just "reset" changes, but reset to default value)
 // TODO: make RD option respect Vanilla's >16 RD only allowed if memory >1GB constraint
+// TODO: allow searching just one mod by using @modid as a prefix in the search query
 public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     private final Screen prevScreen;
 

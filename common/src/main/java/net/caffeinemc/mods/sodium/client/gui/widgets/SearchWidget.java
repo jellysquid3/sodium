@@ -71,8 +71,9 @@ public class SearchWidget extends AbstractOptionList {
         this.setFocused(this.searchBox);
 
         var headerHeight = this.searchBox.getBottom() + Layout.INNER_MARGIN;
+        var optionBaseY = y + headerHeight + Layout.INNER_MARGIN;
         if (this.scrollbar == null) {
-            this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(width + Layout.OPTION_LIST_SCROLLBAR_OFFSET, headerHeight, Layout.SCROLLBAR_WIDTH, height - headerHeight)));
+            this.scrollbar = this.addRenderableChild(new ScrollbarWidget(new Dim2i(width + Layout.OPTION_LIST_SCROLLBAR_OFFSET, optionBaseY, Layout.SCROLLBAR_WIDTH, height - optionBaseY)));
         }
 
         this.clearChildren();
@@ -84,7 +85,6 @@ public class SearchWidget extends AbstractOptionList {
         this.addChild(this.scrollbar);
 
         // present the search results
-        var optionBaseY = y + headerHeight + Layout.INNER_MARGIN;
         var optionX = x + Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN;
         var entryHeight = this.font.lineHeight * 2;
         var listHeight = 0;
@@ -236,7 +236,7 @@ public class SearchWidget extends AbstractOptionList {
         this.scrollbar.render(graphics, mouseX, mouseY, delta);
 
         // render only the controls within the scissor area and not the other gui elements
-        graphics.enableScissor(this.getX(), this.searchBox.getBottom() + Layout.INNER_MARGIN, this.getLimitX() + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.getLimitY());
+        graphics.enableScissor(this.getX(), this.searchBox.getBottom() + Layout.INNER_MARGIN * 2, this.getLimitX() + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
     }
