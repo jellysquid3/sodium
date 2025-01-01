@@ -36,7 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-// TODO: make the search bar work
 // TODO: wrap options within groups in two columns
 // TODO: make the mod config headers interactive: only show one mod's pages at a time, click on a mod header to open that mod's first settings page and close the previous mod's page list
 // TODO: change the scroll bar colors to make it look better against a lighter gray background
@@ -266,8 +265,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void openDonationPage() {
-        Util.getPlatform()
-                .openUri("https://caffeinemc.net/donate");
+        Util.getPlatform().openUri("https://caffeinemc.net/donate");
     }
 
     @Override
@@ -302,7 +300,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
             return true;
         }
 
-        // TODO: switching between the search and the regular mode breaks the keyboard focus
+        // this ensures the right element is focused when the search bar is clicked
         if (this.getFocused() == this.pageList && this.controlList == this.searchWidget ||
                 this.getFocused() == this.searchWidget && this.controlList == this.optionList) {
             this.setFocused(this.controlList);
@@ -402,13 +400,23 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.searchWidget = new SearchWidget(this, this::closeSearch, old, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN + Layout.OPTION_WIDTH, this.height));
         this.addRenderableWidget(this.searchWidget);
 
+        // remove focus from page list even if it doesn't get destroyed so that it isn't focused when the search is closed
+        this.pageList.setFocused(null);
+
         this.removeWidget(this.pageList);
         this.removeWidget(this.optionList);
 
+        // set the search widget to be the focused element in search mode
         this.controlList = this.searchWidget;
+        this.setFocused(this.searchWidget);
     }
 
     private void closeSearch() {
+        // remove focus from the search widget that's getting removed
+        if (this.getFocused() == this.searchWidget) {
+            this.clearFocus();
+        }
+
         this.removeWidget(this.searchWidget);
         this.searchWidget = null;
 

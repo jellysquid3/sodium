@@ -256,7 +256,7 @@ public class SearchWidget extends AbstractOptionList {
             return;
         }
 
-        this.query = text;
+        this.query = text.stripLeading();
         this.search();
     }
 
