@@ -191,7 +191,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.closeButton = new FlatButtonWidget(new Dim2i(this.applyButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("gui.done"), this::onClose, true, false);
         this.undoButton = new FlatButtonWidget(new Dim2i(this.closeButton.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_LONG, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.undo"), this::undoChanges, true, false);
 
-        this.donateButton = new DonationButtonWidget(List.of(this.applyButton, this.closeButton, this.undoButton), this.width, this::openDonationPage, this::addRenderableWidget);
+        this.donateButton = new DonationButtonWidget(this, List.of(this.applyButton, this.closeButton, this.undoButton), this.width, this::openDonationPage);
 
         this.rebuildOptionList();
 
@@ -246,6 +246,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         boolean hasChanges = ConfigManager.CONFIG.anyOptionChanged();
 
         this.applyButton.setEnabled(hasChanges);
+        this.setWidgetPresence(this.undoButton, hasChanges);
         this.undoButton.setVisible(hasChanges);
         this.closeButton.setEnabled(!hasChanges);
 
@@ -358,6 +359,13 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     @Override
     public void removeWidget(GuiEventListener guiEventListener) {
         super.removeWidget(guiEventListener);
+    }
+
+    public <T extends GuiEventListener & Renderable & NarratableEntry> void setWidgetPresence(T guiEventListener, boolean present) {
+        this.removeWidget(guiEventListener);
+        if (present) {
+            this.addRenderableWidget(guiEventListener);
+        }
     }
 
     @Override

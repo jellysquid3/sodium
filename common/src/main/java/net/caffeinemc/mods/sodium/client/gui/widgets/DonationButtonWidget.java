@@ -1,9 +1,9 @@
 package net.caffeinemc.mods.sodium.client.gui.widgets;
 
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
-import net.caffeinemc.mods.sodium.client.gui.ButtonTheme;
 import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.SodiumOptions;
+import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
@@ -12,7 +12,6 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.function.Consumer;
 
 public class DonationButtonWidget {
     private static final int DONATE_BUTTON_WIDTH = 100;
@@ -21,6 +20,7 @@ public class DonationButtonWidget {
     private static final ResourceLocation CUP_TEXTURE = ResourceLocation.fromNamespaceAndPath("sodium", "textures/gui/coffee_cup.png");
     private static final int CUP_SPRITE_SIZE = 10;
 
+    private final VideoSettingsScreen parent;
     private final FlatButtonWidget hideDonateButton;
     private final FlatButtonWidget donateButtonLong;
     private final FlatButtonWidget donateButtonCompact;
@@ -28,7 +28,8 @@ public class DonationButtonWidget {
 
     private final Collection<FlatButtonWidget> colliders;
 
-    public DonationButtonWidget(Collection<FlatButtonWidget> colliders, int width, Runnable openDonationPage, Consumer<AbstractWidget> widgetConsumer) {
+    public DonationButtonWidget(VideoSettingsScreen parent,  Collection<FlatButtonWidget> colliders, int width, Runnable openDonationPage) {
+        this.parent = parent;
         this.colliders = colliders;
 
         this.hideDonateButton = new FlatButtonWidget(new Dim2i(width - Layout.BUTTON_SHORT - Layout.INNER_MARGIN, Layout.INNER_MARGIN, Layout.BUTTON_SHORT, Layout.BUTTON_SHORT), Component.literal("x"), this::hideDonationButton, true, false);
@@ -36,10 +37,6 @@ public class DonationButtonWidget {
 
         this.donateButtonLong = new FlatButtonWidget(new Dim2i(infoButtonOffset - DONATE_BUTTON_WIDTH, Layout.INNER_MARGIN, DONATE_BUTTON_WIDTH, Layout.BUTTON_SHORT), Component.translatable("sodium.options.buttons.donate"), openDonationPage, true, false);
         this.donateButtonCompact = new IconButtonWidget(new Dim2i(infoButtonOffset - Layout.BUTTON_SHORT, Layout.INNER_MARGIN, Layout.BUTTON_SHORT, Layout.BUTTON_SHORT), CUP_TEXTURE, CUP_SPRITE_SIZE, openDonationPage, true, false);
-
-        widgetConsumer.accept(this.hideDonateButton);
-        widgetConsumer.accept(this.donateButtonLong);
-        widgetConsumer.accept(this.donateButtonCompact);
 
         this.updateDisplay();
     }
@@ -76,19 +73,19 @@ public class DonationButtonWidget {
     private void setButtonState(ButtonState state) {
         switch (state) {
             case HIDDEN:
-                this.hideDonateButton.setVisible(false);
-                this.donateButtonLong.setVisible(false);
-                this.donateButtonCompact.setVisible(false);
+                this.parent.setWidgetPresence(this.hideDonateButton, false);
+                this.parent.setWidgetPresence(this.donateButtonLong, false);
+                this.parent.setWidgetPresence(this.donateButtonCompact, false);
                 break;
             case LONG:
-                this.hideDonateButton.setVisible(true);
-                this.donateButtonLong.setVisible(true);
-                this.donateButtonCompact.setVisible(false);
+                this.parent.setWidgetPresence(this.hideDonateButton, true);
+                this.parent.setWidgetPresence(this.donateButtonLong, true);
+                this.parent.setWidgetPresence(this.donateButtonCompact, false);
                 break;
             case COMPACT:
-                this.hideDonateButton.setVisible(true);
-                this.donateButtonLong.setVisible(false);
-                this.donateButtonCompact.setVisible(true);
+                this.parent.setWidgetPresence(this.hideDonateButton, true);
+                this.parent.setWidgetPresence(this.donateButtonLong, false);
+                this.parent.setWidgetPresence(this.donateButtonCompact, true);
                 break;
         }
     }
@@ -109,13 +106,6 @@ public class DonationButtonWidget {
     private static class IconButtonWidget extends FlatButtonWidget {
         private final ResourceLocation sprite;
         private final int spriteSize;
-
-        public IconButtonWidget(Dim2i dim, ResourceLocation sprite, int spriteSize, Runnable action, boolean drawBackground, boolean leftAlign, ButtonTheme theme) {
-            super(dim, null, action, drawBackground, leftAlign, theme);
-
-            this.sprite = sprite;
-            this.spriteSize = spriteSize;
-        }
 
         public IconButtonWidget(Dim2i dim, ResourceLocation sprite, int spriteSize, Runnable action, boolean drawBackground, boolean leftAlign) {
             super(dim, null, action, drawBackground, leftAlign);
