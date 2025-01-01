@@ -70,6 +70,9 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.prevScreen = prevScreen;
 
         this.checkPromptTimers();
+
+        // the binding values may have been modified in the meantime, reload from binding to update
+        ConfigManager.CONFIG.resetAllOptionsFromBindings();
     }
 
     private void checkPromptTimers() {
@@ -262,7 +265,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void undoChanges() {
-        ConfigManager.CONFIG.resetAllOptions();
+        ConfigManager.CONFIG.resetAllOptionsFromBindings();
     }
 
     private void openDonationPage() {

@@ -37,7 +37,7 @@ public class Config implements ConfigState {
         for (var option : this.options.values()) {
             option.loadValueInitial();
         }
-        resetAllOptions();
+        resetAllOptionsFromBindings();
     }
 
     private void registerSearchIndex() {
@@ -155,7 +155,7 @@ public class Config implements ConfigState {
         finished.add(option.id);
     }
 
-    public void resetAllOptions() {
+    public void resetAllOptionsFromBindings() {
         for (var option : this.options.values()) {
             option.resetFromBinding();
         }
