@@ -23,6 +23,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ParticleStatus;
+import net.minecraft.util.OptionEnum;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
@@ -633,6 +634,17 @@ public class SodiumConfigBuilder implements ConfigEntryPoint {
                 )
                 .addOption(
                         this.buildNoErrorContextOption(builder)
+                )
+                .addOption(
+                        builder.createEnumOption(ResourceLocation.parse("sodium:performance.inactivity_fps_limit"), InactivityFpsLimit.class)
+                                .setStorageHandler(this.vanillaStorage)
+                                .setName(Component.translatable("options.inactivityFpsLimit"))
+                                .setElementNameProvider(OptionEnum::getCaption)
+                                .setTooltip((state) -> state == InactivityFpsLimit.AFK ?
+                                        Component.translatable("options.inactivityFpsLimit.afk.tooltip") :
+                                        Component.translatable("options.inactivityFpsLimit.minimized.tooltip"))
+                                .setDefaultValue(InactivityFpsLimit.AFK)
+                                .setBinding(this.vanillaOpts.inactivityFpsLimit()::set, this.vanillaOpts.inactivityFpsLimit()::get)
                 )
         );
 
