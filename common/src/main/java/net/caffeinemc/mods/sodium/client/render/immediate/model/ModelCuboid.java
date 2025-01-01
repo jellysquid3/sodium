@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.immediate.model;
 
 import java.util.Set;
+
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,7 +17,7 @@ public class ModelCuboid {
             FACE_POS_Z = 5; // SOUTH
 
     public final float x1, y1, z1;
-    public final float x2, y2, z2;
+    public final float sizeX, sizeY, sizeZ;
 
     public final float u0, u1, u2, u3, u4, u5;
     public final float v0, v1, v2;
@@ -32,31 +33,25 @@ public class ModelCuboid {
                        boolean mirror,
                        float textureWidth, float textureHeight,
                        Set<Direction> renderDirections) {
-        float x2 = x1 + sizeX;
-        float y2 = y1 + sizeY;
-        float z2 = z1 + sizeZ;
-
         x1 -= extraX;
         y1 -= extraY;
         z1 -= extraZ;
 
-        x2 += extraX;
-        y2 += extraY;
-        z2 += extraZ;
+        float extraSizeX = sizeX + extraX + extraX;
+        float extraSizeY = sizeY + extraY + extraY;
+        float extraSizeZ = sizeZ + extraZ + extraZ;
 
         if (mirror) {
-            float tmp = x2;
-            x2 = x1;
-            x1 = tmp;
+            x1 += extraSizeX;
         }
 
         this.x1 = x1 / 16.0f;
         this.y1 = y1 / 16.0f;
         this.z1 = z1 / 16.0f;
 
-        this.x2 = x2 / 16.0f;
-        this.y2 = y2 / 16.0f;
-        this.z2 = z2 / 16.0f;
+        this.sizeX = extraSizeX / 16.0f;
+        this.sizeY = extraSizeY / 16.0f;
+        this.sizeZ = extraSizeZ / 16.0f;
 
         var scaleU = 1.0f / textureWidth;
         var scaleV = 1.0f / textureHeight;

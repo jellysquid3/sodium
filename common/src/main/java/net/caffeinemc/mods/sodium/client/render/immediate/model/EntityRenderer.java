@@ -122,14 +122,27 @@ public class EntityRenderer {
     }
 
     private static void prepareVertices(PoseStack.Pose matrices, ModelCuboid cuboid) {
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X1_Y1_Z1], cuboid.x1, cuboid.y1, cuboid.z1, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X2_Y1_Z1], cuboid.x2, cuboid.y1, cuboid.z1, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X2_Y2_Z1], cuboid.x2, cuboid.y2, cuboid.z1, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X1_Y2_Z1], cuboid.x1, cuboid.y2, cuboid.z1, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X1_Y1_Z2], cuboid.x1, cuboid.y1, cuboid.z2, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X2_Y1_Z2], cuboid.x2, cuboid.y1, cuboid.z2, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X2_Y2_Z2], cuboid.x2, cuboid.y2, cuboid.z2, matrices.pose());
-        buildVertexPosition(CUBE_CORNERS[VERTEX_X1_Y2_Z2], cuboid.x1, cuboid.y2, cuboid.z2, matrices.pose());
+        Matrix4f pose = matrices.pose();
+
+        // Build a Cube from a Vertex and 3 Vectors
+        // The first vertex
+        CUBE_CORNERS[VERTEX_X1_Y1_Z1].x = MatrixHelper.transformPositionX(pose, cuboid.x1, cuboid.y1, cuboid.z1);
+        CUBE_CORNERS[VERTEX_X1_Y1_Z1].y = MatrixHelper.transformPositionY(pose, cuboid.x1, cuboid.y1, cuboid.z1);
+        CUBE_CORNERS[VERTEX_X1_Y1_Z1].z = MatrixHelper.transformPositionZ(pose, cuboid.x1, cuboid.y1, cuboid.z1);
+
+        // The rotated vectors
+        float vxx = pose.m00() * cuboid.sizeX, vxy = pose.m01() * cuboid.sizeX, vxz = pose.m02() * cuboid.sizeX;
+        float vyx = pose.m10() * cuboid.sizeY, vyy = pose.m11() * cuboid.sizeY, vyz = pose.m12() * cuboid.sizeY;
+        float vzx = pose.m20() * cuboid.sizeZ, vzy = pose.m21() * cuboid.sizeZ, vzz = pose.m22() * cuboid.sizeZ;
+
+        // Last 7 vertices are calculated from the first one
+        CUBE_CORNERS[VERTEX_X1_Y1_Z1].add(vxx, vxy, vxz, CUBE_CORNERS[VERTEX_X2_Y1_Z1]);
+        CUBE_CORNERS[VERTEX_X2_Y1_Z1].add(vyx, vyy, vyz, CUBE_CORNERS[VERTEX_X2_Y2_Z1]);
+        CUBE_CORNERS[VERTEX_X1_Y1_Z1].add(vyx, vyy, vyz, CUBE_CORNERS[VERTEX_X1_Y2_Z1]);
+        CUBE_CORNERS[VERTEX_X1_Y1_Z1].add(vzx, vzy, vzz, CUBE_CORNERS[VERTEX_X1_Y1_Z2]);
+        CUBE_CORNERS[VERTEX_X2_Y1_Z1].add(vzx, vzy, vzz, CUBE_CORNERS[VERTEX_X2_Y1_Z2]);
+        CUBE_CORNERS[VERTEX_X2_Y1_Z2].add(vyx, vyy, vyz, CUBE_CORNERS[VERTEX_X2_Y2_Z2]);
+        CUBE_CORNERS[VERTEX_X1_Y1_Z2].add(vyx, vyy, vyz, CUBE_CORNERS[VERTEX_X1_Y2_Z2]);
 
         buildVertexTexCoord(VERTEX_TEXTURES[FACE_NEG_Y], cuboid.u1, cuboid.v0, cuboid.u2, cuboid.v1);
         buildVertexTexCoord(VERTEX_TEXTURES[FACE_POS_Y], cuboid.u2, cuboid.v1, cuboid.u3, cuboid.v0);
@@ -158,12 +171,6 @@ public class EntityRenderer {
             CUBE_NORMALS_MIRRORED[FACE_POS_X] = CUBE_NORMALS[FACE_NEG_X]; // mirrored
             CUBE_NORMALS_MIRRORED[FACE_NEG_X] = CUBE_NORMALS[FACE_POS_X]; // mirrored
         }
-    }
-
-    private static void buildVertexPosition(Vector3f vector, float x, float y, float z, Matrix4f matrix) {
-        vector.x = MatrixHelper.transformPositionX(matrix, x, y, z);
-        vector.y = MatrixHelper.transformPositionY(matrix, x, y, z);
-        vector.z = MatrixHelper.transformPositionZ(matrix, x, y, z);
     }
 
     private static void buildVertexTexCoord(Vector2f[] uvs, float u1, float v1, float u2, float v2) {
