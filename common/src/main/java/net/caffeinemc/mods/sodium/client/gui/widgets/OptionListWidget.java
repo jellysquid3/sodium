@@ -25,7 +25,7 @@ public class OptionListWidget extends AbstractOptionList {
     private void rebuild(Screen screen) {
         int x = this.getX();
         int y = this.getY();
-        int width = this.getWidth();
+        int width = this.getWidth() - Layout.OPTION_LIST_SCROLLBAR_OFFSET - Layout.SCROLLBAR_WIDTH;
         int height = this.getHeight();
 
         int maxWidth = 0;
@@ -59,7 +59,7 @@ public class OptionListWidget extends AbstractOptionList {
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX() + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.getLimitY());
+        graphics.enableScissor(this.getX(), this.getY(), this.getLimitX(), this.getLimitY());
         super.render(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
     }

@@ -48,7 +48,7 @@ public class SearchWidget extends AbstractOptionList {
     private void rebuild() {
         int x = this.getX();
         int y = this.getY();
-        int width = this.getWidth();
+        int width = this.getWidth() - Layout.OPTION_LIST_SCROLLBAR_OFFSET - Layout.SCROLLBAR_WIDTH;
         int height = this.getHeight();
 
         if (this.closeButton == null) {

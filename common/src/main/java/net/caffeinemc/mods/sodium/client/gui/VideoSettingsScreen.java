@@ -212,7 +212,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
         this.removeWidget(this.optionList);
         this.optionList = this.addRenderableWidget(new OptionListWidget(this, new Dim2i(
                 this.pageList.getLimitX() + Layout.INNER_MARGIN, Layout.INNER_MARGIN * 2 + Layout.BUTTON_SHORT,
-                Layout.OPTION_WIDTH, this.height - (Layout.INNER_MARGIN * 2 + Layout.BOTTOM_MARGIN + Layout.BUTTON_SHORT)),
+                Layout.OPTION_WIDTH + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.height - (Layout.INNER_MARGIN * 3 + Layout.BUTTON_SHORT)),
                 this.currentPage, this.currentMod.theme()
         ));
         this.controlList = this.optionList;
@@ -401,7 +401,7 @@ public class VideoSettingsScreen extends Screen implements ScreenPromptable {
     }
 
     private void startSearch(@Nullable SearchWidget old) {
-        this.searchWidget = new SearchWidget(this, this::closeSearch, old, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN + Layout.OPTION_WIDTH, this.height));
+        this.searchWidget = new SearchWidget(this, this::closeSearch, old, new Dim2i(0, 0, Layout.PAGE_LIST_WIDTH + Layout.INNER_MARGIN + Layout.OPTION_WIDTH + Layout.OPTION_LIST_SCROLLBAR_OFFSET + Layout.SCROLLBAR_WIDTH, this.height));
         this.addRenderableWidget(this.searchWidget);
 
         // remove focus from page list even if it doesn't get destroyed so that it isn't focused when the search is closed
