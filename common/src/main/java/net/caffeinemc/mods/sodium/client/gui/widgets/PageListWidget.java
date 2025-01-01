@@ -9,19 +9,19 @@ import net.caffeinemc.mods.sodium.client.gui.ColorTheme;
 import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.Layout;
 import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
+import net.caffeinemc.mods.sodium.client.gui.options.control.AbstractScrollable;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-public class PageListWidget extends AbstractParentWidget {
+public class PageListWidget extends AbstractScrollable {
     private static final int PAGE_LIST_TOP_PADDING = 3;
 
     private final VideoSettingsScreen parent;
     private final Runnable startSearch;
     private CenteredFlatWidget selected;
-    private ScrollbarWidget scrollbar;
     private FlatButtonWidget search;
 
     public PageListWidget(VideoSettingsScreen parent, Runnable startSearch, Dim2i dim) {
@@ -92,12 +92,6 @@ public class PageListWidget extends AbstractParentWidget {
 
     public static void renderBackgroundGradient(GuiGraphics graphics, int x1, int y1, int x2, int y2) {
         graphics.fillGradient(x1, y1, x2, y2, Colors.BACKGROUND_LIGHT, Colors.BACKGROUND_DEFAULT);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        this.scrollbar.scroll((int) (-verticalAmount * 10));
-        return true;
     }
 
     private void switchSelected(CenteredFlatWidget widget) {
