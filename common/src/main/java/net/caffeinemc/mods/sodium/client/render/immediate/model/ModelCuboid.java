@@ -43,6 +43,7 @@ public class ModelCuboid {
 
         if (mirror) {
             x1 += extraSizeX;
+            extraSizeX = -extraSizeX;
         }
 
         this.x1 = x1 / 16.0f;
