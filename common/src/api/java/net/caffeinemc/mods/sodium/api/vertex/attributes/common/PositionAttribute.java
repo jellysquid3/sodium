@@ -4,20 +4,20 @@ import org.lwjgl.system.MemoryUtil;
 
 public class PositionAttribute {
     public static void put(long ptr, float x, float y, float z) {
-        MemoryUtil.memPutFloat(ptr + 0, x);
-        MemoryUtil.memPutFloat(ptr + 4, y);
-        MemoryUtil.memPutFloat(ptr + 8, z);
+        MemoryUtil.memPutFloat(ptr + 0L, x);
+        MemoryUtil.memPutFloat(ptr + 4L, y);
+        MemoryUtil.memPutFloat(ptr + 8L, z);
     }
 
     public static float getX(long ptr) {
-        return MemoryUtil.memGetFloat(ptr + 0);
+        return MemoryUtil.memGetFloat(ptr + 0L);
     }
 
     public static float getY(long ptr) {
-        return MemoryUtil.memGetFloat(ptr + 4);
+        return MemoryUtil.memGetFloat(ptr + 4L);
     }
 
     public static float getZ(long ptr) {
-        return MemoryUtil.memGetFloat(ptr + 8);
+        return MemoryUtil.memGetFloat(ptr + 8L);
     }
 }
