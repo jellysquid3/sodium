@@ -152,7 +152,7 @@ public class RenderSectionManager {
         }
     }
 
-    public void updateCameraState(Vector3dc cameraPosition, Camera camera) {
+    public void prepareFrame(Vector3dc cameraPosition) {
         var now = System.nanoTime();
         this.lastFrameDuration = now - this.lastFrameAtTime;
         this.lastFrameAtTime = now;

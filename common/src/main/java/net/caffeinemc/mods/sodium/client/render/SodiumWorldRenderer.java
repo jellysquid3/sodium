@@ -212,7 +212,7 @@ public class SodiumWorldRenderer {
 
         this.lastFogDistance = fogDistance;
 
-        this.renderSectionManager.updateCameraState(pos, camera);
+        this.renderSectionManager.prepareFrame(pos);
 
         if (cameraLocationChanged) {
             profiler.popPush("translucent_triggering");
