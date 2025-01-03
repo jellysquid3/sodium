@@ -1,9 +1,9 @@
 {
     "ambientocclusion": false,
     "textures": {
-        "rim": "block/hopper_top",
+        "top": "block/hopper_top",
         "particle": "block/hopper_outside",
-        "outside": "block/hopper_outside",
+        "side": "block/hopper_outside",
         "inside": "block/hopper_inside"
     },
     "elements": [
