@@ -32,7 +32,7 @@ public class CategoryFactorEstimator<C> {
         }
 
         public float getAPerBFactor() {
-            return (float) this.aSum / this.bSum;
+            return ((float) this.aSum) / this.bSum;
         }
     }
 
@@ -45,19 +45,27 @@ public class CategoryFactorEstimator<C> {
     }
 
     public void addBatchEntry(BatchEntry<C> batchEntry) {
-        var category = batchEntry.getCategory();
-        if (this.newData.containsKey(category)) {
-            this.newData.get(category).addDataPoint(batchEntry.getA(), batchEntry.getB());
-        } else {
-            var batchData = new BatchDataAggregation();
-            batchData.addDataPoint(batchEntry.getA(), batchEntry.getB());
-            this.newData.put(category, batchData);
+        var a = batchEntry.getA();
+        var b = batchEntry.getB();
+
+        // skip if b is 0 to prevent Infinity and NaN
+        if (b == 0) {
+            return;
         }
+
+        var category = batchEntry.getCategory();
+        var aggregation = this.newData.get(category);
+        if (aggregation == null) {
+            aggregation = new BatchDataAggregation();
+            this.newData.put(category, aggregation);
+        }
+        aggregation.addDataPoint(a, b);
     }
 
     public void flushNewData() {
         this.newData.forEach((category, frameData) -> {
             var newFactor = frameData.getAPerBFactor();
+            // if there was no data it results in NaN
             if (Float.isNaN(newFactor)) {
                 return;
             }
