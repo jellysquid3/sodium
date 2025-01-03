@@ -15,7 +15,7 @@ public class PendingTaskCollector implements OcclusionCuller.GraphOcclusionVisit
 
     // tunable parameters for the priority calculation.
     // each "gained" point means a reduction in the final priority score (lowest score processed first)
-    static final float PENDING_TIME_FACTOR = -1.0f / 500_000_000.0f; // 1 point gained per 500ms
+    static final float PENDING_TIME_FACTOR = -1.0f / 5_000_000_000.0f; // 1 point gained per 5s
     static final float WITHIN_FRUSTUM_BIAS = -3.0f; // points for being within the frustum
     static final float PROXIMITY_FACTOR = 3.0f; // penalty for being far away
     static final float CLOSE_DISTANCE = 50.0f; // distance at which another proximity bonus is applied
