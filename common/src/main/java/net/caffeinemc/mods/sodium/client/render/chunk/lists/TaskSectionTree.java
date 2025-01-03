@@ -23,6 +23,11 @@ public class TaskSectionTree extends RayOcclusionSectionTree {
         this.taskTreeFinalized = false;
     }
 
+    public void markSectionTask(int x, int y, int z) {
+        this.taskTree.add(x, y, z);
+        this.taskTreeFinalized = false;
+    }
+
     @Override
     protected void addPendingSection(RenderSection section, ChunkUpdateType type) {
         super.addPendingSection(section, type);

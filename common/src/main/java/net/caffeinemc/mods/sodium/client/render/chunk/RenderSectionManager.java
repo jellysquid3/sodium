@@ -1,6 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.*;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
@@ -13,7 +14,9 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkSortOutput;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.JobDurationEstimator;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.MeshResultSize;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.MeshTaskSizeEstimator;
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.*;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobCollector;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobResult;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderSortingTask;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderTask;
@@ -35,6 +38,7 @@ import net.caffeinemc.mods.sodium.client.render.texture.SpriteUtil;
 import net.caffeinemc.mods.sodium.client.render.util.RenderAsserts;
 import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.render.viewport.Viewport;
+import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
 import net.caffeinemc.mods.sodium.client.util.task.CancellationToken;
 import net.caffeinemc.mods.sodium.client.world.LevelSlice;
@@ -115,6 +119,9 @@ public class RenderSectionManager {
 
     private final ExecutorService asyncCullExecutor = Executors.newSingleThreadExecutor(RenderSectionManager::makeAsyncCullThread);
     private final ObjectArrayList<AsyncRenderTask<?>> pendingTasks = new ObjectArrayList<>();
+    private GlobalCullTask pendingGlobalCullTask = null;
+    private final IntArrayList concurrentlySubmittedTasks = new IntArrayList();
+
     private SectionTree renderTree = null;
     private TaskSectionTree globalTaskTree = null;
     private final Map<CullType, SectionTree> cullResults = new EnumMap<>(CullType.class);
@@ -181,7 +188,7 @@ public class RenderSectionManager {
             this.cullResults.remove(CullType.FRUSTUM);
 
             this.pendingTasks.removeIf(task -> {
-                if (task instanceof CullTask<?> cullTask && cullTask.getCullType() == CullType.FRUSTUM) {
+                if (task instanceof FrustumCullTask cullTask) {
                     cullTask.setCancelled();
                     return true;
                 }
@@ -219,6 +226,8 @@ public class RenderSectionManager {
             task.getResult();
         }
         this.pendingTasks.clear();
+        this.pendingGlobalCullTask = null;
+        this.concurrentlySubmittedTasks.clear();
 
         var tree = new VisibleChunkCollectorSync(viewport, searchDistance, this.frame, CullType.FRUSTUM, this.level);
         this.occlusionCuller.findVisible(tree, viewport, searchDistance, useOcclusionCulling, CancellationToken.NEVER_CANCELLED);
@@ -280,6 +289,16 @@ public class RenderSectionManager {
                     latestTreeCullType = cullType;
 
                     this.needsRenderListUpdate = true;
+                    this.pendingGlobalCullTask = null;
+
+                    // mark changes on the global task tree if they were scheduled while the task was already running
+                    for (int i = 0, length = this.concurrentlySubmittedTasks.size(); i < length; i += 3) {
+                        var x = this.concurrentlySubmittedTasks.getInt(i);
+                        var y = this.concurrentlySubmittedTasks.getInt(i + 1);
+                        var z = this.concurrentlySubmittedTasks.getInt(i + 2);
+                        tree.markSectionTask(x, y, z);
+                    }
+                    this.concurrentlySubmittedTasks.clear();
                 }
                 case FrustumTaskCollectionTask collectionTask ->
                         this.frustumTaskLists = collectionTask.getResult().getFrustumTaskLists();
@@ -346,6 +365,10 @@ public class RenderSectionManager {
                 };
                 task.submitTo(this.asyncCullExecutor);
                 this.pendingTasks.add(task);
+
+                if (task instanceof GlobalCullTask globalCullTask) {
+                    this.pendingGlobalCullTask = globalCullTask;
+                }
             }
         }
     }
@@ -1031,6 +1054,15 @@ public class RenderSectionManager {
         if (this.globalTaskTree != null && type != null && current == null) {
             this.globalTaskTree.markSectionTask(section);
             this.needsFrustumTaskListUpdate = true;
+
+            // when a global cull task is already running and has already processed the section, and we mark it with a pending task,
+            // the section will not be marked as having a task in the then replaced global tree and the derivative frustum tree also won't have it.
+            // Sections that are marked with a pending task while a task that may replace the global task tree is running are a added to a list from which the new global task tree is populated once it's done.
+            if (this.pendingGlobalCullTask != null) {
+                this.concurrentlySubmittedTasks.add(section.getChunkX());
+                this.concurrentlySubmittedTasks.add(section.getChunkY());
+                this.concurrentlySubmittedTasks.add(section.getChunkZ());
+            }
         }
 
         return type;
@@ -1160,6 +1192,18 @@ public class RenderSectionManager {
         list.add(String.format("Tasks: N0=%03d | N1=%03d | Def=%03d, Recv=%03d",
                 this.thisFrameBlockingTasks, this.nextFrameBlockingTasks, this.deferredTasks, this.buildResults.size())
         );
+
+        if (PlatformRuntimeInformation.getInstance().isDevelopmentEnvironment()) {
+            var meshTaskDuration = this.jobDurationEstimator.estimateJobDuration(ChunkBuilderMeshingTask.class, 1);
+            var sortTaskDuration = this.jobDurationEstimator.estimateJobDuration(ChunkBuilderSortingTask.class, 1);
+            list.add(String.format("Duration: Mesh=%dns, Sort=%dns", meshTaskDuration, sortTaskDuration));
+
+            var sizeEstimates = new StringBuilder();
+            for (var type : MeshResultSize.SectionCategory.values()) {
+                sizeEstimates.append(String.format("%s=%d, ", type, this.meshTaskSizeEstimator.estimateAWithB(type, 1)));
+            }
+            list.add(String.format("Size: %s", sizeEstimates));
+        }
 
         this.sortTriggering.addDebugStrings(list);
 
