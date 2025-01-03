@@ -200,14 +200,6 @@ public class RenderSection {
     }
 
     /**
-     * @return The squared distance from the center of this chunk in the level to the center of the block position
-     * given by {@param pos}
-     */
-    public float getSquaredDistance(BlockPos pos) {
-        return this.getSquaredDistance(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f);
-    }
-
-    /**
      * @return The squared distance from the center of this chunk to the given block position
      */
     public float getSquaredDistance(float x, float y, float z) {
@@ -273,6 +265,10 @@ public class RenderSection {
 
     public RenderRegion getRegion() {
         return this.region;
+    }
+
+    public boolean needsRender() {
+        return this.region.sectionNeedsRender(this.sectionIndex);
     }
 
     public void setLastVisibleSearchToken(int frame) {

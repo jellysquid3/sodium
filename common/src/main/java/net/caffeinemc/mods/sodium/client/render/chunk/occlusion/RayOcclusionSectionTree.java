@@ -30,13 +30,13 @@ public class RayOcclusionSectionTree extends SectionTree {
 
     @Override
     public boolean visitTestVisible(RenderSection section) {
-        if ((section.getRegion().getSectionFlags(section.getSectionIndex()) & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
-            this.lastSectionKnownEmpty = true;
-        } else {
+        if (section.needsRender()) {
             this.lastSectionKnownEmpty = false;
             if (this.isRayBlockedStepped(section)) {
                 return false;
             }
+        } else {
+            this.lastSectionKnownEmpty = true;
         }
 
         return super.visitTestVisible(section);

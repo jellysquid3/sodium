@@ -613,9 +613,20 @@ public class RenderSectionManager {
         }
     }
 
+    private boolean isSectionEmpty(int x, int y, int z) {
+        long key = SectionPos.asLong(x, y, z);
+        RenderSection section = this.sectionByPosition.get(key);
+
+        if (section == null) {
+            return true;
+        }
+
+        return !section.needsRender();
+    }
+
     // renderTree is not necessarily frustum-filtered but that is ok since the caller makes sure to eventually also perform a frustum test on the box being tested (see EntityRendererMixin)
     public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
-        return this.renderTree == null || this.renderTree.isBoxVisible(x1, y1, z1, x2, y2, z2);
+        return this.renderTree == null || this.renderTree.isBoxVisible(x1, y1, z1, x2, y2, z2, this::isSectionEmpty);
     }
 
     public void uploadChunks() {
@@ -682,7 +693,7 @@ public class RenderSectionManager {
     }
 
     private boolean updateSectionInfo(RenderSection render, BuiltSectionInfo info) {
-        if (info == null || (info.flags & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
+        if (info == null || !RenderSectionFlags.needsRender(info.flags)) {
             this.renderableSectionTree.remove(render);
         } else {
             this.renderableSectionTree.add(render);
@@ -895,6 +906,7 @@ public class RenderSectionManager {
             var section = it.next();
             var pendingUpdate = section.getPendingUpdate();
             if (pendingUpdate != null && pendingUpdate.getDeferMode(alwaysDeferImportantRebuilds) == deferMode) {
+                // isSectionVisible includes a special case for not testing empty sections against the tree as they won't be in it
                 if (this.renderTree == null || this.renderTree.isSectionVisible(viewport, section)) {
                     remainingUploadSize -= submitSectionTask(collector, section, pendingUpdate);
                 } else {
@@ -1039,16 +1051,19 @@ public class RenderSectionManager {
 
     private ChunkUpdateType upgradePendingUpdate(RenderSection section, ChunkUpdateType type) {
         var current = section.getPendingUpdate();
-        var typeChanged = ChunkUpdateType.getPromotionUpdateType(current, type);
+        type = ChunkUpdateType.getPromotedTypeChange(current, type);
 
-        if (typeChanged != null) {
-            // when the pending task type changes, and it's important, add it to the list of important tasks
-            if (current != type && type.isImportant()) {
-                this.importantTasks.get(type.getDeferMode(alwaysDeferImportantRebuilds())).add(section);
-            }
+        // if there was no change the upgraded type is null
+        if (type == null) {
+            return null;
+        }
 
-            section.setPendingUpdate(type, this.lastFrameAtTime);
+        section.setPendingUpdate(type, this.lastFrameAtTime);
 
+        // when the pending task type changes, and it's important, add it to the list of important tasks
+        if (type.isImportant()) {
+            this.importantTasks.get(type.getDeferMode(alwaysDeferImportantRebuilds())).add(section);
+        } else {
             // if the section received a new task, mark in the task tree so an update can happen before a global cull task runs
             if (this.globalTaskTree != null && current == null) {
                 this.globalTaskTree.markSectionTask(section);
@@ -1065,7 +1080,7 @@ public class RenderSectionManager {
             }
         }
 
-        return typeChanged;
+        return type;
     }
 
     public void scheduleSort(long sectionPos, boolean isDirectTrigger) {

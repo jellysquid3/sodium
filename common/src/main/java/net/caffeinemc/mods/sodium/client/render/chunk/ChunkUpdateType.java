@@ -36,8 +36,11 @@ public enum ChunkUpdateType {
      * @param next New update type
      * @return Promoted update type or {@code null} if the update type is the same or less important
      */
-    public static ChunkUpdateType getPromotionUpdateType(ChunkUpdateType prev, ChunkUpdateType next) {
-        if (prev == null || prev == SORT || prev == next) {
+    public static ChunkUpdateType getPromotedTypeChange(ChunkUpdateType prev, ChunkUpdateType next) {
+        if (prev == next) {
+            return null;
+        }
+        if (prev == null || prev == SORT || prev == INITIAL_BUILD) {
             return next;
         }
         if (next == IMPORTANT_REBUILD

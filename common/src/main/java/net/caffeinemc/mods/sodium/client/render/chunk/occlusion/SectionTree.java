@@ -71,7 +71,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
 
         // discard invisible or sections that don't need to be rendered,
         // only perform this test if it hasn't already been done before
-        if (this.lastSectionKnownEmpty || (section.getRegion().getSectionFlags(section.getSectionIndex()) & RenderSectionFlags.MASK_NEEDS_RENDER) == 0) {
+        if (this.lastSectionKnownEmpty || !section.needsRender()) {
             return;
         }
 
@@ -86,7 +86,7 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         this.tree.prepareForTraversal();
     }
 
-    public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2) {
+    public boolean isBoxVisible(double x1, double y1, double z1, double x2, double y2, double z2, NotInTreePredicate notInTreePredicate) {
         // check if there's a section at any part of the box
         int minX = SectionPos.posToSectionCoord(x1 - 0.5D);
         int minY = SectionPos.posToSectionCoord(y1 - 0.5D);
@@ -96,10 +96,21 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         int maxY = SectionPos.posToSectionCoord(y2 + 0.5D);
         int maxZ = SectionPos.posToSectionCoord(z2 + 0.5D);
 
+        // check if any of the sections in the box are present, and then check the predicate as it's likely more expensive than fetching from the bitmask
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
                 for (int y = minY; y <= maxY; y++) {
-                    if (this.isSectionPresent(x, y, z)) {
+                    if (this.tree.isSectionPresent(x, y, z)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                for (int y = minY; y <= maxY; y++) {
+                    if (notInTreePredicate.isEmpty(x, y, z)) {
                         return true;
                     }
                 }
@@ -109,12 +120,14 @@ public class SectionTree extends PendingTaskCollector implements OcclusionCuller
         return false;
     }
 
-    private boolean isSectionPresent(int x, int y, int z) {
-        return this.tree.getPresence(x, y, z) == Tree.PRESENT;
+    @FunctionalInterface
+    public interface NotInTreePredicate {
+        boolean isEmpty(int x, int y, int z);
     }
 
     public boolean isSectionVisible(Viewport viewport, RenderSection section) {
-        return this.isSectionPresent(section.getChunkX(), section.getChunkY(), section.getChunkZ()) &&
+        // empty sections are not tested against the tree because the tree is not aware of them
+        return (!section.needsRender() || this.tree.isSectionPresent(section.getChunkX(), section.getChunkY(), section.getChunkZ())) &&
                 this.isWithinFrustum(viewport, section);
     }
 

@@ -10,4 +10,8 @@ public interface Forest {
     }
 
     int getPresence(int x, int y, int z);
+
+    default boolean isSectionPresent(int x, int y, int z) {
+        return this.getPresence(x, y, z) == Tree.PRESENT;
+    }
 }

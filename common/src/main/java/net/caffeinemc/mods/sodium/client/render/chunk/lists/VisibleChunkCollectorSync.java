@@ -36,7 +36,7 @@ public class VisibleChunkCollectorSync extends SectionTree implements RenderList
         }
 
         var index = section.getSectionIndex();
-        if ((region.getSectionFlags(index) & RenderSectionFlags.MASK_NEEDS_RENDER) != 0) {
+        if (region.sectionNeedsRender(index)) {
             renderList.add(index);
         }
     }

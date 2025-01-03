@@ -196,6 +196,10 @@ public class RenderRegion {
         return this.sectionFlags[id];
     }
 
+    public boolean sectionNeedsRender(int id) {
+        return RenderSectionFlags.needsRender(this.sectionFlags[id]);
+    }
+
     /**
      * Returns the collection of block entities contained by this rendered chunk, which are not part of its culling
      * volume. These entities should always be rendered regardless of the render being visible in the frustum.
