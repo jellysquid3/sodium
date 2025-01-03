@@ -114,7 +114,6 @@ public class RenderSectionManager {
     private boolean cameraChanged = false;
     private boolean needsFrustumTaskListUpdate = true;
 
-    private @Nullable BlockPos cameraBlockPos;
     private @Nullable Vector3dc cameraPosition;
 
     private final ExecutorService asyncCullExecutor = Executors.newSingleThreadExecutor(RenderSectionManager::makeAsyncCullThread);
@@ -148,8 +147,9 @@ public class RenderSectionManager {
         this.renderableSectionTree = new RemovableMultiForest(renderDistance);
 
         this.importantTasks = new EnumMap<>(DeferMode.class);
-        this.importantTasks.put(DeferMode.ZERO_FRAMES, new ReferenceLinkedOpenHashSet<>());
-        this.importantTasks.put(DeferMode.ONE_FRAME, new ReferenceLinkedOpenHashSet<>());
+        for (var deferMode : DeferMode.values()) {
+            this.importantTasks.put(deferMode, new ReferenceLinkedOpenHashSet<>());
+        }
     }
 
     public void updateCameraState(Vector3dc cameraPosition, Camera camera) {
@@ -167,7 +167,6 @@ public class RenderSectionManager {
         this.needsRenderListUpdate |= this.cameraChanged;
         this.needsFrustumTaskListUpdate |= this.needsRenderListUpdate;
 
-        this.cameraBlockPos = camera.getBlockPosition();
         this.cameraPosition = cameraPosition;
     }
 
@@ -791,6 +790,8 @@ public class RenderSectionManager {
             ChunkJobCollector importantCollector, ChunkJobCollector semiImportantCollector, ChunkJobCollector deferredCollector, long remainingUploadSize, Viewport viewport) {
         remainingUploadSize = submitImportantSectionTasks(importantCollector, remainingUploadSize, DeferMode.ZERO_FRAMES, viewport);
         remainingUploadSize = submitImportantSectionTasks(semiImportantCollector, remainingUploadSize, DeferMode.ONE_FRAME, viewport);
+        remainingUploadSize = submitImportantSectionTasks(deferredCollector, remainingUploadSize, DeferMode.ALWAYS, viewport);
+
         submitDeferredSectionTasks(deferredCollector, remainingUploadSize);
     }
 
@@ -887,13 +888,13 @@ public class RenderSectionManager {
     }
 
     private long submitImportantSectionTasks(ChunkJobCollector collector, long remainingUploadSize, DeferMode deferMode, Viewport viewport) {
-        var limitOnSize = deferMode != DeferMode.ZERO_FRAMES;
-        var it =  this.importantTasks.get(deferMode).iterator();
+        var it = this.importantTasks.get(deferMode).iterator();
+        var alwaysDeferImportantRebuilds = alwaysDeferImportantRebuilds();
 
-        while (it.hasNext() && collector.hasBudgetRemaining() && (!limitOnSize || remainingUploadSize > 0)) {
+        while (it.hasNext() && collector.hasBudgetRemaining() && (deferMode.allowsUnlimitedUploadSize() || remainingUploadSize > 0)) {
             var section = it.next();
             var pendingUpdate = section.getPendingUpdate();
-            if (pendingUpdate != null && pendingUpdate.getDeferMode() == deferMode) {
+            if (pendingUpdate != null && pendingUpdate.getDeferMode(alwaysDeferImportantRebuilds) == deferMode) {
                 if (this.renderTree == null || this.renderTree.isSectionVisible(viewport, section)) {
                     remainingUploadSize -= submitSectionTask(collector, section, pendingUpdate);
                 } else {
@@ -1038,34 +1039,33 @@ public class RenderSectionManager {
 
     private ChunkUpdateType upgradePendingUpdate(RenderSection section, ChunkUpdateType type) {
         var current = section.getPendingUpdate();
-        type = ChunkUpdateType.getPromotionUpdateType(current, type);
+        var typeChanged = ChunkUpdateType.getPromotionUpdateType(current, type);
 
-        // when the pending task type changes and it's important, add it to the list of important tasks
-        if (type != null && current != type) {
-            var deferMode = type.getDeferMode();
-            if (deferMode != DeferMode.ALWAYS) {
-                this.importantTasks.get(deferMode).add(section);
+        if (typeChanged != null) {
+            // when the pending task type changes, and it's important, add it to the list of important tasks
+            if (current != type && type.isImportant()) {
+                this.importantTasks.get(type.getDeferMode(alwaysDeferImportantRebuilds())).add(section);
+            }
+
+            section.setPendingUpdate(type, this.lastFrameAtTime);
+
+            // if the section received a new task, mark in the task tree so an update can happen before a global cull task runs
+            if (this.globalTaskTree != null && current == null) {
+                this.globalTaskTree.markSectionTask(section);
+                this.needsFrustumTaskListUpdate = true;
+
+                // when a global cull task is already running and has already processed the section, and we mark it with a pending task,
+                // the section will not be marked as having a task in the then replaced global tree and the derivative frustum tree also won't have it.
+                // Sections that are marked with a pending task while a task that may replace the global task tree is running are a added to a list from which the new global task tree is populated once it's done.
+                if (this.pendingGlobalCullTask != null) {
+                    this.concurrentlySubmittedTasks.add(section.getChunkX());
+                    this.concurrentlySubmittedTasks.add(section.getChunkY());
+                    this.concurrentlySubmittedTasks.add(section.getChunkZ());
+                }
             }
         }
 
-        section.setPendingUpdate(type, this.lastFrameAtTime);
-
-        // if the section received a new task, mark in the task tree so an update can happen before a global cull task runs
-        if (this.globalTaskTree != null && type != null && current == null) {
-            this.globalTaskTree.markSectionTask(section);
-            this.needsFrustumTaskListUpdate = true;
-
-            // when a global cull task is already running and has already processed the section, and we mark it with a pending task,
-            // the section will not be marked as having a task in the then replaced global tree and the derivative frustum tree also won't have it.
-            // Sections that are marked with a pending task while a task that may replace the global task tree is running are a added to a list from which the new global task tree is populated once it's done.
-            if (this.pendingGlobalCullTask != null) {
-                this.concurrentlySubmittedTasks.add(section.getChunkX());
-                this.concurrentlySubmittedTasks.add(section.getChunkY());
-                this.concurrentlySubmittedTasks.add(section.getChunkZ());
-            }
-        }
-
-        return type;
+        return typeChanged;
     }
 
     public void scheduleSort(long sectionPos, boolean isDirectTrigger) {
@@ -1095,7 +1095,7 @@ public class RenderSectionManager {
         if (section != null && section.isBuilt()) {
             ChunkUpdateType pendingUpdate;
 
-            if (allowImportantRebuilds() && (important || this.shouldPrioritizeTask(section, NEARBY_REBUILD_DISTANCE))) {
+            if (important || this.shouldPrioritizeTask(section, NEARBY_REBUILD_DISTANCE)) {
                 pendingUpdate = ChunkUpdateType.IMPORTANT_REBUILD;
             } else {
                 pendingUpdate = ChunkUpdateType.REBUILD;
@@ -1106,11 +1106,15 @@ public class RenderSectionManager {
     }
 
     private boolean shouldPrioritizeTask(RenderSection section, float distance) {
-        return this.cameraBlockPos != null && section.getSquaredDistance(this.cameraBlockPos) < distance;
+        return this.cameraPosition != null && section.getSquaredDistance(
+                (float) this.cameraPosition.x(),
+                (float) this.cameraPosition.y(),
+                (float) this.cameraPosition.z()
+        ) < distance;
     }
 
-    private static boolean allowImportantRebuilds() {
-        return !SodiumClientMod.options().performance.alwaysDeferChunkUpdates;
+    private static boolean alwaysDeferImportantRebuilds() {
+        return SodiumClientMod.options().performance.alwaysDeferChunkUpdates;
     }
 
     private float getEffectiveRenderDistance() {

@@ -1,23 +1,41 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
- * NOTE: Update types with not-ALWAYS defer mode should be prefixed "important".
+ * Important: Whether the task is scheduled immediately after its creation. Otherwise, they're scheduled through asynchronous culling that collects non-important tasks.
+ * Defer mode: For important tasks, how fast they are going to be executed. One or zero frame deferral only allows one or zero frames to pass before the frame blocks on the task. Always deferral allows the task to be deferred indefinitely, but if it's important it will still be put to the front of the queue.
  */
 public enum ChunkUpdateType {
-    SORT(DeferMode.ALWAYS, 2),
-    INITIAL_BUILD(DeferMode.ALWAYS, 0),
-    REBUILD(DeferMode.ALWAYS, 1),
-    IMPORTANT_REBUILD(DeferMode.ONE_FRAME, 1),
+    SORT(2),
+    INITIAL_BUILD(0),
+    REBUILD(1),
+    IMPORTANT_REBUILD(DeferMode.ZERO_FRAMES, 1),
     IMPORTANT_SORT(DeferMode.ZERO_FRAMES, 2);
 
     private final DeferMode deferMode;
+    private final boolean important;
     private final float priorityValue;
 
-    ChunkUpdateType(DeferMode deferMode, float priorityValue) {
-        this.deferMode = deferMode;
+    ChunkUpdateType(float priorityValue) {
+        this.deferMode = DeferMode.ALWAYS;
+        this.important = false;
         this.priorityValue = priorityValue;
     }
 
+    ChunkUpdateType(@NotNull DeferMode deferMode, float priorityValue) {
+        this.deferMode = deferMode;
+        this.important = true;
+        this.priorityValue = priorityValue;
+    }
+
+    /**
+     * Returns a promoted update type if the new update type is more important than the previous one. Nothing is returned if the update type is the same or less important.
+     *
+     * @param prev Previous update type
+     * @param next New update type
+     * @return Promoted update type or {@code null} if the update type is the same or less important
+     */
     public static ChunkUpdateType getPromotionUpdateType(ChunkUpdateType prev, ChunkUpdateType next) {
         if (prev == null || prev == SORT || prev == next) {
             return next;
@@ -31,11 +49,12 @@ public enum ChunkUpdateType {
     }
 
     public boolean isImportant() {
-        return this.deferMode != DeferMode.ALWAYS;
+        return this.important;
     }
 
-    public DeferMode getDeferMode() {
-        return this.deferMode;
+    public DeferMode getDeferMode(boolean deferImportantRebuilds) {
+        // use defer mode ALWAYS if important rebuilds are configured to be always deferred
+        return deferImportantRebuilds && this == IMPORTANT_REBUILD ? DeferMode.ALWAYS : this.deferMode;
     }
 
     public float getPriorityValue() {
