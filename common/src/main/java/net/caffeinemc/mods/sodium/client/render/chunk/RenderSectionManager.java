@@ -900,17 +900,17 @@ public class RenderSectionManager {
 
     private long submitImportantSectionTasks(ChunkJobCollector collector, long remainingUploadSize, DeferMode deferMode, Viewport viewport) {
         var it = this.importantTasks.get(deferMode).iterator();
-        var alwaysDeferImportantRebuilds = alwaysDeferImportantRebuilds();
+        var importantRebuildDeferMode = SodiumClientMod.options().performance.chunkBuildDeferMode;
 
         while (it.hasNext() && collector.hasBudgetRemaining() && (deferMode.allowsUnlimitedUploadSize() || remainingUploadSize > 0)) {
             var section = it.next();
             var pendingUpdate = section.getPendingUpdate();
-            if (pendingUpdate != null && pendingUpdate.getDeferMode(alwaysDeferImportantRebuilds) == deferMode) {
+            if (pendingUpdate != null && pendingUpdate.getDeferMode(importantRebuildDeferMode) == deferMode && this.shouldPrioritizeTask(section, NEARBY_SORT_DISTANCE)) {
                 // isSectionVisible includes a special case for not testing empty sections against the tree as they won't be in it
                 if (this.renderTree == null || this.renderTree.isSectionVisible(viewport, section)) {
                     remainingUploadSize -= submitSectionTask(collector, section, pendingUpdate);
                 } else {
-                    // don't remove if simply not visible but still needs to be run
+                    // don't remove if simply not visible currently but still relevant
                     continue;
                 }
             }
@@ -1062,7 +1062,7 @@ public class RenderSectionManager {
 
         // when the pending task type changes, and it's important, add it to the list of important tasks
         if (type.isImportant()) {
-            this.importantTasks.get(type.getDeferMode(alwaysDeferImportantRebuilds())).add(section);
+            this.importantTasks.get(type.getDeferMode(SodiumClientMod.options().performance.chunkBuildDeferMode)).add(section);
         } else {
             // if the section received a new task, mark in the task tree so an update can happen before a global cull task runs
             if (this.globalTaskTree != null && current == null) {
@@ -1089,8 +1089,7 @@ public class RenderSectionManager {
         if (section != null) {
             var pendingUpdate = ChunkUpdateType.SORT;
             var priorityMode = SodiumClientMod.options().performance.getSortBehavior().getPriorityMode();
-            if (priorityMode == PriorityMode.ALL
-                    || priorityMode == PriorityMode.NEARBY && this.shouldPrioritizeTask(section, NEARBY_SORT_DISTANCE)) {
+            if (priorityMode == PriorityMode.NEARBY && this.shouldPrioritizeTask(section, NEARBY_SORT_DISTANCE) || priorityMode == PriorityMode.ALL) {
                 pendingUpdate = ChunkUpdateType.IMPORTANT_SORT;
             }
 
@@ -1100,7 +1099,7 @@ public class RenderSectionManager {
         }
     }
 
-    public void scheduleRebuild(int x, int y, int z, boolean important) {
+    public void scheduleRebuild(int x, int y, int z, boolean playerChanged) {
         RenderAsserts.validateCurrentThread();
 
         this.sectionCache.invalidate(x, y, z);
@@ -1110,7 +1109,7 @@ public class RenderSectionManager {
         if (section != null && section.isBuilt()) {
             ChunkUpdateType pendingUpdate;
 
-            if (important || this.shouldPrioritizeTask(section, NEARBY_REBUILD_DISTANCE)) {
+            if (playerChanged && this.shouldPrioritizeTask(section, NEARBY_REBUILD_DISTANCE)) {
                 pendingUpdate = ChunkUpdateType.IMPORTANT_REBUILD;
             } else {
                 pendingUpdate = ChunkUpdateType.REBUILD;
@@ -1126,10 +1125,6 @@ public class RenderSectionManager {
                 (float) this.cameraPosition.y(),
                 (float) this.cameraPosition.z()
         ) < distance;
-    }
-
-    private static boolean alwaysDeferImportantRebuilds() {
-        return SodiumClientMod.options().performance.alwaysDeferChunkUpdates;
     }
 
     private float getEffectiveRenderDistance() {

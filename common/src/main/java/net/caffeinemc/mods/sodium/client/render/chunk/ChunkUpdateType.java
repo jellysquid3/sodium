@@ -55,9 +55,8 @@ public enum ChunkUpdateType {
         return this.important;
     }
 
-    public DeferMode getDeferMode(boolean deferImportantRebuilds) {
-        // use defer mode ALWAYS if important rebuilds are configured to be always deferred
-        return deferImportantRebuilds && this == IMPORTANT_REBUILD ? DeferMode.ALWAYS : this.deferMode;
+    public DeferMode getDeferMode(DeferMode importantRebuildDeferMode) {
+        return this == IMPORTANT_REBUILD ? importantRebuildDeferMode : this.deferMode;
     }
 
     public float getPriorityValue() {

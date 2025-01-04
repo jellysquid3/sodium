@@ -516,18 +516,18 @@ public class SodiumWorldRenderer {
     /**
      * Schedules chunk rebuilds for all chunks in the specified block region.
      */
-    public void scheduleRebuildForBlockArea(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, boolean important) {
-        this.scheduleRebuildForChunks(minX >> 4, minY >> 4, minZ >> 4, maxX >> 4, maxY >> 4, maxZ >> 4, important);
+    public void scheduleRebuildForBlockArea(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, boolean playerChanged) {
+        this.scheduleRebuildForChunks(minX >> 4, minY >> 4, minZ >> 4, maxX >> 4, maxY >> 4, maxZ >> 4, playerChanged);
     }
 
     /**
      * Schedules chunk rebuilds for all chunks in the specified chunk region.
      */
-    public void scheduleRebuildForChunks(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, boolean important) {
+    public void scheduleRebuildForChunks(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, boolean playerChanged) {
         for (int chunkX = minX; chunkX <= maxX; chunkX++) {
             for (int chunkY = minY; chunkY <= maxY; chunkY++) {
                 for (int chunkZ = minZ; chunkZ <= maxZ; chunkZ++) {
-                    this.scheduleRebuildForChunk(chunkX, chunkY, chunkZ, important);
+                    this.scheduleRebuildForChunk(chunkX, chunkY, chunkZ, playerChanged);
                 }
             }
         }
@@ -536,8 +536,8 @@ public class SodiumWorldRenderer {
     /**
      * Schedules a chunk rebuild for the render belonging to the given chunk section position.
      */
-    public void scheduleRebuildForChunk(int x, int y, int z, boolean important) {
-        this.renderSectionManager.scheduleRebuild(x, y, z, important);
+    public void scheduleRebuildForChunk(int x, int y, int z, boolean playerChanged) {
+        this.renderSectionManager.scheduleRebuild(x, y, z, playerChanged);
     }
 
     public Collection<String> getDebugStrings() {
