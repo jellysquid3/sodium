@@ -1,7 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation;
 
 public class JobDurationEstimator extends CategoryFactorEstimator<Class<?>> {
-    public static final float NEW_DATA_FACTOR = 0.01f;
+    public static final float NEW_DATA_FACTOR = 0.07f;
     private static final long INITIAL_JOB_DURATION_ESTIMATE = 5_000_000L;
 
     public JobDurationEstimator() {
