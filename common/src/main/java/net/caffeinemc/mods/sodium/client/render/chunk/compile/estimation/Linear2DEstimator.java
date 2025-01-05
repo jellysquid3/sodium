@@ -2,6 +2,8 @@ package net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+import java.util.Locale;
+
 public abstract class Linear2DEstimator<C> extends Estimator<C, Linear2DEstimator.DataPair<C>, Linear2DEstimator.LinearRegressionBatch<C>, Long, Long, Linear2DEstimator.LinearFunction<C>> {
     private final float newDataRatio;
     private final int initialSampleTarget;
@@ -126,6 +128,11 @@ public abstract class Linear2DEstimator<C> extends Estimator<C, Linear2DEstimato
             }
 
             return (long) (this.yIntercept + this.slope * input);
+        }
+
+        @Override
+        public String toString() {
+            return String.format(Locale.US, "s=%.2f,y=%.0f", this.slope, this.yIntercept);
         }
     }
 

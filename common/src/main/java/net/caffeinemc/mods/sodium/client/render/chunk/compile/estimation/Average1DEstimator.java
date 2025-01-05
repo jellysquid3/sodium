@@ -2,6 +2,8 @@ package net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation;
 
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
 
+import java.util.Locale;
+
 public abstract class Average1DEstimator<C> extends Estimator<C, Average1DEstimator.Value<C>, Average1DEstimator.ValueBatch<C>, Void, Long, Average1DEstimator.Average<C>> {
     private final float newDataRatio;
     private final long initialEstimate;
@@ -68,6 +70,11 @@ public abstract class Average1DEstimator<C> extends Estimator<C, Average1DEstima
         @Override
         public Long predict(Void input) {
             return (long) this.average;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(Locale.US, "%.0f", this.average);
         }
     }
 

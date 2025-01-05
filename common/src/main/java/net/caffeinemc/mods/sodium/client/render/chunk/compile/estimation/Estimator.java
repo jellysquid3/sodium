@@ -80,4 +80,12 @@ public abstract class Estimator<
     public O predict(C category, I input) {
         return this.ensureModel(category).predict(input);
     }
+
+    public String toString(C category) {
+        var model = this.models.get(category);
+        if (model == null) {
+            return "-";
+        }
+        return model.toString();
+    }
 }

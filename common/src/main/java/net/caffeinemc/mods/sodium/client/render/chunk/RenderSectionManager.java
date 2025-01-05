@@ -1208,15 +1208,15 @@ public class RenderSectionManager {
         );
 
         if (PlatformRuntimeInformation.getInstance().isDevelopmentEnvironment()) {
-            var meshTaskDuration = this.jobDurationEstimator.estimateJobDuration(ChunkBuilderMeshingTask.class, 1);
-            var sortTaskDuration = this.jobDurationEstimator.estimateJobDuration(ChunkBuilderSortingTask.class, 1);
-            list.add(String.format("Duration: Mesh=%dns, Sort=%dns", meshTaskDuration, sortTaskDuration));
+            var meshTaskParameters = this.jobDurationEstimator.toString(ChunkBuilderMeshingTask.class);
+            var sortTaskParameters = this.jobDurationEstimator.toString(ChunkBuilderSortingTask.class);
+            list.add(String.format("Duration: Mesh %s, Sort %s", meshTaskParameters, sortTaskParameters));
 
-            var sizeEstimates = new StringBuilder();
+            var sizeEstimates = new ReferenceArrayList<String>();
             for (var type : MeshResultSize.SectionCategory.values()) {
-                sizeEstimates.append(String.format("%s=%d, ", type, this.meshTaskSizeEstimator.predict(type)));
+                sizeEstimates.add(String.format("%s=%s", type, this.meshTaskSizeEstimator.toString(type)));
             }
-            list.add(String.format("Size: %s", sizeEstimates));
+            list.add(String.format("Size: %s", String.join(", ", sizeEstimates)));
         }
 
         this.sortTriggering.addDebugStrings(list);
