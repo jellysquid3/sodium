@@ -107,7 +107,7 @@ public class RenderSectionManager {
     private long lastFrameDuration = -1;
     private long averageFrameDuration = -1;
     private long lastFrameAtTime = System.nanoTime();
-    private static final float AVERAGE_FRAME_DURATION_FACTOR = 0.05f;
+    private static final float FRAME_DURATION_UPDATE_RATIO = 0.05f;
 
     private boolean needsGraphUpdate = true;
     private boolean needsRenderListUpdate = true;
@@ -159,7 +159,7 @@ public class RenderSectionManager {
         if (this.averageFrameDuration == -1) {
             this.averageFrameDuration = this.lastFrameDuration;
         } else {
-            this.averageFrameDuration = MathUtil.exponentialMovingAverage(this.averageFrameDuration, this.lastFrameDuration, AVERAGE_FRAME_DURATION_FACTOR);
+            this.averageFrameDuration = MathUtil.exponentialMovingAverage(this.averageFrameDuration, this.lastFrameDuration, FRAME_DURATION_UPDATE_RATIO);
         }
         this.averageFrameDuration = Mth.clamp(this.averageFrameDuration, 1_000_100, 100_000_000);
 
@@ -662,7 +662,7 @@ public class RenderSectionManager {
 
                 var resultSize = chunkBuildOutput.getResultSize();
                 result.render.setLastMeshResultSize(resultSize);
-                this.meshTaskSizeEstimator.addBatchEntry(MeshResultSize.forSection(result.render, resultSize));
+                this.meshTaskSizeEstimator.addData(MeshResultSize.forSection(result.render, resultSize));
 
                 if (chunkBuildOutput.translucentData != null) {
                     this.sortTriggering.integrateTranslucentData(oldData, chunkBuildOutput.translucentData, this.cameraPosition, this::scheduleSort);
@@ -687,7 +687,7 @@ public class RenderSectionManager {
             result.render.setLastUploadFrame(result.submitTime);
         }
 
-        this.meshTaskSizeEstimator.flushNewData();
+        this.meshTaskSizeEstimator.updateModels();
 
         return touchedSectionInfo;
     }
@@ -737,11 +737,11 @@ public class RenderSectionManager {
             results.add(result.unwrap());
             var jobEffort = result.getJobEffort();
             if (jobEffort != null) {
-                this.jobDurationEstimator.addBatchEntry(jobEffort);
+                this.jobDurationEstimator.addData(jobEffort);
             }
         }
 
-        this.jobDurationEstimator.flushNewData();
+        this.jobDurationEstimator.updateModels();
 
         return results;
     }
@@ -1214,7 +1214,7 @@ public class RenderSectionManager {
 
             var sizeEstimates = new StringBuilder();
             for (var type : MeshResultSize.SectionCategory.values()) {
-                sizeEstimates.append(String.format("%s=%d, ", type, this.meshTaskSizeEstimator.estimateAWithB(type, 1)));
+                sizeEstimates.append(String.format("%s=%d, ", type, this.meshTaskSizeEstimator.predict(type)));
             }
             list.add(String.format("Size: %s", sizeEstimates));
         }

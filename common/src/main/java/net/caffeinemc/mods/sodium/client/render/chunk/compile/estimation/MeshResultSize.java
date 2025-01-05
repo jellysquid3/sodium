@@ -2,7 +2,7 @@ package net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation;
 
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 
-public record MeshResultSize(SectionCategory category, long resultSize) implements CategoryFactorEstimator.BatchEntry<MeshResultSize.SectionCategory> {
+public record MeshResultSize(SectionCategory category, long resultSize) implements Average1DEstimator.Value<MeshResultSize.SectionCategory> {
     public static long NO_DATA = -1;
 
     public enum SectionCategory {
@@ -33,17 +33,12 @@ public record MeshResultSize(SectionCategory category, long resultSize) implemen
     }
 
     @Override
-    public SectionCategory getCategory() {
+    public SectionCategory category() {
         return this.category;
     }
 
     @Override
-    public long getA() {
+    public long value() {
         return this.resultSize;
-    }
-
-    @Override
-    public long getB() {
-        return 1;
     }
 }
