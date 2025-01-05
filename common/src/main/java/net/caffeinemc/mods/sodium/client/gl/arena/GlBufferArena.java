@@ -1,10 +1,13 @@
 package net.caffeinemc.mods.sodium.client.gl.arena;
 
+import it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap;
 import net.caffeinemc.mods.sodium.client.gl.arena.staging.StagingBuffer;
 import net.caffeinemc.mods.sodium.client.gl.buffer.GlBuffer;
 import net.caffeinemc.mods.sodium.client.gl.buffer.GlBufferUsage;
 import net.caffeinemc.mods.sodium.client.gl.buffer.GlMutableBuffer;
 import net.caffeinemc.mods.sodium.client.gl.device.CommandList;
+import net.jpountz.xxhash.XXHash64;
+import net.jpountz.xxhash.XXHashFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -26,12 +29,17 @@ public class GlBufferArena {
 
     private GlBufferSegment head;
 
+    private static final XXHash64 NATIVE_HASH = XXHashFactory.fastestInstance().hash64();
+    private static final XXHash64 JAVA_HASH = XXHashFactory.fastestJavaInstance().hash64();
+    private static final int NATIVE_HASH_BYTES_THRESHOLD = 512; // TODO: tune this?
+    private final Long2ReferenceOpenHashMap<GlBufferSegment> cache;
+
     private long capacity;
     private long used;
 
     private final int stride;
 
-    public GlBufferArena(CommandList commands, int initialCapacity, int stride, StagingBuffer stagingBuffer) {
+    public GlBufferArena(CommandList commands, int initialCapacity, int stride, StagingBuffer stagingBuffer, boolean enableCache) {
         this.capacity = initialCapacity;
         this.resizeIncrement = initialCapacity / 16;
 
@@ -44,6 +52,12 @@ public class GlBufferArena {
         commands.allocateStorage(this.arenaBuffer, this.capacity * stride, BUFFER_USAGE);
 
         this.stagingBuffer = stagingBuffer;
+
+        if (enableCache) {
+            this.cache = new Long2ReferenceOpenHashMap<>();
+        } else {
+            this.cache = null;
+        }
     }
 
     private void resize(CommandList commandList, long newCapacity) {
@@ -226,6 +240,10 @@ public class GlBufferArena {
             throw new IllegalStateException("Already freed");
         }
 
+        if (entry.isHashed()) {
+            this.cache.remove(entry.getHash());
+        }
+
         entry.setFree(true);
 
         this.used -= entry.getLength();
@@ -265,7 +283,7 @@ public class GlBufferArena {
         // A linked list is used as we'll be randomly removing elements and want O(1) performance
         List<PendingUpload> queue = stream.collect(Collectors.toCollection(LinkedList::new));
 
-        // Try to upload all of the data into free segments first
+        // Try to upload all the data into free segments first
         this.tryUploads(commandList, queue);
 
         // If we weren't able to upload some buffers, they will have been left behind in the queue
@@ -297,16 +315,44 @@ public class GlBufferArena {
         this.stagingBuffer.flush(commandList);
     }
 
+    private long getBufferHash(ByteBuffer data) {
+        var seed = System.identityHashCode(this);
+        var length = data.remaining();
+        if (length < NATIVE_HASH_BYTES_THRESHOLD) {
+            return JAVA_HASH.hash(data, 0, length, seed);
+        } else {
+            return NATIVE_HASH.hash(data, 0, length, seed);
+        }
+    }
+
     private boolean tryUpload(CommandList commandList, PendingUpload upload) {
-        ByteBuffer data = upload.getDataBuffer()
-                .getDirectBuffer();
+        ByteBuffer data = upload.getDataBuffer().getDirectBuffer();
 
         int elementCount = data.remaining() / this.stride;
+
+        // return a buffer segment with the same content if there is one based on the hash of the incoming content
+        GlBufferSegment matchingSegment = null;
+        long hash = 0;
+        if (this.cache != null) {
+            hash = this.getBufferHash(data);
+            matchingSegment = this.cache.get(hash);
+        }
+        if (matchingSegment != null) {
+            upload.setResult(matchingSegment);
+            matchingSegment.addRef();
+            return true;
+        }
 
         GlBufferSegment dst = this.alloc(elementCount);
 
         if (dst == null) {
             return false;
+        }
+
+        // if a new segment was needed (cache miss), set the calculated hash on the segment
+        if (this.cache != null) {
+            dst.setHash(hash);
+            this.cache.put(hash, dst);
         }
 
         // Copy the data into our staging buffer, then copy it into the arena's buffer

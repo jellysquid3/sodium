@@ -16,15 +16,13 @@ import org.lwjgl.system.MemoryUtil;
 // Please never try to write performance critical code in Java. This is what it will do to you. And you will still be
 // three times slower than the most naive solution in literally any other language that LLVM can compile.
 
-// struct SectionRenderData { // 64 bytes
-//   base_element: u32
-//   mask: u32,
-//   ranges: [VertexRange; 7]
-// }
-//
-// struct VertexRange { // 8 bytes
-//   offset: u32,
-//   count: u32
+// struct SectionRenderData { // 48 bytes
+//   base_element: u32,
+//   base_vertex: u32,
+//   is_local_index: u8,
+//   facing_list: u56,
+//   slice_mask: u32,
+//   vertex_count: [u32; 7]
 // }
 
 public class SectionRenderDataUnsafe {
@@ -35,9 +33,11 @@ public class SectionRenderDataUnsafe {
      * Otherwise, indices should be sourced from the index buffer for the render region using the specified offset.
      */
     private static final long OFFSET_BASE_ELEMENT = 0;
-
-    private static final long OFFSET_SLICE_MASK = 4;
-    private static final long OFFSET_SLICE_RANGES = 8;
+    private static final long OFFSET_BASE_VERTEX = 4;
+    private static final long OFFSET_FACING_LIST = 8;
+    private static final long OFFSET_IS_LOCAL_INDEX = 15;
+    private static final long OFFSET_SLICE_MASK = 16;
+    private static final long OFFSET_ELEMENT_COUNTS = 20;
 
     private static final long ALIGNMENT = 64;
     private static final long STRIDE = 64; // cache-line friendly! :)
@@ -63,6 +63,20 @@ public class SectionRenderDataUnsafe {
         return ptr + (index * STRIDE);
     }
 
+    public static void setLocalBaseElement(long ptr, long value /* Uint32 */) {
+        MemoryUtil.memPutInt(ptr + OFFSET_BASE_ELEMENT, UInt32.downcast(value));
+        MemoryUtil.memPutByte(ptr + OFFSET_IS_LOCAL_INDEX, (byte) 1);
+    }
+
+    public static void setSharedBaseElement(long ptr, long value /* Uint32 */) {
+        MemoryUtil.memPutInt(ptr + OFFSET_BASE_ELEMENT, UInt32.downcast(value));
+        MemoryUtil.memPutByte(ptr + OFFSET_IS_LOCAL_INDEX, (byte) 0);
+    }
+
+    public static long getBaseElement(long ptr) {
+        return Integer.toUnsignedLong(MemoryUtil.memGetInt(ptr + OFFSET_BASE_ELEMENT));
+    }
+
     public static void setSliceMask(long ptr, int value) {
         MemoryUtil.memPutInt(ptr + OFFSET_SLICE_MASK, value);
     }
@@ -71,27 +85,31 @@ public class SectionRenderDataUnsafe {
         return MemoryUtil.memGetInt(ptr + OFFSET_SLICE_MASK);
     }
 
-    public static void setBaseElement(long ptr, long value) {
-        MemoryUtil.memPutInt(ptr + OFFSET_BASE_ELEMENT, UInt32.downcast(value));
+    public static void setFacingList(long ptr, long facingList) {
+        MemoryUtil.memPutLong(ptr + OFFSET_FACING_LIST, facingList);
     }
 
-    public static long getBaseElement(long ptr) {
-        return Integer.toUnsignedLong(MemoryUtil.memGetInt(ptr + OFFSET_BASE_ELEMENT));
+    public static long getFacingList(long ptr) {
+        return MemoryUtil.memGetLong(ptr + OFFSET_FACING_LIST);
     }
 
-    public static void setVertexOffset(long ptr, int facing, long value /* Uint32 */) {
-        MemoryUtil.memPutInt(ptr + OFFSET_SLICE_RANGES + (facing * 8L) + 0L, UInt32.downcast(value));
+    public static boolean isLocalIndex(long ptr) {
+        return MemoryUtil.memGetByte(ptr + OFFSET_IS_LOCAL_INDEX) != 0;
     }
 
-    public static long /* Uint32 */ getVertexOffset(long ptr, int facing) {
-        return UInt32.upcast(MemoryUtil.memGetInt(ptr + OFFSET_SLICE_RANGES + (facing * 8L) + 0L));
+    public static void setBaseVertex(long ptr, long value /* Uint32 */) {
+        MemoryUtil.memPutInt(ptr + OFFSET_BASE_VERTEX, UInt32.downcast(value));
     }
 
-    public static void setElementCount(long ptr, int facing, long value /* Uint32 */) {
-        MemoryUtil.memPutInt(ptr + OFFSET_SLICE_RANGES + (facing * 8L) + 4L, UInt32.downcast(value));
+    public static long /* Uint32 */ getBaseVertex(long ptr) {
+        return UInt32.upcast(MemoryUtil.memGetInt(ptr + OFFSET_BASE_VERTEX));
     }
 
-    public static long /* Uint32 */ getElementCount(long ptr, int facing) {
-        return UInt32.upcast(MemoryUtil.memGetInt(ptr + OFFSET_SLICE_RANGES + (facing * 8L) + 4L));
+    public static void setVertexCount(long ptr, int index, long count /* Uint32 */) {
+        MemoryUtil.memPutInt(ptr + OFFSET_ELEMENT_COUNTS + (index * 4), UInt32.downcast(count));
+    }
+
+    public static long /* Uint32 */ getVertexCount(long ptr, int index) {
+        return UInt32.upcast(MemoryUtil.memGetInt(ptr + OFFSET_ELEMENT_COUNTS + (index * 4)));
     }
 }

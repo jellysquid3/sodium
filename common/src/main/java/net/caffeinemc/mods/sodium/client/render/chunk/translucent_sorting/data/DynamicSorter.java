@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data;
 
-abstract class DynamicSorter extends Sorter {
+abstract class DynamicSorter extends PresentSorter {
     private final int quadCount;
 
     DynamicSorter(int quadCount) {

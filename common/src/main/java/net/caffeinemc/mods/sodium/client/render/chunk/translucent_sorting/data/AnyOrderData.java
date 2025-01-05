@@ -46,21 +46,7 @@ public class AnyOrderData extends SplitDirectionData {
     public static AnyOrderData fromMesh(int[] vertexCounts,
                                         TQuad[] quads, SectionPos sectionPos) {
         var anyOrderData = new AnyOrderData(sectionPos, vertexCounts, quads.length);
-        var sorter = new StaticSorter(quads.length);
-        anyOrderData.sorterOnce = sorter;
-        var indexBuffer = sorter.getIntBuffer();
-
-        for (var vertexCount : vertexCounts) {
-            if (vertexCount <= 0) {
-                continue;
-            }
-
-            int count = TranslucentData.vertexCountToQuadCount(vertexCount);
-            for (int i = 0; i < count; i++) {
-                TranslucentData.writeQuadVertexIndexes(indexBuffer, i);
-            }
-        }
-
+        anyOrderData.sorterOnce = new SharedIndexSorter(quads.length);
         return anyOrderData;
     }
 }

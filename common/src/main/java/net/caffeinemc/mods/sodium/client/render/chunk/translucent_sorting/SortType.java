@@ -8,17 +8,17 @@ public enum SortType {
     /**
      * The section is fully empty, no index buffer is needed.
      */
-    EMPTY_SECTION(false),
+    EMPTY_SECTION(false, true),
 
     /**
      * The section has no translucent geometry, no index buffer is needed.
      */
-    NO_TRANSLUCENT(false),
+    NO_TRANSLUCENT(false, true),
 
     /**
      * No sorting is required and the sort order doesn't matter.
      */
-    NONE(false),
+    NONE(false, true),
 
     /**
      * There is only one sort order. No active sorting is required, but an initial
@@ -45,8 +45,15 @@ public enum SortType {
     DYNAMIC(true);
 
     public final boolean needsDirectionMixing;
+    public final boolean allowSliceReordering;
 
     SortType(boolean needsDirectionMixing) {
         this.needsDirectionMixing = needsDirectionMixing;
+        this.allowSliceReordering = false;
+    }
+
+    SortType(boolean needsDirectionMixing, boolean allowSliceReordering) {
+        this.needsDirectionMixing = needsDirectionMixing;
+        this.allowSliceReordering = allowSliceReordering;
     }
 }

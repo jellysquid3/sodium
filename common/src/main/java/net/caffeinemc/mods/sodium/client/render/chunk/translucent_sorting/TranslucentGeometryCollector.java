@@ -561,7 +561,7 @@ public class TranslucentGeometryCollector {
             return NoData.forNoTranslucent(this.sectionPos);
         }
 
-        var vertexCounts = translucentMesh.getVertexCounts();
+        var vertexCounts = translucentMesh.computeVertexCounts();
 
         // re-use the original translucent data if it's the same. This reduces the
         // amount of generated and uploaded index data when sections are rebuilt without

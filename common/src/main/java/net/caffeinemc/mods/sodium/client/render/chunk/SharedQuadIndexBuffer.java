@@ -7,6 +7,7 @@ import net.caffeinemc.mods.sodium.client.gl.buffer.GlMutableBuffer;
 import net.caffeinemc.mods.sodium.client.gl.device.CommandList;
 import net.caffeinemc.mods.sodium.client.gl.tessellation.GlIndexType;
 import net.caffeinemc.mods.sodium.client.gl.util.EnumBitField;
+import net.caffeinemc.mods.sodium.client.util.NativeBuffer;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -55,6 +56,14 @@ public class SharedQuadIndexBuffer {
         this.maxPrimitives = primitiveCount;
     }
 
+    public static NativeBuffer createIndexBuffer(IndexType indexType, int primitiveCount) {
+        var bufferSize = primitiveCount * indexType.getBytesPerElement() * ELEMENTS_PER_PRIMITIVE;
+        var buffer = new NativeBuffer(bufferSize);
+
+        indexType.createIndexBuffer(buffer.getDirectBuffer(), primitiveCount);
+
+        return buffer;
+    }
 
     public GlBuffer getBufferObject() {
         return this.buffer;

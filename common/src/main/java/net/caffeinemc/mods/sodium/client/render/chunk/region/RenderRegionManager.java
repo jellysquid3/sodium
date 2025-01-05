@@ -20,6 +20,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.data.SharedIndexSorter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -82,24 +83,34 @@ public class RenderRegionManager {
 
                     if (mesh != null) {
                         uploads.add(new PendingSectionMeshUpload(result.render, mesh, pass,
-                        new PendingUpload(mesh.getVertexData())));
+                                new PendingUpload(mesh.getVertexData())));
                     }
                 }
             }
 
             if (result instanceof ChunkSortOutput indexDataOutput && !indexDataOutput.isReusingUploadedIndexData()) {
-                var buffer = indexDataOutput.getIndexBuffer();
-
-                // when a non-present TranslucentData is used like NoData, the indexBuffer is null
-                if (buffer == null) {
-                    continue;
-                }
-
-                indexUploads.add(new PendingSectionIndexBufferUpload(result.render, new PendingUpload(buffer)));
-
-                var storage = region.getStorage(DefaultTerrainRenderPasses.TRANSLUCENT);
-                if (storage != null) {
+                var sorter = indexDataOutput.getSorter();
+                if (sorter instanceof SharedIndexSorter sharedIndexSorter) {
+                    var storage = region.createStorage(DefaultTerrainRenderPasses.TRANSLUCENT);
                     storage.removeIndexData(renderSectionIndex);
+                    storage.setSharedIndexUsage(renderSectionIndex, sharedIndexSorter.quadCount());
+                } else {
+                    var storage = region.getStorage(DefaultTerrainRenderPasses.TRANSLUCENT);
+                    if (storage != null) {
+                        storage.removeIndexData(renderSectionIndex);
+                        storage.setSharedIndexUsage(renderSectionIndex, 0);
+                    }
+
+                    if (sorter == null) {
+                        continue;
+                    }
+                    // when a non-present TranslucentData is used like NoData, the indexBuffer is null
+                    var buffer = sorter.getIndexBuffer();
+                    if (buffer == null) {
+                        continue;
+                    }
+
+                    indexUploads.add(new PendingSectionIndexBufferUpload(result.render, new PendingUpload(buffer)));
                 }
             }
         }
@@ -107,7 +118,9 @@ public class RenderRegionManager {
         ProfilerFiller profiler = Profiler.get();
 
         // If we have nothing to upload, abort!
-        if (uploads.isEmpty() && indexUploads.isEmpty()) {
+        var translucentStorage = region.getStorage(DefaultTerrainRenderPasses.TRANSLUCENT);
+        var needsSharedIndexUpdate = translucentStorage != null && translucentStorage.needsSharedIndexUpdate();
+        if (uploads.isEmpty() && indexUploads.isEmpty() && !needsSharedIndexUpdate) {
             return;
         }
 
@@ -130,25 +143,30 @@ public class RenderRegionManager {
             for (PendingSectionMeshUpload upload : uploads) {
                 var storage = region.createStorage(upload.pass);
                 storage.setVertexData(upload.section.getSectionIndex(),
-                        upload.vertexUpload.getResult(), upload.meshData.getVertexCounts());
+                        upload.vertexUpload.getResult(), upload.meshData.getVertexSegments());
             }
         }
 
         profiler.popPush("upload_indices");
+        var indexBufferChanged = false;
 
         if (!indexUploads.isEmpty()) {
             var arena = resources.getIndexArena();
-            boolean bufferChanged = arena.upload(commandList, indexUploads.stream()
+            indexBufferChanged = arena.upload(commandList, indexUploads.stream()
                     .map(upload -> upload.indexBufferUpload));
-
-            if (bufferChanged) {
-                region.refreshIndexedTesselation(commandList);
-            }
 
             for (PendingSectionIndexBufferUpload upload : indexUploads) {
                 var storage = region.createStorage(DefaultTerrainRenderPasses.TRANSLUCENT);
                 storage.setIndexData(upload.section.getSectionIndex(), upload.indexBufferUpload.getResult());
             }
+        }
+
+        if (needsSharedIndexUpdate) {
+            indexBufferChanged |= translucentStorage.updateSharedIndexData(commandList, resources.getIndexArena());
+        }
+
+        if (indexBufferChanged) {
+            region.refreshIndexedTesselation(commandList);
         }
 
         profiler.pop();
@@ -205,7 +223,6 @@ public class RenderRegionManager {
 
     private record PendingSectionIndexBufferUpload(RenderSection section, PendingUpload indexBufferUpload) {
     }
-
 
     private static StagingBuffer createStagingBuffer(CommandList commandList) {
         if (SodiumClientMod.options().advanced.useAdvancedStagingBuffers && MappedStagingBuffer.isSupported(RenderDevice.INSTANCE)) {
