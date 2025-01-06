@@ -25,6 +25,7 @@ import net.caffeinemc.mods.sodium.client.render.viewport.CameraTransform;
 import net.caffeinemc.mods.sodium.client.util.BitwiseMath;
 import net.caffeinemc.mods.sodium.client.util.UInt32;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Pointer;
 
 import java.util.Iterator;
 
@@ -172,7 +173,7 @@ public class DefaultChunkRenderer extends ShaderChunkRenderer {
             // Uint32 -> Int32 cast is always safe and should be optimized away
             MemoryUtil.memPutInt(pBaseVertex + (size << 2), (int) SectionRenderDataUnsafe.getVertexOffset(pMeshData, facing));
             MemoryUtil.memPutInt(pElementCount + (size << 2), (int) SectionRenderDataUnsafe.getElementCount(pMeshData, facing));
-            MemoryUtil.memPutAddress(pElementPointer + (size << 3), 0 /* using a shared index buffer */);
+            MemoryUtil.memPutAddress(pElementPointer + (size << Pointer.POINTER_SHIFT), 0 /* using a shared index buffer */);
 
             size += (mask >> facing) & 1;
         }
@@ -204,7 +205,7 @@ public class DefaultChunkRenderer extends ShaderChunkRenderer {
 
             // * 4 to convert to bytes (the index buffer contains integers)
             // the section render data storage for the indices stores the offset in indices (also called elements)
-            MemoryUtil.memPutAddress(pElementPointer + (size << 3), elementOffset << 2);
+            MemoryUtil.memPutAddress(pElementPointer + (size << Pointer.POINTER_SHIFT), elementOffset << 2);
 
             // adding the number of elements works because the index data has one index per element (which are the indices)
             elementOffset += elementCount;
