@@ -64,6 +64,7 @@
     "features.render.model.ItemBlockRenderTypesMixin",
     "features.render.model.item.ItemRendererMixin",
     "features.render.particle.SingleQuadParticleMixin",
+    "features.render.particle.ParticleEngineMixin",
     "features.render.world.clouds.LevelRendererMixin",
     "features.render.world.sky.FogRendererMixin",
     "features.render.world.sky.ClientLevelMixin",
