@@ -68,8 +68,6 @@ public class TickBoxControl implements Control<Boolean> {
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (this.option.isAvailable() && button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
                 toggleControl();
-                this.playClickSound();
-
                 return true;
             }
 
@@ -82,15 +80,14 @@ public class TickBoxControl implements Control<Boolean> {
 
             if (CommonInputs.selected(keyCode)) {
                 toggleControl();
-                this.playClickSound();
-
                 return true;
             }
 
             return false;
         }
 
-        public void toggleControl() {
+        private void toggleControl() {
+            this.playClickSound();
             this.option.setValue(!this.option.getValue());
         }
     }
