@@ -189,9 +189,10 @@ public class OcclusionCuller {
 
         // coordinates of the point to compare (in view space)
         // this is the closest point within the bounding box to the center (0, 0, 0)
-        float dx = nearestToZero(ox, ox + 16) - camera.fracX;
-        float dy = nearestToZero(oy, oy + 16) - camera.fracY;
-        float dz = nearestToZero(oz, oz + 16) - camera.fracZ;
+        // the bounding box is expanded by 1 block in each direction due to the maximum allowed size of block models.
+        float dx = nearestToZero(ox - 1, ox + 17) - camera.fracX;
+        float dy = nearestToZero(oy - 1, oy + 17) - camera.fracY;
+        float dz = nearestToZero(oz - 1, oz + 17) - camera.fracZ;
 
         // vanilla's "cylindrical fog" algorithm
         // max(length(distance.xz), abs(distance.y))
