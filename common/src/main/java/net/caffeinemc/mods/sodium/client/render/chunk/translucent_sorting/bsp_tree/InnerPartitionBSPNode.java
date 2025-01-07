@@ -530,43 +530,25 @@ abstract class InnerPartitionBSPNode extends BSPNode {
     }
 
     static private BSPNode buildSNRLeafNodeFromQuads(BSPWorkspace workspace, IntArrayList indexes, LongArrayList points) {
-        // in this case the points array is wrong, but its allocation can be reused
+        final var indexBuffer = indexes.elements();
+        final var indexCount = indexes.size();
 
-        int[] quadIndexes;
+        final var keys = new int[indexCount];
+        final var perm = new int[indexCount];
 
-        // adapted from SNR sorting code
-        if (RadixSort.useRadixSort(indexes.size())) {
-            final var keys = new int[indexes.size()];
-
-            for (int i = 0; i < indexes.size(); i++) {
-                var quadIndex = indexes.getInt(i);
-                keys[i] = MathUtil.floatToComparableInt(workspace.quads[quadIndex].getAccurateDotProduct());
-            }
-
-            quadIndexes = RadixSort.sort(keys);
-
-            for (int i = 0; i < indexes.size(); i++) {
-                quadIndexes[i] = indexes.getInt(quadIndexes[i]);
-            }
-        } else {
-            final var sortData = points.elements();
-
-            for (int i = 0; i < indexes.size(); i++) {
-                var quadIndex = indexes.getInt(i);
-                int dotProductComponent = MathUtil.floatToComparableInt(workspace.quads[quadIndex].getAccurateDotProduct());
-                sortData[i] = (long) dotProductComponent << 32 | quadIndex;
-            }
-
-            Arrays.sort(sortData, 0, indexes.size());
-
-            quadIndexes = new int[indexes.size()];
-
-            for (int i = 0; i < indexes.size(); i++) {
-                quadIndexes[i] = (int) sortData[i];
-            }
+        for (int i = 0; i < indexCount; i++) {
+            TQuad quad = workspace.quads[indexBuffer[i]];
+            keys[i] = MathUtil.floatToComparableInt(quad.getAccurateDotProduct());
+            perm[i] = i;
         }
 
-        return new LeafMultiBSPNode(BSPSortState.compressIndexes(IntArrayList.wrap(quadIndexes), false));
+        RadixSort.sortIndirect(perm, keys);
+
+        for (int i = 0; i < indexCount; i++) {
+            perm[i] = indexBuffer[perm[i]];
+        }
+
+        return new LeafMultiBSPNode(BSPSortState.compressIndexes(IntArrayList.wrap(perm), false));
     }
 
     static private BSPNode buildSNRLeafNodeFromPoints(BSPWorkspace workspace, LongArrayList points) {
