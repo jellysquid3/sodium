@@ -31,6 +31,8 @@ public interface ControlValueFormatter {
         return (v) -> {
             if (v == 0) {
                 return Component.translatable("options.gamma.min");
+            } else if (v == 50) {
+                return Component.translatable("options.gamma.default");
             } else if (v == 100) {
                 return Component.translatable("options.gamma.max");
             } else {
@@ -57,8 +59,8 @@ public interface ControlValueFormatter {
         return (v) -> Component.literal(v + "x");
     }
 
-    static ControlValueFormatter quantityOrDisabled(String name, String disableText) {
-        return (v) -> Component.literal(v == 0 ? disableText : v + " " + name);
+    static ControlValueFormatter quantityOrDisabled(String valueKey, String disableKey) {
+        return (v) -> v == 0 ? Component.translatable(disableKey) : Component.translatable(valueKey, v);
     }
 
     static ControlValueFormatter number() {
