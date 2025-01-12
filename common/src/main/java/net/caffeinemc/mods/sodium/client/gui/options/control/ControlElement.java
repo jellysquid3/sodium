@@ -1,47 +1,46 @@
 package net.caffeinemc.mods.sodium.client.gui.options.control;
 
-import net.caffeinemc.mods.sodium.client.gui.options.Option;
+import net.caffeinemc.mods.sodium.client.config.structure.Option;
+import net.caffeinemc.mods.sodium.client.gui.Colors;
 import net.caffeinemc.mods.sodium.client.gui.widgets.AbstractWidget;
 import net.caffeinemc.mods.sodium.client.util.Dim2i;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
-import net.minecraft.client.gui.navigation.ScreenRectangle;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import org.jetbrains.annotations.Nullable;
 
-public class ControlElement<T> extends AbstractWidget {
-    protected final Option<T> option;
+public abstract class ControlElement extends AbstractWidget {
+    protected final AbstractOptionList list;
 
-    protected final Dim2i dim;
-
-    public ControlElement(Option<T> option, Dim2i dim) {
-        this.option = option;
-        this.dim = dim;
+    public ControlElement(AbstractOptionList list, Dim2i dim) {
+        super(dim);
+        this.list = list;
     }
 
+    public abstract Option getOption();
+
     public int getContentWidth() {
-        return this.option.getControl().getMaxWidth();
+        return this.getOption().getControl().getMaxWidth();
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        String name = this.option.getName().getString();
+        String name = this.getOption().getName().getString();
 
         // add the star suffix before truncation to prevent it from overlapping with the label text
-        if (this.option.isAvailable() && this.option.hasChanged()) {
+        if (this.getOption().isEnabled() && this.getOption().hasChanged()) {
             name = name + " *";
         }
 
-        // on focus or hover truncate the label to never overlap with the control's content
-        if (this.hovered || this.isFocused()) {
-            name = truncateLabelToFit(name);
-        }
+        name = truncateLabelToFit(name);
 
         String label;
-        if (this.option.isAvailable()) {
-            if (this.option.hasChanged()) {
+        if (this.getOption().isEnabled()) {
+            if (this.getOption().hasChanged()) {
                 label = ChatFormatting.ITALIC + name;
             } else {
                 label = ChatFormatting.WHITE + name;
@@ -50,65 +49,36 @@ public class ControlElement<T> extends AbstractWidget {
             label = String.valueOf(ChatFormatting.GRAY) + ChatFormatting.STRIKETHROUGH + name;
         }
 
-        this.hovered = this.dim.containsCursor(mouseX, mouseY);
+        this.hovered = this.isMouseOver(mouseX, mouseY);
 
-        this.drawRect(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), this.hovered ? 0xE0000000 : 0x90000000);
-        this.drawString(graphics, label, this.dim.x() + 6, this.dim.getCenterY() - 4, 0xFFFFFFFF);
+        this.drawRect(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), this.hovered ? Colors.BACKGROUND_HOVER : Colors.BACKGROUND_DEFAULT);
+        this.drawString(graphics, label, this.getX() + 6, this.getCenterY() - 4, Colors.FOREGROUND);
 
         if (this.isFocused()) {
-            this.drawBorder(graphics, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), -1);
+            this.drawBorder(graphics, this.getX(), this.getY(), this.getLimitX(), this.getLimitY(), -1);
         }
     }
 
-    private @NotNull String truncateLabelToFit(String name) {
-        var suffix = "...";
-        var suffixWidth = this.font.width(suffix);
-        var nameFontWidth = this.font.width(name);
-        var targetWidth = this.dim.width() - this.getContentWidth() - 20;
-        if (nameFontWidth > targetWidth) {
-            targetWidth -= suffixWidth;
-            int maxLabelChars = name.length() - 3;
-            int minLabelChars = 1;
-
-            // binary search on how many chars fit
-            while (maxLabelChars - minLabelChars > 1) {
-                var mid = (maxLabelChars + minLabelChars) / 2;
-                var midName = name.substring(0, mid);
-                var midWidth = this.font.width(midName);
-                if (midWidth > targetWidth) {
-                    maxLabelChars = mid;
-                } else {
-                    minLabelChars = mid;
-                }
-            }
-
-            name = name.substring(0, minLabelChars).trim() + suffix;
-        }
-        return name;
+    protected MutableComponent formatDisabledControlValue(Component value) {
+        return value.copy().withStyle(Style.EMPTY
+                .withColor(ChatFormatting.GRAY)
+                .withItalic(true));
     }
 
-    public Option<T> getOption() {
-        return this.option;
+    private String truncateLabelToFit(String name) {
+        return truncateTextToFit(name, this.getWidth() - this.getContentWidth() - 20);
     }
 
-    public Dim2i getDimensions() {
-        return this.dim;
+    @Override
+    public int getY() {
+        return super.getY() - this.list.getScrollAmount();
     }
 
     @Override
     public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent event) {
-        if (!this.option.isAvailable())
+        if (!this.getOption().isEnabled()) {
             return null;
+        }
         return super.nextFocusPath(event);
-    }
-
-    @Override
-    public ScreenRectangle getRectangle() {
-        return new ScreenRectangle(this.dim.x(), this.dim.y(), this.dim.width(), this.dim.height());
-    }
-
-    @Override
-    public boolean isMouseOver(double x, double y) {
-        return this.dim.containsCursor(x, y);
     }
 }

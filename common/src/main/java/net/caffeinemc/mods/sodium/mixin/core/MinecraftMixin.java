@@ -3,6 +3,7 @@ package net.caffeinemc.mods.sodium.mixin.core;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import net.caffeinemc.mods.sodium.client.SodiumClientMod;
 import net.caffeinemc.mods.sodium.client.checks.ResourcePackScanner;
+import net.caffeinemc.mods.sodium.client.config.ConfigManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.util.profiling.Profiler;
@@ -78,6 +79,8 @@ public class MinecraftMixin {
     @Inject(method = "buildInitialScreens", at = @At("TAIL"))
     private void postInit(CallbackInfoReturnable<Runnable> cir) {
         ResourcePackScanner.checkIfCoreShaderLoaded(this.resourceManager);
+
+        ConfigManager.registerConfigsLate();
     }
 
     /**

@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.neoforge;
 
-import net.caffeinemc.mods.sodium.client.gui.SodiumOptionsGUI;
+import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.caffeinemc.mods.sodium.client.render.frapi.SodiumRenderer;
 import net.caffeinemc.mods.sodium.client.util.FlawlessFrames;
 import net.fabricmc.fabric.api.renderer.v1.Renderer;
@@ -19,7 +19,7 @@ import java.util.function.Function;
 @Mod(value = "sodium", dist = Dist.CLIENT)
 public class SodiumForgeMod {
     public SodiumForgeMod(IEventBus bus, ModContainer modContainer) {
-        modContainer.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, screen) -> SodiumOptionsGUI.createScreen(screen));
+        modContainer.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, screen) -> VideoSettingsScreen.createScreen(screen));
         Renderer.register(SodiumRenderer.INSTANCE);
 
         MethodHandles.Lookup lookup = MethodHandles.lookup();

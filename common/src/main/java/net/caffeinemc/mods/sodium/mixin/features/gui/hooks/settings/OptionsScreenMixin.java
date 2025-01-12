@@ -1,6 +1,6 @@
 package net.caffeinemc.mods.sodium.mixin.features.gui.hooks.settings;
 
-import net.caffeinemc.mods.sodium.client.gui.SodiumOptionsGUI;
+import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.network.chat.Component;
@@ -22,6 +22,6 @@ public class OptionsScreenMixin extends Screen {
             "lambda$init$2"
     }, require = 1, at = @At("HEAD"), cancellable = true)
     private void open(CallbackInfoReturnable<Screen> ci) {
-        ci.setReturnValue(SodiumOptionsGUI.createScreen(this));
+        ci.setReturnValue(VideoSettingsScreen.createScreen(this));
     }
 }
