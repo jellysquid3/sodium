@@ -54,4 +54,9 @@ public class ChunkSortOutput extends BuilderTaskOutput implements SortData {
             this.indexBuffer.free();
         }
     }
+
+    @Override
+    protected long calculateResultSize() {
+        return this.indexBuffer == null ? 0 : this.indexBuffer.getLength();
+    }
 }

@@ -13,4 +13,6 @@ public interface StagingBuffer {
     void delete(CommandList commandList);
 
     void flip();
+
+    long getUploadSizeLimit(long frameDuration);
 }

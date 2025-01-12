@@ -7,19 +7,28 @@ import net.caffeinemc.mods.sodium.client.gl.buffer.GlBuffer;
 import net.caffeinemc.mods.sodium.client.gl.device.CommandList;
 import net.caffeinemc.mods.sodium.client.gl.tessellation.GlTessellation;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
+import net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionFlags;
+import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionInfo;
 import net.caffeinemc.mods.sodium.client.render.chunk.data.SectionRenderDataStorage;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.DefaultTerrainRenderPasses;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.ChunkMeshFormats;
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.SectionPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.Validate;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Map;
 
 public class RenderRegion {
+    public static final int SECTION_VERTEX_COUNT_ESTIMATE = 756;
+    public static final int SECTION_INDEX_COUNT_ESTIMATE = (SECTION_VERTEX_COUNT_ESTIMATE / 4) * 6;
+    public static final int SECTION_BUFFER_ESTIMATE = SECTION_VERTEX_COUNT_ESTIMATE * ChunkMeshFormats.COMPACT.getVertexFormat().getStride() + SECTION_INDEX_COUNT_ESTIMATE * Integer.BYTES;
+
     public static final int REGION_WIDTH = 8;
     public static final int REGION_HEIGHT = 4;
     public static final int REGION_LENGTH = 8;
@@ -46,6 +55,10 @@ public class RenderRegion {
     private final ChunkRenderList renderList;
 
     private final RenderSection[] sections = new RenderSection[RenderRegion.REGION_SIZE];
+    private final byte[] sectionFlags = new byte[RenderRegion.REGION_SIZE];
+    private final BlockEntity[] @Nullable [] globalBlockEntities = new BlockEntity[RenderRegion.REGION_SIZE][];
+    private final BlockEntity[] @Nullable [] culledBlockEntities = new BlockEntity[RenderRegion.REGION_SIZE][];
+    private final TextureAtlasSprite[] @Nullable [] animatedSprites = new TextureAtlasSprite[RenderRegion.REGION_SIZE][];
     private int sectionCount;
 
     private final Map<TerrainRenderPass, SectionRenderDataStorage> sectionRenderData = new Reference2ReferenceOpenHashMap<>();
@@ -165,6 +178,59 @@ public class RenderRegion {
         this.sectionCount++;
     }
 
+    public void setSectionRenderState(int id, BuiltSectionInfo info) {
+        this.sectionFlags[id] = (byte) (info.flags | RenderSectionFlags.MASK_IS_BUILT);
+        this.globalBlockEntities[id] = info.globalBlockEntities;
+        this.culledBlockEntities[id] = info.culledBlockEntities;
+        this.animatedSprites[id] = info.animatedSprites;
+    }
+
+    public void clearSectionRenderState(int id) {
+        this.sectionFlags[id] = RenderSectionFlags.NONE;
+        this.globalBlockEntities[id] = null;
+        this.culledBlockEntities[id] = null;
+        this.animatedSprites[id] = null;
+    }
+
+    public int getSectionFlags(int id) {
+        return this.sectionFlags[id];
+    }
+
+    public boolean sectionNeedsRender(int id) {
+        return RenderSectionFlags.needsRender(this.sectionFlags[id]);
+    }
+
+    /**
+     * Returns the collection of block entities contained by this rendered chunk, which are not part of its culling
+     * volume. These entities should always be rendered regardless of the render being visible in the frustum.
+     *
+     * @param id The section index
+     * @return The collection of block entities
+     */
+    public BlockEntity[] getGlobalBlockEntities(int id) {
+        return this.globalBlockEntities[id];
+    }
+
+    /**
+     * Returns the collection of block entities contained by this rendered chunk.
+     *
+     * @param id The section index
+     * @return The collection of block entities
+     */
+    public BlockEntity[] getCulledBlockEntities(int id) {
+        return this.culledBlockEntities[id];
+    }
+
+    /**
+     * Returns the collection of animated sprites contained by this rendered chunk section.
+     *
+     * @param id The section index
+     * @return The collection of animated sprites
+     */
+    public TextureAtlasSprite[] getAnimatedSprites(int id) {
+        return this.animatedSprites[id];
+    }
+
     public void removeSection(RenderSection section) {
         var sectionIndex = section.getSectionIndex();
         var prev = this.sections[sectionIndex];
@@ -227,11 +293,8 @@ public class RenderRegion {
         public DeviceResources(CommandList commandList, StagingBuffer stagingBuffer) {
             int stride = ChunkMeshFormats.COMPACT.getVertexFormat().getStride();
 
-            // the magic number 756 for the initial size is arbitrary, it was made up.
-            var initialVertices = 756;
-            this.geometryArena = new GlBufferArena(commandList, REGION_SIZE * initialVertices, stride, stagingBuffer);
-            var initialIndices = (initialVertices / 4) * 6;
-            this.indexArena = new GlBufferArena(commandList, REGION_SIZE * initialIndices, Integer.BYTES, stagingBuffer);
+            this.geometryArena = new GlBufferArena(commandList, REGION_SIZE * SECTION_VERTEX_COUNT_ESTIMATE, stride, stagingBuffer);
+            this.indexArena = new GlBufferArena(commandList, REGION_SIZE * SECTION_INDEX_COUNT_ESTIMATE, Integer.BYTES, stagingBuffer);
         }
 
         public void updateTessellation(CommandList commandList, GlTessellation tessellation) {

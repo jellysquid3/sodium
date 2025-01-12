@@ -2,6 +2,7 @@ package net.caffeinemc.mods.sodium.client.render.chunk.compile.executor;
 
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.BuilderTaskOutput;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.ChunkBuildContext;
+import net.caffeinemc.mods.sodium.client.render.chunk.compile.estimation.JobEffort;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderTask;
 
 import java.util.function.Consumer;
@@ -42,6 +43,7 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT extends
         ChunkJobResult<OUTPUT> result;
 
         try {
+            var start = System.nanoTime();
             var output = this.task.execute(context, this);
 
             // Task was cancelled while executing
@@ -49,7 +51,7 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT extends
                 return;
             }
 
-            result = ChunkJobResult.successfully(output);
+            result = ChunkJobResult.successfully(output, JobEffort.untilNowWithEffort(this.task.getClass(), start, output.getResultSize()));
         } catch (Throwable throwable) {
             result = ChunkJobResult.exceptionally(throwable);
             ChunkBuilder.LOGGER.error("Chunk build failed", throwable);
@@ -68,7 +70,12 @@ public class ChunkJobTyped<TASK extends ChunkBuilderTask<OUTPUT>, OUTPUT extends
     }
 
     @Override
-    public int getEffort() {
-        return this.task.getEffort();
+    public long getEstimatedSize() {
+        return this.task.getEstimatedSize();
+    }
+
+    @Override
+    public long getEstimatedDuration() {
+        return this.task.getEstimatedDuration();
     }
 }

@@ -188,6 +188,12 @@ public class RenderRegionManager {
                 chunkZ >> RenderRegion.REGION_LENGTH_SH);
     }
 
+    public RenderRegion getForChunk(int chunkX, int chunkY, int chunkZ) {
+        return this.regions.get(RenderRegion.key(chunkX >> RenderRegion.REGION_WIDTH_SH,
+                chunkY >> RenderRegion.REGION_HEIGHT_SH,
+                chunkZ >> RenderRegion.REGION_LENGTH_SH));
+    }
+
     @NotNull
     private RenderRegion create(int x, int y, int z) {
         var key = RenderRegion.key(x, y, z);

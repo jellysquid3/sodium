@@ -40,4 +40,17 @@ public class ChunkBuildOutput extends ChunkSortOutput {
             data.getVertexData().free();
         }
     }
+
+    private long getMeshSize() {
+        long size = 0;
+        for (var data : this.meshes.values()) {
+            size += data.getVertexData().getLength();
+        }
+        return size;
+    }
+
+    @Override
+    public long calculateResultSize() {
+        return super.calculateResultSize() + this.getMeshSize();
+    }
 }

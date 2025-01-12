@@ -13,4 +13,9 @@ public final class SimpleFrustum implements Frustum {
     public boolean testAab(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
         return this.frustum.testAab(minX, minY, minZ, maxX, maxY, maxZ);
     }
+
+    @Override
+    public int intersectAab(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+        return this.frustum.intersectAab(minX, minY, minZ, maxX, maxY, maxZ);
+    }
 }
