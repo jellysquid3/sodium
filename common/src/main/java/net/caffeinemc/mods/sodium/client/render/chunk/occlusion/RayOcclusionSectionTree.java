@@ -106,7 +106,7 @@ public class RayOcclusionSectionTree extends SectionTree {
         y >>= 4;
         z >>= 4;
 
-        if (y < this.minSection || y >= this.maxSection) {
+        if (y < this.minSection || y > this.maxSection) {
             return Tree.OUT_OF_BOUNDS;
         }
 
