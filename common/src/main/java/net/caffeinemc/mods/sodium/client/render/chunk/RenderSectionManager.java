@@ -302,6 +302,7 @@ public class RenderSectionManager {
                 case FrustumTaskCollectionTask collectionTask ->
                         this.frustumTaskLists = collectionTask.getResult().getFrustumTaskLists();
                 default -> {
+                    throw new IllegalStateException("Unexpected task type: " + task);
                 }
             }
         }
@@ -415,7 +416,8 @@ public class RenderSectionManager {
 
     private void processRenderListUpdate(Viewport viewport) {
         // pick the narrowest valid tree. This tree is either up-to-date or the origin is out of the graph as otherwise sync bfs would have been triggered (in graph but moving rapidly)
-        SectionTree bestTree = null;
+        SectionTree bestValidTree = null;
+        SectionTree bestAnyTree = null;
         for (var type : NARROW_TO_WIDE) {
             var tree = this.cullResults.get(type);
             if (tree == null) {
@@ -424,49 +426,75 @@ public class RenderSectionManager {
 
             // pick the most recent and most valid tree
             float searchDistance = this.getSearchDistanceForCullType(type);
+            int treeFrame = tree.getFrame();
+            if (bestAnyTree == null || treeFrame > bestAnyTree.getFrame()) {
+                bestAnyTree = tree;
+            }
             if (!tree.isValidFor(viewport, searchDistance)) {
                 continue;
             }
-            if (bestTree == null || tree.getFrame() > bestTree.getFrame()) {
-                bestTree = tree;
+            if (bestValidTree == null || treeFrame > bestValidTree.getFrame()) {
+                bestValidTree = tree;
             }
+        }
+
+        // use out-of-graph fallback if the origin section is not loaded and there's no valid tree (missing origin section, empty world)
+        if (bestValidTree == null && this.isOutOfGraph(viewport.getChunkCoord())) {
+            this.renderOutOfGraph(viewport);
+            return;
         }
 
         // wait for pending tasks to maybe supply a valid tree if there's no current tree (first frames after initial load/reload)
-        if (bestTree == null) {
-            bestTree = this.unpackTaskResults(viewport);
-        }
-
-        // use out-of-graph fallback there's still no result because nothing was scheduled (missing origin section, empty world)
-        if (bestTree == null) {
-            var searchDistance = this.getSearchDistance();
-            var visitor = new FallbackVisibleChunkCollector(viewport, searchDistance, this.sectionByPosition, this.regions, this.frame);
-
-            this.renderableSectionTree.prepareForTraversal();
-            this.renderableSectionTree.traverse(visitor, viewport, searchDistance);
-
-            this.renderLists = visitor.createRenderLists(viewport);
-            this.frustumTaskLists = visitor.getPendingTaskLists();
-            this.globalTaskLists = null;
-            this.renderTree = null;
-        } else {
-            var start = System.nanoTime();
-
-            var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
-            bestTree.traverse(visibleCollector, viewport, this.getSearchDistance());
-            this.renderLists = visibleCollector.createRenderLists(viewport);
-
-            var end = System.nanoTime();
-            var time = end - start;
-            timings.add(time);
-            if (timings.size() >= 500) {
-                var average = timings.longStream().average().orElse(0);
-                System.out.println("Render list generation took " + (average) / 1000 + "µs over " + timings.size() + " samples");
-                timings.clear();
+        if (bestAnyTree == null) {
+            var result = this.unpackTaskResults(viewport);
+            if (result != null) {
+                bestValidTree = result;
             }
-
-            this.renderTree = bestTree;
         }
+
+        // use the best valid tree, or even invalid tree if necessary
+        if (bestValidTree != null) {
+            bestAnyTree = bestValidTree;
+        }
+        if (bestAnyTree == null) {
+            this.renderOutOfGraph(viewport);
+            return;
+        }
+
+        var start = System.nanoTime();
+
+        var visibleCollector = new VisibleChunkCollectorAsync(this.regions, this.frame);
+        bestAnyTree.traverse(visibleCollector, viewport, this.getSearchDistance());
+        this.renderLists = visibleCollector.createRenderLists(viewport);
+
+        var end = System.nanoTime();
+        var time = end - start;
+        timings.add(time);
+        if (timings.size() >= 500) {
+            var average = timings.longStream().average().orElse(0);
+            System.out.println("Render list generation took " + (average) / 1000 + "µs over " + timings.size() + " samples");
+            timings.clear();
+        }
+
+        this.renderTree = bestAnyTree;
+    }
+
+    private void renderOutOfGraph(Viewport viewport) {
+        var searchDistance = this.getSearchDistance();
+        var visitor = new FallbackVisibleChunkCollector(viewport, searchDistance, this.sectionByPosition, this.regions, this.frame);
+
+        this.renderableSectionTree.prepareForTraversal();
+        this.renderableSectionTree.traverse(visitor, viewport, searchDistance);
+
+        this.renderLists = visitor.createRenderLists(viewport);
+        this.frustumTaskLists = visitor.getPendingTaskLists();
+        this.globalTaskLists = null;
+        this.renderTree = null;
+    }
+
+    private boolean isOutOfGraph(SectionPos pos) {
+        var sectionY = pos.getY();
+        return this.level.getMaxSectionY() <= sectionY && sectionY <= this.level.getMaxSectionY() && !this.sectionByPosition.containsKey(pos.asLong());
     }
 
     public void markGraphDirty() {
