@@ -1,24 +1,46 @@
 package net.caffeinemc.mods.sodium.client.render.chunk;
 
-import net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder;
+import org.jetbrains.annotations.NotNull;
 
+/**
+ * Important: Whether the task is scheduled immediately after its creation. Otherwise, they're scheduled through asynchronous culling that collects non-important tasks.
+ * Defer mode: For important tasks, how fast they are going to be executed. One or zero frame deferral only allows one or zero frames to pass before the frame blocks on the task. Always deferral allows the task to be deferred indefinitely, but if it's important it will still be put to the front of the queue.
+ */
 public enum ChunkUpdateType {
-    SORT(Integer.MAX_VALUE, ChunkBuilder.LOW_EFFORT),
-    INITIAL_BUILD(128, ChunkBuilder.HIGH_EFFORT),
-    REBUILD(Integer.MAX_VALUE, ChunkBuilder.HIGH_EFFORT),
-    IMPORTANT_REBUILD(Integer.MAX_VALUE, ChunkBuilder.HIGH_EFFORT),
-    IMPORTANT_SORT(Integer.MAX_VALUE, ChunkBuilder.LOW_EFFORT);
+    SORT(2),
+    INITIAL_BUILD(0),
+    REBUILD(1),
+    IMPORTANT_REBUILD(DeferMode.ZERO_FRAMES, 1),
+    IMPORTANT_SORT(DeferMode.ZERO_FRAMES, 2);
 
-    private final int maximumQueueSize;
-    private final int taskEffort;
+    private final DeferMode deferMode;
+    private final boolean important;
+    private final float priorityValue;
 
-    ChunkUpdateType(int maximumQueueSize, int taskEffort) {
-        this.maximumQueueSize = maximumQueueSize;
-        this.taskEffort = taskEffort;
+    ChunkUpdateType(float priorityValue) {
+        this.deferMode = DeferMode.ALWAYS;
+        this.important = false;
+        this.priorityValue = priorityValue;
     }
 
-    public static ChunkUpdateType getPromotionUpdateType(ChunkUpdateType prev, ChunkUpdateType next) {
-        if (prev == null || prev == SORT || prev == next) {
+    ChunkUpdateType(@NotNull DeferMode deferMode, float priorityValue) {
+        this.deferMode = deferMode;
+        this.important = true;
+        this.priorityValue = priorityValue;
+    }
+
+    /**
+     * Returns a promoted update type if the new update type is more important than the previous one. Nothing is returned if the update type is the same or less important.
+     *
+     * @param prev Previous update type
+     * @param next New update type
+     * @return Promoted update type or {@code null} if the update type is the same or less important
+     */
+    public static ChunkUpdateType getPromotedTypeChange(ChunkUpdateType prev, ChunkUpdateType next) {
+        if (prev == next) {
+            return null;
+        }
+        if (prev == null || prev == SORT || prev == INITIAL_BUILD) {
             return next;
         }
         if (next == IMPORTANT_REBUILD
@@ -29,15 +51,15 @@ public enum ChunkUpdateType {
         return null;
     }
 
-    public int getMaximumQueueSize() {
-        return this.maximumQueueSize;
-    }
-
     public boolean isImportant() {
-        return this == IMPORTANT_REBUILD || this == IMPORTANT_SORT;
+        return this.important;
     }
 
-    public int getTaskEffort() {
-        return this.taskEffort;
+    public DeferMode getDeferMode(DeferMode importantRebuildDeferMode) {
+        return this == IMPORTANT_REBUILD ? importantRebuildDeferMode : this.deferMode;
+    }
+
+    public float getPriorityValue() {
+        return this.priorityValue;
     }
 }

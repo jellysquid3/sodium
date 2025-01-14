@@ -1,5 +1,7 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting;
 
+import net.caffeinemc.mods.sodium.client.render.chunk.DeferMode;
+
 public enum SortBehavior {
     OFF("OFF", SortMode.NONE),
     STATIC("S", SortMode.STATIC),
@@ -12,10 +14,10 @@ public enum SortBehavior {
     private final String shortName;
     private final SortBehavior.SortMode sortMode;
     private final SortBehavior.PriorityMode priorityMode;
-    private final SortBehavior.DeferMode deferMode;
+    private final DeferMode deferMode;
 
     SortBehavior(String shortName, SortBehavior.SortMode sortMode, SortBehavior.PriorityMode priorityMode,
-            SortBehavior.DeferMode deferMode) {
+            DeferMode deferMode) {
         this.shortName = shortName;
         this.sortMode = sortMode;
         this.priorityMode = priorityMode;
@@ -26,7 +28,7 @@ public enum SortBehavior {
         this(shortName, sortMode, null, null);
     }
 
-    SortBehavior(String shortName, SortBehavior.PriorityMode priorityMode, SortBehavior.DeferMode deferMode) {
+    SortBehavior(String shortName, SortBehavior.PriorityMode priorityMode, DeferMode deferMode) {
         this(shortName, SortMode.DYNAMIC, priorityMode, deferMode);
     }
 
@@ -42,7 +44,7 @@ public enum SortBehavior {
         return this.priorityMode;
     }
 
-    public SortBehavior.DeferMode getDeferMode() {
+    public DeferMode getDeferMode() {
         return this.deferMode;
     }
 
@@ -52,9 +54,5 @@ public enum SortBehavior {
 
     public enum PriorityMode {
         NONE, NEARBY, ALL
-    }
-
-    public enum DeferMode {
-        ALWAYS, ONE_FRAME, ZERO_FRAMES
     }
 }

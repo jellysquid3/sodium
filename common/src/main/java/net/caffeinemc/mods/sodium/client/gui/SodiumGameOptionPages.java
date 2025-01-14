@@ -14,6 +14,7 @@ import net.caffeinemc.mods.sodium.client.gui.options.control.*;
 import net.caffeinemc.mods.sodium.client.gui.options.storage.MinecraftOptionsStorage;
 import net.caffeinemc.mods.sodium.client.gui.options.storage.SodiumOptionsStorage;
 import net.caffeinemc.mods.sodium.client.compatibility.workarounds.Workarounds;
+import net.caffeinemc.mods.sodium.client.render.chunk.DeferMode;
 import net.caffeinemc.mods.sodium.client.services.PlatformRuntimeInformation;
 import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.InactivityFpsLimit;
@@ -279,12 +280,12 @@ public class SodiumGameOptionPages {
                         .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
                         .build()
                 )
-                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
-                        .setName(Component.translatable("sodium.options.always_defer_chunk_updates.name"))
-                        .setTooltip(Component.translatable("sodium.options.always_defer_chunk_updates.tooltip"))
-                        .setControl(TickBoxControl::new)
+                .add(OptionImpl.createBuilder(DeferMode.class, sodiumOpts)
+                        .setName(Component.translatable("sodium.options.defer_chunk_updates.name"))
+                        .setTooltip(Component.translatable("sodium.options.defer_chunk_updates.tooltip"))
+                        .setControl(option -> new CyclingControl<>(option, DeferMode.class))
                         .setImpact(OptionImpact.HIGH)
-                        .setBinding((opts, value) -> opts.performance.alwaysDeferChunkUpdates = value, opts -> opts.performance.alwaysDeferChunkUpdates)
+                        .setBinding((opts, value) -> opts.performance.chunkBuildDeferMode = value, opts -> opts.performance.chunkBuildDeferMode)
                         .setFlags(OptionFlag.REQUIRES_RENDERER_UPDATE)
                         .build())
                 .build()

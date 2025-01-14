@@ -41,6 +41,30 @@ public final class Viewport {
         );
     }
 
+    public boolean isBoxVisibleDirect(float floatOriginX, float floatOriginY, float floatOriginZ, float floatSize) {
+        return this.frustum.testAab(
+                floatOriginX - floatSize,
+                floatOriginY - floatSize,
+                floatOriginZ - floatSize,
+
+                floatOriginX + floatSize,
+                floatOriginY + floatSize,
+                floatOriginZ + floatSize
+        );
+    }
+
+    public int getBoxIntersectionDirect(float floatOriginX, float floatOriginY, float floatOriginZ, float floatSize) {
+        return this.frustum.intersectAab(
+                floatOriginX - floatSize,
+                floatOriginY - floatSize,
+                floatOriginZ - floatSize,
+
+                floatOriginX + floatSize,
+                floatOriginY + floatSize,
+                floatOriginZ + floatSize
+        );
+    }
+
     public CameraTransform getTransform() {
         return this.transform;
     }

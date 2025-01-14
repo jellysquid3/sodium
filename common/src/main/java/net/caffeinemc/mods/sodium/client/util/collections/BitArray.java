@@ -5,7 +5,7 @@ import net.caffeinemc.mods.sodium.client.util.MathUtil;
 import java.util.Arrays;
 
 /**
- * Originally authored here: https://github.com/CaffeineMC/sodium/blob/ddfb9f21a54bfb30aa876678204371e94d8001db/src/main/java/net/caffeinemc/sodium/util/collections/BitArray.java
+ * Originally authored <a href="https://github.com/CaffeineMC/sodium/blob/ddfb9f21a54bfb30aa876678204371e94d8001db/src/main/java/net/caffeinemc/sodium/util/collections/BitArray.java">here</a>
  * @author burgerindividual
  */
 public class BitArray {

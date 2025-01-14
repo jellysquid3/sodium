@@ -58,7 +58,7 @@ public class DynamicTopoData extends DynamicData {
     }
 
     @Override
-    public Sorter getSorter() {
+    public DynamicSorter getSorter() {
         return new DynamicTopoSorter(this.getQuadCount(), this, this.pendingTriggerIsDirect, this.consecutiveTopoSortFailures, this.GFNITrigger, this.directTrigger);
     }
 
