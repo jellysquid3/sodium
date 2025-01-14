@@ -36,10 +36,12 @@ public class RemovableMultiForest implements RemovableForest {
             return;
         }
 
-        for (var tree : this.trees.values()) {
+        var it = this.trees.values().iterator();
+        while (it.hasNext()) {
+            var tree = it.next();
             tree.prepareForTraversal();
             if (tree.isEmpty()) {
-                this.trees.remove(tree.getTreeKey());
+                it.remove();
                 if (this.lastTree == tree) {
                     this.lastTree = null;
                 }
