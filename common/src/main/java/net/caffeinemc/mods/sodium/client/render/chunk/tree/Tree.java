@@ -1,9 +1,9 @@
 package net.caffeinemc.mods.sodium.client.render.chunk.tree;
 
 public abstract class Tree {
-    public static final int OUT_OF_BOUNDS = 0;
-    public static final int NOT_PRESENT = 1;
-    public static final int PRESENT = 2;
+    public static final int OUT_OF_BOUNDS = -1;
+    public static final int NOT_PRESENT = 0;
+    public static final int PRESENT = 1;
 
     protected final long[] tree = new long[64 * 64];
     protected final int offsetX, offsetY, offsetZ;

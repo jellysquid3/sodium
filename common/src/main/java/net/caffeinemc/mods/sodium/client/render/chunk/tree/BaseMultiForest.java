@@ -6,7 +6,7 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
 
     protected T lastTree;
 
-    public BaseMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ,float buildDistance) {
+    public BaseMultiForest(int baseOffsetX, int baseOffsetY, int baseOffsetZ, float buildDistance) {
         super(baseOffsetX, baseOffsetY, baseOffsetZ, buildDistance);
 
         this.forestDim = forestDimFromBuildDistance(buildDistance);
@@ -23,11 +23,13 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
         var treeY = localY >> 6;
         var treeZ = localZ >> 6;
 
-        return treeX + (treeZ * this.forestDim + treeY) * this.forestDim;
-    }
+        if (treeX < 0 || treeX >= this.forestDim ||
+                treeY < 0 || treeY >= this.forestDim ||
+                treeZ < 0 || treeZ >= this.forestDim) {
+            return Tree.OUT_OF_BOUNDS;
+        }
 
-    protected int getTreeIndexAbsolute(int x, int y, int z) {
-        return this.getTreeIndex(x - this.baseOffsetX, y - this.baseOffsetY, z - this.baseOffsetZ);
+        return treeX + (treeZ * this.forestDim + treeY) * this.forestDim;
     }
 
     @Override
@@ -41,6 +43,10 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
         var localZ = z - this.baseOffsetZ;
 
         var treeIndex = this.getTreeIndex(localX, localY, localZ);
+        if (treeIndex == Tree.OUT_OF_BOUNDS) {
+            return;
+        }
+
         var tree = this.trees[treeIndex];
 
         if (tree == null) {
@@ -59,18 +65,26 @@ public abstract class BaseMultiForest<T extends Tree> extends BaseForest<T> {
     public int getPresence(int x, int y, int z) {
         if (this.lastTree != null) {
             var result = this.lastTree.getPresence(x, y, z);
-            if (result != TraversableTree.OUT_OF_BOUNDS) {
+            if (result != Tree.OUT_OF_BOUNDS) {
                 return result;
             }
         }
 
-        var treeIndex = this.getTreeIndexAbsolute(x, y, z);
+        var localX = x - this.baseOffsetX;
+        var localY = y - this.baseOffsetY;
+        var localZ = z - this.baseOffsetZ;
+
+        var treeIndex = this.getTreeIndex(localX, localY, localZ);
+        if (treeIndex == Tree.OUT_OF_BOUNDS) {
+            return Tree.OUT_OF_BOUNDS;
+        }
+
         var tree = this.trees[treeIndex];
         if (tree != null) {
             this.lastTree = tree;
             return tree.getPresence(x, y, z);
         }
-        return TraversableTree.OUT_OF_BOUNDS;
+        return Tree.OUT_OF_BOUNDS;
     }
 
     protected abstract T[] makeTrees(int length);
